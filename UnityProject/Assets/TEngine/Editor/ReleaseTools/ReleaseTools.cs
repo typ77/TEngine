@@ -310,7 +310,7 @@ namespace TEngine
 
         public static void BuildImp(BuildTargetGroup buildTargetGroup, BuildTarget buildTarget, string locationPathName)
         {
-            EditorUserBuildSettings.SwitchActiveBuildTarget(buildTargetGroup, BuildTarget.StandaloneWindows64);
+            EditorUserBuildSettings.SwitchActiveBuildTarget(buildTargetGroup, buildTarget);
             AssetDatabase.Refresh();
 
             BuildPlayerOptions buildPlayerOptions = new BuildPlayerOptions
