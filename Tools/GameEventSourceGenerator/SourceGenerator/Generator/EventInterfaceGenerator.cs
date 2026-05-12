@@ -54,8 +54,11 @@ public class EventInterfaceGenerator : ISourceGenerator
             }  
         }  
         
-        string uniqueFileName = $"GameEventHelper.g.cs";
-        context.AddSource(uniqueFileName, GenerateGameEventHelper(classNameList));
+        if (classNameList.Count > 0)
+        {
+            string uniqueFileName = $"GameEventHelper.g.cs";
+            context.AddSource(uniqueFileName, GenerateGameEventHelper(classNameList));
+        }
     }  
     
     private string GenerateGameEventHelper(List<string> classNameList)
