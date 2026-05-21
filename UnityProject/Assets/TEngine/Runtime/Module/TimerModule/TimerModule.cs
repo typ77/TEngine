@@ -7,8 +7,6 @@ using Object = UnityEngine.Object;
 
 namespace TEngine
 {
-    public delegate void TimerHandler(object[] args);
-
     internal sealed class TimerModule : Module, IUpdateModule, ITimerModule
     {
         // ——— 静态全局实例（供 TimerHandle 访问）———
@@ -32,11 +30,11 @@ namespace TEngine
         private double _scaledTime;
         private double _unscaledTime;
 
+        // ——— 旧 API 兼容映射（timerId → nodeId）———
+        private readonly Dictionary<int, int> _legacyIdMap = new Dictionary<int, int>();
+
         // ——— 诊断用：zombie 警告节流（同一帧只警告一次）———
         private int _lastZombieWarnFrame = -1;
-
-        // ——— 向后兼容：旧 int id 到 pool id 的映射 ———
-        private readonly Dictionary<int, int> _legacyIdMap = new Dictionary<int, int>();
 
         // ——— 诊断属性 ———
         public int ActiveTimerCount
@@ -173,6 +171,7 @@ namespace TEngine
                         continue;
                     }
 
+                    // 追赶逻辑：计算下次触发时间
                     double nextFireTime = top.FireTime + top.Interval;
                     int catchUp = 0;
                     while (nextFireTime <= currentTime)
