@@ -220,10 +220,10 @@ namespace TEngine
             float elapsed = (float)(currentTime - node.StartTime);
             var args = new TimerTickArgs(node.CompletedTicks, node.TotalTicks, elapsed, handle);
 
-            node.CompletedTicks++;
-
             try
             {
+                node.CompletedTicks++;
+
                 if (node.OnTickWithArg != null)
                     node.OnTickWithArg(args);
                 else
@@ -232,6 +232,8 @@ namespace TEngine
             catch (Exception ex)
             {
                 Log.Error($"[Timer] 回调异常（Id={node.Id}）: {ex}");
+                // 回调异常时标记为删除，避免影响其他定时器
+                node.IsDeleted = true;
             }
         }
 
