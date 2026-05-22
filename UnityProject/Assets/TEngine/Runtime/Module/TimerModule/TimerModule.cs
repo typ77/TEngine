@@ -222,12 +222,12 @@ namespace TEngine
 
             try
             {
-                node.CompletedTicks++;
-
                 if (node.OnTickWithArg != null)
                     node.OnTickWithArg(args);
                 else
                     node.OnTickNoArg?.Invoke();
+
+                node.CompletedTicks++;
             }
             catch (Exception ex)
             {
