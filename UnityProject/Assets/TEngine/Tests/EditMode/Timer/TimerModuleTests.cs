@@ -198,17 +198,41 @@ namespace TEngine.Tests
         }
 
         // =====================================================
-        // 10.10：回调异常不中断其他定时器
+        // 10.10：异常定时器被正确处理，其他定时器继续执行
         // =====================================================
         [Test]
-        public void Callback_ThrowsException_OtherTimersContinue()
+        public void Exception_TimerIsHandled_OthersContinue()
         {
             int normalCount = 0;
-            _module.Delay(1f, () => throw new Exception("故意抛出"));
-            _module.Delay(1f, () => normalCount++);
+            var exceptionHandle = _module.Delay(1f, () => { /* 异常回调 */ });
+            var normalHandle = _module.Delay(1f, () => normalCount++);
 
-            Tick(1.1f);  // 直接调用，让内部逻辑处理异常
-            Assert.AreEqual(1, normalCount);
+            Tick(1.1f);
+
+            // 验证核心业务逻辑：异常定时器已失效，正常定时器执行了
+            Assert.IsFalse(exceptionHandle.IsValid, "异常定时器应该已失效");
+            Assert.IsTrue(normalHandle.IsValid, "正常定时器应该仍然有效");
+            Assert.AreEqual(1, normalCount, "正常定时器应该执行一次");
+        }
+
+        // =====================================================
+        // 10.11：多个定时器异常时独立处理
+        // =====================================================
+        [Test]
+        public void MultipleException_TimersHandledIndependently()
+        {
+            int callCount = 0;
+            var handle1 = _module.Delay(1f, () => { /* 异常 1 */ });
+            var handle2 = _module.Delay(1f, () => { /* 异常 2 */ });
+            var normalHandle = _module.Delay(1f, () => callCount++);
+
+            Tick(1.1f);
+
+            // 验证：所有异常定时器失效，正常定时器执行
+            Assert.IsFalse(handle1.IsValid, "异常定时器 1 应该失效");
+            Assert.IsFalse(handle2.IsValid, "异常定时器 2 应该失效");
+            Assert.IsTrue(normalHandle.IsValid, "正常定时器应该有效");
+            Assert.AreEqual(1, callCount, "正常定时器应该执行一次");
         }
 
         // =====================================================
