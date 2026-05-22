@@ -79,6 +79,7 @@ namespace TEngine
         private RuntimeMemoryInformationWindow<ScriptableObject> _runtimeMemoryScriptableObjectInformationWindow = new RuntimeMemoryInformationWindow<ScriptableObject>();
         private ObjectPoolInformationWindow _objectPoolInformationWindow = new ObjectPoolInformationWindow();
         private MemoryPoolPoolInformationWindow _memoryPoolPoolInformationWindow = new MemoryPoolPoolInformationWindow();
+        private TimerInformationWindow _timerInformationWindow = new TimerInformationWindow();
         private SettingsWindow _settingsWindow = new SettingsWindow();
 
         private FpsCounter _fpsCounter = null;
@@ -212,6 +213,7 @@ namespace TEngine
             RegisterDebuggerWindow("Profiler/Memory/ScriptableObject", _runtimeMemoryScriptableObjectInformationWindow);
             RegisterDebuggerWindow("Profiler/Object Pool", _objectPoolInformationWindow);;
             RegisterDebuggerWindow("Profiler/Reference Pool", _memoryPoolPoolInformationWindow);
+            RegisterDebuggerWindow("Profiler/Timer", _timerInformationWindow);
             RegisterDebuggerWindow("Other/Settings", _settingsWindow);
 
             switch (activeWindow)
