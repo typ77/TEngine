@@ -49,6 +49,10 @@
 </enum>
 ```
 
+> **规范约束：flags 枚举值必须为 2 的幂次**（1, 2, 4, 8, 16, ...）。位标志通过按位或组合值，非幂次值会导致逻辑冲突。
+>
+> 反面教材：`WHITE=1, RED=2, GREEN=3` — `GREEN(3)` 等于 `WHITE|RED`，按位组合时产生歧义。
+
 ### 属性说明
 
 | 属性 | 说明 |
@@ -92,19 +96,68 @@
 
 ### 多态 bean
 
+Luban 原生多态通过 `abstract` + `parent` 继承实现，自动使用 `$type` 鉴别符分发，**推荐使用此方式**。
+
+> **不要**手动添加 `type` 字段模拟多态——这无法利用 Luban 的自动分发和校验能力。
+
 ```xml
-<bean name="EffectConfig" comment="效果配置" sep=",">
-    <var name="type" type="string" comment="效果类型"/>
+<!-- 抽象基类：不可直接实例化 -->
+<bean name="Skill" abstract="true">
+    <var name="skillId" type="int" comment="技能ID"/>
+    <var name="skillName" type="string" comment="技能名称"/>
 </bean>
 
-<bean name="DamageEffect" parent="EffectConfig">
-    <var name="damage" type="int"/>
-    <var name="damageType" type="string"/>
+<!-- 子类通过 parent 继承 -->
+<bean name="AttackSkill" parent="Skill">
+    <var name="skillHp" type="int" comment="伤害"/>
 </bean>
 
-<bean name="HealEffect" parent="EffectConfig">
-    <var name="healAmount" type="int"/>
+<bean name="BuffSkill" parent="Skill">
+    <var name="buffId" type="int" comment="Buff ID"/>
 </bean>
+```
+
+`abstract="true"` 使基类在 C# 中生成为 `abstract class`，子类继承基类并添加自有字段。数据中通过 `$type` 字段指定子类型名。
+
+#### 代码生成对照
+
+XML 定义（同上）生成的 C# 代码：
+
+```csharp
+// 抽象基类，含工厂方法
+public abstract partial class Skill : BeanBase
+{
+    public readonly int SkillId;
+    public readonly string SkillName;
+
+    // 根据 $type 鉴别符分发到子类
+    public static Skill DeserializeSkill(JsonElement _buf)
+    {
+        switch (_buf.GetProperty("$type").GetString())
+        {
+            case "AttackSkill": return new AttackSkill(_buf);
+            case "BuffSkill":   return new BuffSkill(_buf);
+            default: throw new SerializationException();
+        }
+    }
+}
+
+// 子类继承基类
+public sealed partial class AttackSkill : Skill
+{
+    public readonly int SkillHp;
+}
+
+public sealed partial class BuffSkill : Skill
+{
+    public readonly int BuffId;
+}
+```
+
+JSON 数据中使用 `$type` 指定子类型：
+
+```json
+{ "$type": "AttackSkill", "skillId": 1001, "skillName": "火球术", "skillHp": 1000 }
 ```
 
 ### bean 属性说明
@@ -113,9 +166,12 @@
 |------|------|
 | `name` | bean 名 |
 | `parent` | 父 bean 名（支持继承和多态）|
+| `abstract` | 是否为抽象基类（不可实例化，仅作为多态父类）|
 | `valueType` | 是否为值类型（C# struct）|
 | `sep` | 分隔符，用于紧凑格式数据 |
 | `group` | 分组控制 |
+
+> **valueType 使用指导：** 小型不可变数据（坐标 vector2/3/4、颜色、矩形等）使用 `valueType="1"` 生成 C# `struct`；有引用语义、需要继承或多态的 bean 使用默认 class。
 
 ## 字段定义 (var)
 
@@ -226,6 +282,19 @@
 
 <var name="equipId" type="string#ref=EquipTables"/>
 ```
+
+## constalias 定义
+
+`<constalias>` 是 `<module>` 的直接子元素，与 `<enum>`/`<bean>`/`<table>` 同级：
+
+```xml
+<module name="">
+    <constalias name="MAX_LEVEL" value="99"/>
+    <constalias name="BOSS_TAG" value="1001"/>
+</module>
+```
+
+数据文件中使用别名代替数值：`MAX_LEVEL` → `99`。仅 Excel/lite 数据源支持。
 
 ## Excel Schema 定义
 

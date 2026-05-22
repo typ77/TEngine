@@ -81,8 +81,27 @@
 
 ### 代码生成
 
-- ref 会生成 `xxx_Ref` 字段（C#/TypeScript）
-- 多表 ref 不会生成 Ref 字段
+- 单值 ref：字段 `xxx` → 生成 `xxx_Ref`（如 `itemId` → `itemId_Ref`）
+- 数组/列表 ref：字段 `xxx` → 生成 `xxx_Ref` 数组（如 `testIds:int[]` → `testIds_Ref:TestA[]`）
+- 多表 ref 不生成 Ref 字段
+
+### ResolveRef 生命周期
+
+`ResolveRef()` 在 Tables 构造函数中，所有表加载完成后统一调用，用于建立跨表引用关系。Ref 字段在构造函数完成后才可用，不能在构造过程中访问。
+
+```csharp
+public Tables(Func<string, JsonElement> loader)
+{
+    TbItem = new TbItem(loader("tbitem"));
+    TbReward = new TbReward(loader("tbreward"));
+    ResolveRef();  // 此处填充所有 xxx_Ref 字段
+}
+```
+
+### 找不到引用时的行为
+
+- **导出时**：Luban 校验 ref 合法性，找不到目标记录会报错
+- **运行时**：`GetOrDefault` 返回 null（不抛异常），Ref 字段为 null
 
 ---
 

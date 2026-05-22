@@ -145,9 +145,13 @@
 
 为数值类型提供字符串别名（仅 Excel/lite 数据源）。
 
+在 XML Schema 中定义为 `<module>` 的直接子元素：
+
 ```xml
-<constalias name="MAX_LEVEL" value="99"/>
-<constalias name="BOSS_TAG" value="1001"/>
+<module name="">
+    <constalias name="MAX_LEVEL" value="99"/>
+    <constalias name="BOSS_TAG" value="1001"/>
+</module>
 ```
 
 数据文件中使用别名代替数值：

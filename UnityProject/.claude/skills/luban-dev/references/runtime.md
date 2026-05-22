@@ -172,6 +172,44 @@ Bean 需额外提供 `constructor` 指定转换函数。
 -x l10n.convertTextKeyToValue=1
 ```
 
+### text.json 格式
+
+多语言文本文件，每条记录包含 key 和各语言翻译：
+
+```json
+[
+  {"key": "item_sword_001", "zh": "倚天剑", "en": "Heaven Sword", "ja": "倚天の剣"},
+  {"key": "item_sword_001_desc", "zh": "传说中的神剑", "en": "A legendary sword", "ja": "伝説の神剣"}
+]
+```
+
+- `key`：文本 key，配置表中引用此值
+- 其余字段：语言代码 → 翻译文本（语言字段名由 `l10n.textFile.languageFieldName` 指定）
+
+### 字段标记方式
+
+- **`text` 类型**（等价 `string#text=1`）：标记为本地化 key，导出时触发本地化替换
+- **`string` 类型**：不触发本地化替换，原样输出
+
+```xml
+<var name="name" type="text" comment="名称（本地化）"/>   <!-- 触发本地化 -->
+<var name="internalId" type="string" comment="内部ID"/>  <!-- 不触发 -->
+```
+
+### 导出效果
+
+| 阶段 | 字段值 |
+|:---|:---|
+| 源数据（Excel/JSON） | key：`item_sword_001` |
+| 导出后（生成数据） | 实际文本：`Heaven Sword`（由 `languageFieldName` 指定的语言） |
+
+### 两种策略
+
+| 策略 | 说明 | 适用场景 |
+|:---|:---|:---|
+| **导出时替换**（`convertTextKeyToValue=1`） | 导出数据中直接包含目标语言文本 | 单语言包发布，无需运行时切换 |
+| **运行时查找** | 导出数据保留 key，运行时通过 LocalizationManager 按 key+语言查找 | 多语言动态切换 |
+
 ### text 类型
 
 `text` 是特殊的语法糖，等价 `string#text=1`，语义上表示本地化字符串的 key。

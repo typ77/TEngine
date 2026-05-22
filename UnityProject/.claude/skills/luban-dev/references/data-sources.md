@@ -65,6 +65,18 @@
 
 使用 `$type` 属性指定具体类型。
 
+### 多态鉴别符汇总
+
+各数据源格式中多态 bean 的鉴别符字段名不同：
+
+| 数据源 | 鉴别符 | 示例 |
+|:---|:---|:---|
+| JSON | `$type` | `{"$type": "AttackSkill", ...}` |
+| XML | `type` | `<effect type="AttackSkill">` |
+| YAML | `$type` | `$type: AttackSkill` |
+| Lua | `_type_` | `{_type_ = "AttackSkill", ...}` |
+| Lite | 位置式 | `{AttackSkill, ...}` |
+
 ## XML 格式
 
 ### 基本对象
