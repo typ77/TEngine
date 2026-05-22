@@ -3,9 +3,13 @@ using System;
 using System.Collections.Generic;
 using System.Threading;
 using UnityEngine;
+using Object = UnityEngine.Object;
 
 namespace TEngine
 {
+    // 旧 API 回调委托（保留向后兼容）
+    public delegate void TimerHandler(params object[] args);
+
     public interface ITimerModule
     {
         // ——— 新 API ———
