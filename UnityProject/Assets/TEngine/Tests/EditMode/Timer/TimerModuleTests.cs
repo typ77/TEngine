@@ -207,7 +207,7 @@ namespace TEngine.Tests
             _module.Delay(1f, () => throw new Exception("故意抛出"));
             _module.Delay(1f, () => normalCount++);
 
-            Assert.DoesNotThrow(() => Tick(1.1f));
+            Tick(1.1f);  // 直接调用，让内部逻辑处理异常
             Assert.AreEqual(1, normalCount);
         }
 
