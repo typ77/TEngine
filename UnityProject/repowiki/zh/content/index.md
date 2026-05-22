@@ -19,6 +19,7 @@
 - [模块系统/模块生命周期管理.md](repowiki/zh/content/模块系统/模块生命周期管理.md) - 生命周期管理
 - [模块系统/模块间通信.md](repowiki/zh/content/模块系统/模块间通信.md) - 模块通信
 - [模块系统/自定义模块开发.md](repowiki/zh/content/模块系统/自定义模块开发.md) - 自定义模块
+- [模块系统/TimerModule重构说明.md](repowiki/zh/content/模块系统/TimerModule重构说明.md) - 定时器重构 v2.0 🆕
 
 **资源管理**：
 - [资源管理/](repowiki/zh/content/资源管理/) - 资源管理（YooAsset）
@@ -80,7 +81,7 @@
 **API参考**：
 - [API参考/API参考.md](repowiki/zh/content/API参考/API参考.md) - API 参考
 - [API参考/核心API.md](repowiki/zh/content/API参考/核心API.md) - 核心 API
-- [API参考/模块系统API.md](repowiki/zh/content/API参考/模块系统API.md) - 模块 API
+- [API参考/模块系统API.md](repowiki/zh/content/API参考/模块系统API.md) - 模块 API 🆕(v2.0重构)
 - [API参考/资源管理API.md](repowiki/zh/content/API参考/资源管理API.md) - 资源 API
 - [API参考/UI系统API.md](repowiki/zh/content/API参考/UI系统API.md) - UI API
 - [API参考/事件系统API.md](repowiki/zh/content/API参考/事件系统API.md) - 事件 API

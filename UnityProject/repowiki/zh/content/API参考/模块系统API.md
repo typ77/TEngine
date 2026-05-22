@@ -12,6 +12,10 @@
 - [IFsmModule.cs](file://Assets/TEngine/Runtime/Module/FsmModule/IFsmModule.cs)
 - [TimerModule.cs](file://Assets/TEngine/Runtime/Module/TimerModule/TimerModule.cs)
 - [ITimerModule.cs](file://Assets/TEngine/Runtime/Module/TimerModule/ITimerModule.cs)
+- [TimerTypes.cs](file://Assets/TEngine/Runtime/Module/TimerModule/TimerTypes.cs)
+- [TimerNode.cs](file://Assets/TEngine/Runtime/Module/TimerModule/TimerNode.cs)
+- [TimerNodePool.cs](file://Assets/TEngine/Runtime/Module/TimerModule/TimerNodePool.cs)
+- [IndexedMinHeap.cs](file://Assets/TEngine/Runtime/Module/TimerModule/IndexedMinHeap.cs)
 </cite>
 
 ## 目录
@@ -197,24 +201,71 @@ Root->>MS : "Shutdown(逆序关闭)"
 - [FsmModule.cs:9-396](file://Assets/TEngine/Runtime/Module/FsmModule/FsmModule.cs#L9-L396)
 - [IFsmModule.cs:9-175](file://Assets/TEngine/Runtime/Module/FsmModule/IFsmModule.cs#L9-L175)
 
-### TimerModule 计时器模块 API
-- 模块特性
-  - 实现 IUpdateModule，分别维护“逻辑时间”和“真实时间”两类计时器列表。
-  - 提供统一 Update(elapsed, realElapsed) 调度。
-- 计时器管理
-  - AddTimer：添加计时器，支持循环、非缩放时间、回调参数。
-  - Stop/Resume/IsRunning：暂停、恢复、查询运行状态。
-  - GetLeftTime/Restart/Reset/ResetTimer：查询剩余时间、重置到初始状态、重置参数（含切换是否受时间缩放影响）。
-  - RemoveTimer/RemoveAllTimer：按ID或全部移除。
-- 内部机制
-  - 使用两个有序列表分别存储逻辑/真实时间计时器，按剩余时间升序插入。
-  - 支持“坏帧补偿”：当循环计时器在同帧内多次到期，递归触发回调直至不再到期。
-  - 提供 AddSystemTimer 用于系统级定时器（如外部监控）。
+### TimerModule 计时器模块 API（重构版 v2.0）
 
-最佳实践
-- 优先使用 AddTimer 的参数化回调，避免闭包捕获导致的GC压力。
-- 对 UI/动画等对时间缩放敏感的逻辑使用 isUnscaled=false（默认）；对调试/统计等不受影响的逻辑使用 isUnscaled=true。
-- 大量短周期循环计时器应谨慎使用，必要时合并或降频。
+- **模块特性**
+  - 基于双堆结构的高性能定时器系统，分别维护逻辑时间和真实时间的定时器队列
+  - 使用对象池预分配 TimerNode，实现零 GC 创建
+  - TimerHandle 结构体替代整数 ID，通过版本号防止无效引用访问
+  - 支持完整的游戏定时语义：暂停/恢复、Owner 绑定、CancellationToken 取消
+  - 提供完整的诊断系统：活跃定时器数量、Zombie 定时器、对象池状态等
+
+- **核心类型**
+  - `TimeMode` 枚举：`Scaled`（受时间缩放影响）、`Unscaled`（不受时间缩放影响）
+  - `TimerHandle` 结构体：定时器句柄，包含 Id 和版本号，提供 IsValid/Remaining/Progress 属性和 Cancel/Pause/Resume 方法
+  - `TimerTickArgs` 结构体：回调参数，包含 TickIndex、TotalTicks、TicksRemaining、Progress、ElapsedTime、Handle
+  - `TimerDiagnosticInfo` 结构体：诊断信息，包含 Id、RemainingSeconds、TickIndex、TotalTicks、TimeMode、IsPaused、IsDeleted
+
+- **定时器创建 API**
+  - `Delay`：创建延迟定时器，支持两种回调签名（Action/Action<TimerTickArgs>）
+  - `Repeat`：创建循环定时器，支持指定次数或无限循环（-1）
+  - `Schedule`：创建调度定时器（延迟 + 循环），提供最灵活的控制
+  - `Countdown`：创建倒计时定时器，语义糖用于倒计时场景
+  - `NextFrame`：下一帧触发
+  - `WaitFrames`：等待指定帧数后触发
+
+- **定时器控制 API（通过 TimerHandle）**
+  - `Cancel`：取消定时器，惰性删除（标记 IsDeleted=true）
+  - `Pause`：暂停定时器，通过 ChangeKey 移至堆底
+  - `Resume`：恢复定时器，重新计算触发时间并移回堆顶
+  - `IsValid`：查询定时器是否有效（版本号匹配且未删除）
+  - `Remaining`：查询剩余时间
+  - `Progress`：查询进度（0~1，循环定时器为 NaN）
+
+- **系统配置与诊断**
+  - `Configure`：配置定时器系统参数（maxCatchUpSteps、initialPoolCapacity）
+  - `Compact`：清理已取消的定时器，重建堆结构
+  - `ActiveTimerCount`：活跃定时器数量
+  - `ZombieCount`：已取消但未清理的定时器数量
+  - `PoolCapacity`：对象池容量
+  - `PoolUsed`：对象池已使用数
+  - `GetDiagnostics`：获取定时器诊断信息列表
+
+- **向后兼容（Obsolete API）**
+  - `AddTimer`：旧版添加定时器 API，内部转换为 Delay/Repeat
+  - `RemoveTimer/RemoveAllTimer`：移除定时器，内部调用 TimerHandle.Cancel()
+  - `Stop/Resume`：暂停/恢复定时器，内部调用 TimerHandle.Pause/Resume()
+  - `IsRunning/GetLeftTime`：查询状态，内部转换为 TimerHandle.IsValid/Remaining
+  - `Restart/ResetTimer`：重置定时器，新推荐使用 Schedule
+  - `AddSystemTimer`：系统级定时器，推荐使用 UniTask.Delay
+
+- **内部机制**
+  - 双堆调度：`IndexedMinHeap` 分别管理 Scaled 和 Unscaled 定时器，O(1) 空帧检测，O(log n) 插入/删除
+  - 对象池管理：`TimerNodePool` 预分配数组 + FreeStack，支持自动扩容和版本管理
+  - 惰性删除：Cancel 仅标记 IsDeleted，在堆弹出时回收节点
+  - 追赶逻辑：当帧间隔过大时，按 MaxCatchUpSteps 限制触发次数，避免卡顿时的异常行为
+  - 帧队列：NextFrame/WaitFrames 使用独立的 List<FrameTimerNode>，不进入时间堆
+  - 安全机制：Owner 销毁自动取消、CancellationToken 支持、回调异常隔离
+
+**最佳实践**
+- 使用 TimerHandle 替代整数 ID，利用版本号机制避免无效引用访问
+- 优先使用 TimerTickArgs 回调获取进度信息，避免手动计算
+- 对 UI/动画等对时间缩放敏感的逻辑使用 TimeMode.Scaled（默认）
+- 对调试/统计等不受影响的逻辑使用 TimeMode.Unscaled
+- 为需要自动清理的定时器绑定 Owner，确保对象销毁时定时器取消
+- 定期调用 Compact() 清理 Zombie 定时器，降低内存占用
+- 使用 Configure() 调整 MaxCatchUpSteps 和初始池容量以适应项目需求
+- 避免创建大量短周期循环定时器，必要时合并或降频
 
 章节来源
 - [TimerModule.cs:8-478](file://Assets/TEngine/Runtime/Module/TimerModule/TimerModule.cs#L8-L478)
@@ -267,17 +318,54 @@ class FsmModule {
 +Shutdown()
 }
 class TimerModule {
-+AddTimer(cb, time, loop, unscaled, args)
-+Stop(id)
-+Resume(id)
-+IsRunning(id)
-+GetLeftTime(id)
-+Restart(id)
-+ResetTimer(id,...)
-+RemoveTimer(id)
-+RemoveAllTimer()
++Delay(delay, cb, mode, owner, token)
++Repeat(interval, cb, count, mode, onComplete, owner, token)
++Schedule(delay, interval, cb, count, mode, onComplete, owner, token)
++Countdown(count, interval, onTick, onComplete, mode, owner, token)
++NextFrame(cb)
++WaitFrames(frames, cb)
++Configure(maxCatchUpSteps, initialPoolCapacity)
++Compact()
++ActiveTimerCount
++ZombieCount
++PoolCapacity
++PoolUsed
++GetDiagnostics(output)
++IsHandleValid(handle)
++GetRemaining(handle)
++GetProgress(handle)
++Cancel(handle)
++PauseTimer(handle)
++ResumeTimer(handle)
 +Update(elapsed, realElapsed)
 +Shutdown()
+}
+class TimerHandle {
++Id
++Version
++IsValid
++Remaining
++Progress
++Cancel()
++Pause()
++Resume()
+}
+class TimerTickArgs {
++TickIndex
++TotalTicks
++TicksRemaining
++Progress
++ElapsedTime
++Handle
+}
+class TimerDiagnosticInfo {
++Id
++RemainingSeconds
++TickIndex
++TotalTicks
++TimeMode
++IsPaused
++IsDeleted
 }
 Module <|-- RootModule
 Module <|-- ProcedureModule
@@ -308,11 +396,13 @@ ProcedureModule --> FsmModule : "依赖"
 - 状态机
   - FsmModule 使用临时列表遍历，避免遍历时修改字典。
   - 按剩余时间有序插入，查找与更新效率高。
-- 计时器
-  - 逻辑/真实时间双列表分离，避免相互干扰。
-  - 循环回调“坏帧补偿”递归处理，确保到期一致性。
+- 定时器
+  - 双堆结构（Scaled/Unscaled）分离调度，避免相互干扰，O(1) 空帧检测。
+  - 对象池预分配 TimerNode，零 GC 创建，支持自动扩容。
+  - 循环定时器”坏帧补偿”逻辑，按 MaxCatchUpSteps 限制触发次数，避免卡顿异常。
+  - TimerHandle 版本号机制，防止无效引用访问，提升安全性。
 - 内存与GC
-  - 建议使用参数化回调，避免闭包捕获。
+  - 优先使用 TimerTickArgs 回调，避免闭包捕获导致的 GC 压力。
   - RootModule.OnLowMemory 主动触发对象池与资源模块回收，降低内存峰值风险。
 
 ## 故障排查指南
@@ -325,9 +415,21 @@ ProcedureModule --> FsmModule : "依赖"
 - 状态机重复创建
   - 现象：创建同名状态机抛出“已存在”异常。
   - 排查：确保命名唯一，或先 DestroyFsm 再创建。
-- 计时器无效
-  - 现象：回调不触发或状态异常。
-  - 排查：确认 IsRunning 状态、是否被标记移除、是否使用了正确的时间模式（逻辑/真实）。
+- 定时器无效
+  - 现象：回调不触发、状态异常、IsValid 返回 false。
+  - 排查：确认 TimerHandle.Version 是否匹配、是否已被 Cancel、Owner 对象是否已销毁、CancellationToken 是否已取消。
+- 性能下降
+  - 现象：大量定时器时 FPS 下降。
+  - 排查：检查 ZombieCount 是否过高，调用 Compact() 清理；考虑合并短周期定时器；检查是否有过多的循环定时器。
+- 内存占用过高
+  - 现象：TimerNodePool 持续扩容。
+  - 排查：检查是否忘记 Cancel 定时器、是否定期调用 Compact()、是否正确使用 Owner 绑定自动清理。
+- 时间对齐问题
+  - 现象：循环定时器触发时间漂移。
+  - 排查：确认使用正确的 TimeMode（Scaled/Unscaled）；检查是否在 Pause/Resume 期间有异常行为。
+- 回调异常
+  - 现象：单个定时器回调异常影响其他定时器。
+  - 排查：系统已隔离异常回调，检查 Log.Error 输出的异常堆栈；确认回调代码正确性。
 
 章节来源
 - [ModuleSystem.cs:68-89](file://Assets/TEngine/Runtime/Core/ModuleSystem.cs#L68-L89)
@@ -350,6 +452,9 @@ TEngine 模块系统以清晰的抽象与严格的生命周期管理为核心，
   - FsmModule 状态机管理
     - 创建与销毁状态机：[FsmModule.cs:226-283](file://Assets/TEngine/Runtime/Module/FsmModule/FsmModule.cs#L226-L283), [FsmModule.cs:289-366](file://Assets/TEngine/Runtime/Module/FsmModule/FsmModule.cs#L289-L366)
     - 查询与遍历：[FsmModule.cs:138-183](file://Assets/TEngine/Runtime/Module/FsmModule/FsmModule.cs#L138-L183), [FsmModule.cs:189-217](file://Assets/TEngine/Runtime/Module/FsmModule/FsmModule.cs#L189-L217)
-  - TimerModule 计时器管理
-    - 添加与控制计时器：[TimerModule.cs:39-56](file://Assets/TEngine/Runtime/Module/TimerModule/TimerModule.cs#L39-L56), [TimerModule.cs:101-126](file://Assets/TEngine/Runtime/Module/TimerModule/TimerModule.cs#L101-L126)
-    - 重置与移除：[TimerModule.cs:151-204](file://Assets/TEngine/Runtime/Module/TimerModule/TimerModule.cs#L151-L204), [TimerModule.cs:235-263](file://Assets/TEngine/Runtime/Module/TimerModule/TimerModule.cs#L235-L263)
+  - TimerModule 计时器管理（重构版）
+    - 双堆调度核心：[TimerModule.cs:114-224](file://Assets/TEngine/Runtime/Module/TimerModule/TimerModule.cs#L114-L224)
+    - 新 API 创建定时器：[TimerModule.cs:225-309](file://Assets/TEngine/Runtime/Module/TimerModule/TimerModule.cs#L225-L309)
+    - TimerHandle 操作：[TimerModule.cs:310-359](file://Assets/TEngine/Runtime/Module/TimerModule/TimerModule.cs#L310-L359)
+    - 诊断与配置：[TimerModule.cs:360-419](file://Assets/TEngine/Runtime/Module/TimerModule/TimerModule.cs#L360-L419)
+    - 类型定义：[TimerTypes.cs](file://Assets/TEngine/Runtime/Module/TimerModule/TimerTypes.cs)
