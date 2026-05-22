@@ -78,8 +78,13 @@ namespace GameLogic
         /// 隐藏窗口关闭时间。
         /// </summary>
         public int HideTimeToClose { get; set; }
-        
+
         public int HideTimerId { get; set; }
+
+        /// <summary>
+        /// 隐藏定时器句柄（新 API）。
+        /// </summary>
+        public TimerHandle HideTimerHandle { get; set; }
 
         /// <summary>
         /// 窗口深度值。
@@ -514,7 +519,7 @@ namespace GameLogic
         internal void CancelHideToCloseTimer()
         {
             IsHide = false;
-            if (HideTimerId > 0)
+            if (HideTimerHandle.IsValid)
             {
                 HideTimerHandle.Cancel();
                 HideTimerId = 0;
