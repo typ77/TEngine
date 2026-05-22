@@ -408,10 +408,7 @@ namespace GameLogic
             window.CancelHideToCloseTimer();
             window.Visible = false;
             window.IsHide = true;
-            window.HideTimerId = GameModule.Timer.AddTimer((arg) =>
-            {
-                CloseUI(type);
-            },window.HideTimeToClose);
+            window.HideTimerHandle = GameModule.Timer.Delay(window.HideTimeToClose, () => CloseUI(type), owner: window.gameObject != null ? window.gameObject : null);
 
             if (window.FullScreen)
             {

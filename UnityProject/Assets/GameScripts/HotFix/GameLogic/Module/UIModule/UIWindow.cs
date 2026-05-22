@@ -516,7 +516,7 @@ namespace GameLogic
             IsHide = false;
             if (HideTimerId > 0)
             {
-                ModuleSystem.GetModule<ITimerModule>().RemoveTimer(HideTimerId);
+                HideTimerHandle.Cancel();
                 HideTimerId = 0;
             }
         }
