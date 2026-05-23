@@ -30,15 +30,17 @@ dotnet <luban.dll路径> [参数]
 | `-x` | `--xargs` | 扩展参数 | `-x key=value` |
 | `-w` | `--watchDir` | 监视目录 | `-w DataTables` |
 | `-v` | `--verbose` | 详细输出 | `-v` |
+| `--variant` | - | 字段变体 | `--variant default=cn` |
+| `--timeZone` | - | 目标时区 | `--timeZone Asia/Shanghai` |
 
 ## 代码目标 (codeTarget)
 
 | 目标 | 说明 |
 |------|------|
-| `cs-bin` | C# + Binary 格式 |
-| `cs-simple-json` | C# + SimpleJSON |
-| `cs-dotnet-json` | C# + System.Text.Json |
-| `cs-newtonsoft-json` | C# + Newtonsoft.Json |
+| `cs-bin` | C# + Binary 格式（ByteBuf 加载，最小体积，推荐 Unity 生产环境） |
+| `cs-simple-json` | C# + SimpleJSON（第三方轻量 JSON 库） |
+| `cs-dotnet-json` | C# + System.Text.Json（.NET 6+ 内置，推荐 .NET 运行时） |
+| `cs-newtonsoft-json` | C# + Newtonsoft.Json（兼容性最广） |
 | `java-bin` | Java + Binary |
 | `java-json` | Java + JSON |
 | `go-bin` | Go + Binary |

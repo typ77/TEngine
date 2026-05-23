@@ -328,6 +328,8 @@ var item = ConfigSystem.Instance.Tables.TbItem.Get(1001);
 7. 在 GameLogic/Config/ 下创建 NewTableConfigMgr.cs 封装查询方法
 ```
 
+**注意**：不要使用 `#` 前缀自动导入方式（如 `#Item-道具表.xlsx`），所有表必须在 `__tables__.xlsx` 中正式注册，确保表结构统一管理。
+
 ## 兼容性注意事项
 
 - **新增字段**：前向兼容，旧客户端自动忽略新字段

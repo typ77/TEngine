@@ -22,7 +22,8 @@ import argparse
 import json
 import hashlib
 from pathlib import Path
-from typing import Optional, List, Dict, Any
+from typing import Optional, List, Dict, Any, Tuple
+from dataclasses import dataclass, field
 
 try:
     import openpyxl
@@ -32,9 +33,44 @@ except ImportError:
     sys.exit(1)
 
 
+@dataclass
+class LubanSheetStructure:
+    """Luban xlsx 工作表结构解析结果（统一解析器输出）"""
+    var_row_num: int = 0                # ##var 行号（1-indexed）
+    type_row_num: Optional[int] = None  # ##type 行号（None=缺失）
+    group_row_num: Optional[int] = None # ##group 行号（None=缺失）
+    comment_row_nums: List[int] = field(default_factory=list)  # ## 注释行号列表
+    data_start_row: int = 0             # 数据起始行号（1-indexed）
+    fields: List[Dict[str, Any]] = field(default_factory=list) # 标准化字段列表
+    var_row: Optional[List] = None      # 原始 ##var 行数据
+    type_row: Optional[List] = None     # 原始 ##type 行数据
+    group_row: Optional[List] = None    # 原始 ##group 行数据
+    format_errors: List[str] = field(default_factory=list)   # 结构错误（阻止 Luban 生成）
+    format_warnings: List[str] = field(default_factory=list) # 结构警告（不影响生成但应修复）
+
+    @property
+    def is_valid(self) -> bool:
+        """结构是否有效（无 format_errors）"""
+        return len(self.format_errors) == 0
+
+
 class LubanConfigHelper:
     """Luban 配置辅助类"""
-    
+
+    @staticmethod
+    def _cell(row: tuple, index: int, default: Any = "") -> Any:
+        """从 xlsx 行元组安全取值，空单元格(None)规范化为 default。
+
+        openpyxl 对空单元格返回 None，此方法统一处理：
+        - 索引越界 → default
+        - 值为 None → default
+        - 其他值 → 原值
+        """
+        if index >= len(row):
+            return default
+        val = row[index]
+        return default if val is None else val
+
     def __init__(self, data_dir: str, cache_dir: str = ".luban_cache"):
         self.data_dir = Path(data_dir)
         self.cache_dir = Path(cache_dir)
@@ -68,27 +104,27 @@ class LubanConfigHelper:
                     "full_name": full_name,
                     "flags": row[2],
                     "unique": row[3],
-                    "comment": row[6] if len(row) > 6 else "",
+                    "comment": self._cell(row, 6),
                     "items": []
                 }
                 # 检查同一行是否有第一个枚举项
-                first_item_name = row[7] if len(row) > 7 else None
+                first_item_name = self._cell(row, 7, None)
                 if first_item_name:
                     current_enum["items"].append({
                         "name": first_item_name,
-                        "alias": row[8] if len(row) > 8 else "",
-                        "value": row[9] if len(row) > 9 else None,
-                        "comment": row[10] if len(row) > 10 else ""
+                        "alias": self._cell(row, 8),
+                        "value": self._cell(row, 9, None),
+                        "comment": self._cell(row, 10)
                     })
             elif current_enum:  # 枚举项
                 # *items 列开始 (H列开始，索引7)
-                item_name = row[7] if len(row) > 7 else None
+                item_name = self._cell(row, 7, None)
                 if item_name:
                     current_enum["items"].append({
                         "name": item_name,
-                        "alias": row[8] if len(row) > 8 else "",
-                        "value": row[9] if len(row) > 9 else None,
-                        "comment": row[10] if len(row) > 10 else ""
+                        "alias": self._cell(row, 8),
+                        "value": self._cell(row, 9, None),
+                        "comment": self._cell(row, 10)
                     })
         
         if current_enum:
@@ -263,34 +299,34 @@ class LubanConfigHelper:
                     beans.append(current_bean)
                 current_bean = {
                     "full_name": full_name,
-                    "parent": row[2] if len(row) > 2 else "",
-                    "value_type": row[3] if len(row) > 3 else "",
-                    "alias": row[4] if len(row) > 4 else "",
-                    "sep": row[5] if len(row) > 5 else "",
-                    "comment": row[6] if len(row) > 6 else "",
-                    "group": row[8] if len(row) > 8 else "",
+                    "parent": self._cell(row, 2),
+                    "value_type": self._cell(row, 3),
+                    "sep": self._cell(row, 4),
+                    "alias": self._cell(row, 5),
+                    "comment": self._cell(row, 6),
+                    "group": self._cell(row, 8),
                     "fields": []
                 }
                 # 检查同一行是否有第一个字段
-                first_field_name = row[9] if len(row) > 9 else None
+                first_field_name = self._cell(row, 9, None)
                 if first_field_name:
                     current_bean["fields"].append({
                         "name": first_field_name,
-                        "alias": row[10] if len(row) > 10 else "",
-                        "type": row[11] if len(row) > 11 else "",
-                        "group": row[12] if len(row) > 12 else "",
-                        "comment": row[13] if len(row) > 13 else ""
+                        "alias": self._cell(row, 10),
+                        "type": self._cell(row, 11),
+                        "group": self._cell(row, 12),
+                        "comment": self._cell(row, 13)
                     })
             elif current_bean:  # 字段行
                 # *fields 列开始 (I列开始，索引9)
-                field_name = row[9] if len(row) > 9 else None
+                field_name = self._cell(row, 9, None)
                 if field_name:
                     current_bean["fields"].append({
                         "name": field_name,
-                        "alias": row[10] if len(row) > 10 else "",
-                        "type": row[11] if len(row) > 11 else "",
-                        "group": row[12] if len(row) > 12 else "",
-                        "comment": row[13] if len(row) > 13 else ""
+                        "alias": self._cell(row, 10),
+                        "type": self._cell(row, 11),
+                        "group": self._cell(row, 12),
+                        "comment": self._cell(row, 13)
                     })
         
         if current_bean:
@@ -308,29 +344,42 @@ class LubanConfigHelper:
         return None
     
     def add_bean(self, full_name: str, fields: List[Dict], parent: str = "",
-                 comment: str = "", alias: str = "") -> bool:
-        """新增 Bean"""
+                 comment: str = "", alias: str = "", value_type: int = 0,
+                 sep: str = "") -> bool:
+        """新增 Bean
+
+        Args:
+            full_name: Bean 全名
+            fields: 字段列表
+            parent: 父类名称
+            comment: 注释
+            alias: 别名
+            value_type: 是否为值类型（0=普通类，1=值类型/struct），用于 list<Bean> 中的 Bean 必须设为1
+            sep: 分隔符（用于 list 类型元素分隔）
+        """
         if not self.beans_file.exists():
             print(f"错误: 文件不存在 {self.beans_file}")
             return False
-        
+
         # 检查是否已存在
         existing = self.get_bean(full_name)
         if existing:
             print(f"错误: Bean {full_name} 已存在")
             return False
-        
+
         wb = openpyxl.load_workbook(self.beans_file)
         sheet = wb.active
-        
+
         # 找到最后一行
         last_row = sheet.max_row
-        
+
         # 添加 Bean 定义行
         row_num = last_row + 1
         sheet.cell(row=row_num, column=2, value=full_name)  # full_name
         sheet.cell(row=row_num, column=3, value=parent)     # parent
-        sheet.cell(row=row_num, column=5, value=alias)      # alias
+        sheet.cell(row=row_num, column=4, value=value_type) # valueType
+        sheet.cell(row=row_num, column=5, value=sep)        # sep
+        sheet.cell(row=row_num, column=6, value=alias)      # alias
         sheet.cell(row=row_num, column=7, value=comment)    # comment
         
         # 添加第一个字段
@@ -395,16 +444,17 @@ class LubanConfigHelper:
         print(f"✓ 已删除 Bean: {bean_name}")
         return True
     
-    def update_bean(self, bean_name: str, sep: str = None, comment: str = None, 
-                    alias: str = None, parent: str = None) -> bool:
+    def update_bean(self, bean_name: str, sep: str = None, comment: str = None,
+                    alias: str = None, parent: str = None, value_type: int = None) -> bool:
         """更新 Bean 属性
-        
+
         Args:
             bean_name: Bean 名称
             sep: 分隔符（用于 list 类型的元素分隔）
             comment: 注释
             alias: 别名
             parent: 父类
+            value_type: 是否为值类型（0=普通类，1=值类型/struct）
         """
         if not self.beans_file.exists():
             print(f"错误: 文件不存在 {self.beans_file}")
@@ -426,20 +476,23 @@ class LubanConfigHelper:
             wb.close()
             return False
         
-        # 更新属性（列索引：B=2 full_name, C=3 parent, E=5 alias, F=6 sep, G=7 comment）
+        # 更新属性（列索引：B=2 full_name, C=3 parent, D=4 valueType, E=5 sep, F=6 alias, G=7 comment）
         updated = []
         if sep is not None:
-            sheet.cell(row=target_row, column=6, value=sep)  # F列 = sep
+            sheet.cell(row=target_row, column=5, value=sep)  # E列 = sep
             updated.append(f"sep={sep}")
         if comment is not None:
             sheet.cell(row=target_row, column=7, value=comment)  # G列 = comment
             updated.append(f"comment={comment}")
         if alias is not None:
-            sheet.cell(row=target_row, column=5, value=alias)  # E列 = alias
+            sheet.cell(row=target_row, column=6, value=alias)  # F列 = alias
             updated.append(f"alias={alias}")
         if parent is not None:
             sheet.cell(row=target_row, column=3, value=parent)  # C列 = parent
             updated.append(f"parent={parent}")
+        if value_type is not None:
+            sheet.cell(row=target_row, column=4, value=value_type)  # D列 = valueType
+            updated.append(f"valueType={value_type}")
         
         if not updated:
             print("警告: 没有指定要更新的属性")
@@ -470,11 +523,11 @@ class LubanConfigHelper:
                 if full_name and isinstance(full_name, str):
                     tables.append({
                         "full_name": full_name,
-                        "value_type": row[2] if len(row) > 2 else "",  # C列
-                        "input": row[4] if len(row) > 4 else "",  # E列
-                        "index": row[5] if len(row) > 5 else "",  # F列
-                        "mode": row[6] if len(row) > 6 else "",  # G列
-                        "comment": row[8] if len(row) > 8 else "",  # I列
+                        "value_type": self._cell(row, 2),  # C列
+                        "input": self._cell(row, 4),  # E列
+                        "index": self._cell(row, 5),  # F列
+                        "mode": self._cell(row, 6),  # G列
+                        "comment": self._cell(row, 8),  # I列
                         "source": "__tables__.xlsx"
                     })
                     existing_names.add(full_name)
@@ -527,7 +580,7 @@ class LubanConfigHelper:
                     tables.append({
                         "full_name": full_name,
                         "value_type": value_type,
-                        "input": str(item.relative_to(self.data_dir)),
+                        "input": item.relative_to(self.data_dir).as_posix(),
                         "index": "",  # 自动从表头读取
                         "mode": "",
                         "comment": comment,
@@ -549,7 +602,7 @@ class LubanConfigHelper:
     
     # 用户偏好设置
     USER_PREFERENCES = {
-        "prefer_auto_import": True  # 默认使用自动导入格式
+        "prefer_auto_import": False  # 默认使用 __tables__.xlsx 正式注册，不使用 # 自动导入
     }
     
     def set_preference(self, key: str, value: Any) -> None:
@@ -577,11 +630,11 @@ class LubanConfigHelper:
             comment: 表注释
             index: 主键定义 (如 "id" 或 "id1+id2")
             groups: 分组列表 (如 ["c", "s"])
-            auto_import: 是否使用自动导入格式（None 时使用用户偏好）
+            auto_import: 是否使用自动导入格式（None 时使用用户偏好，默认 False 即在 __tables__.xlsx 注册）
             vertical: 是否使用纵表模式（适合单例表）
         """
-        # 决定是否使用自动导入格式
-        use_auto_import = auto_import if auto_import is not None else self.get_preference("prefer_auto_import", True)
+        # 决定是否使用自动导入格式（默认在 __tables__.xlsx 正式注册）
+        use_auto_import = auto_import if auto_import is not None else self.get_preference("prefer_auto_import", False)
         
         # 提取表名（去掉模块前缀）
         table_short_name = full_name.split(".")[-1] if "." in full_name else full_name
@@ -648,22 +701,39 @@ class LubanConfigHelper:
             wb.close()
         
         # 2. 创建数据表 Excel 文件（或添加 sheet）
-        if input_file:
-            excel_path = self.data_dir / input_file
-            # 确定默认 sheet 名
-            if not sheet_name:
-                if excel_path.exists():
-                    # 已有文件：默认使用表名作为 sheet 名
-                    sheet_name = full_name.split(".")[-1] if "." in full_name else full_name
-                else:
-                    # 新建文件：默认使用 Sheet1（Luban 兼容）
-                    sheet_name = "Sheet1"
-            self._create_table_excel(excel_path, fields, sheet_name, groups, vertical)
-        
+        # --input 缺省时自动推导路径
+        if not input_file:
+            # 从 full_name 推导: Map.TbItem → Map/item.xlsx
+            # 从 record_type 推导: Item → item.xlsx
+            if "." in full_name:
+                module = full_name.split(".")[0]
+                input_file = f"{module}/{record_type.lower()}.xlsx"
+            else:
+                input_file = f"{record_type.lower()}.xlsx"
+
+        excel_path = self.data_dir / input_file
+        # 确定默认 sheet 名
+        if not sheet_name:
+            if excel_path.exists():
+                # 已有文件：默认使用表名作为 sheet 名
+                sheet_name = full_name.split(".")[-1] if "." in full_name else full_name
+            else:
+                # 新建文件：默认使用 Sheet1（Luban 兼容）
+                sheet_name = "Sheet1"
+        self._create_table_excel(excel_path, fields, sheet_name, groups, vertical)
+
+        # 3. 自动 validate 创建的 xlsx
+        validate_result = self.validate_table(full_name)
+        if not validate_result["valid"]:
+            print(f"  ⚠ 创建后验证发现问题:")
+            for err in validate_result["errors"]:
+                print(f"    ✗ {err}")
+            for warn in validate_result.get("warnings", []):
+                print(f"    ⚠ {warn}")
+
         print(f"✓ 已添加表: {full_name}")
-        if input_file:
-            print(f"  数据文件: {excel_path}")
-            print(f"  Sheet: {sheet_name}")
+        print(f"  数据文件: {excel_path}")
+        print(f"  Sheet: {sheet_name}")
         if vertical:
             print(f"  模式: 纵表")
         return True
@@ -892,7 +962,7 @@ class LubanConfigHelper:
             full_name = row[1]
             if full_name == table_name or (full_name and full_name.endswith("." + table_name)):
                 target_row = i
-                target_input = row[3] if len(row) > 3 else None
+                target_input = self._cell(row, 4, None)  # E列 = input
                 break
         
         if not target_row:
@@ -947,16 +1017,16 @@ class LubanConfigHelper:
             return False
         
         # 更新属性
-        # 列索引：B=2 full_name, C=3 value, D=4 input, E=5 mode, F=6 comment
+        # 列索引：B=2 full_name, C=3 value, E=5 input, F=6 index, G=7 mode, I=9 comment
         updated = []
         if comment is not None:
-            sheet.cell(row=target_row, column=6, value=comment)
+            sheet.cell(row=target_row, column=9, value=comment)
             updated.append(f"comment={comment}")
         if input_file is not None:
-            sheet.cell(row=target_row, column=4, value=input_file)
+            sheet.cell(row=target_row, column=5, value=input_file)
             updated.append(f"input={input_file}")
         if mode is not None:
-            sheet.cell(row=target_row, column=5, value=mode)
+            sheet.cell(row=target_row, column=7, value=mode)
             updated.append(f"mode={mode}")
         if value_type is not None:
             sheet.cell(row=target_row, column=3, value=value_type)
@@ -975,49 +1045,88 @@ class LubanConfigHelper:
         return True
     
     # ==================== 字段操作 ====================
-    
+
+    def _resolve_input_path(self, input_val: str) -> Tuple[Path, Optional[str]]:
+        """解析 Luban input 字段为 (excel_path, sheet_name)。
+
+        Luban input 语法:
+          - 单文件: "Map/map.xlsx" → (data_dir/Map/map.xlsx, None)
+          - 多 sheet @ 语法: "战斗/技能基础@技能配置表.xlsx"
+            → (data_dir/战斗/技能配置表.xlsx, "技能基础")
+            即: @ 之前是 目录/sheet名，@ 之后是 文件名
+
+        Args:
+            input_val: __tables__.xlsx 中 input 列的值
+
+        Returns:
+            (Path, Optional[str]): (绝对路径, sheet名或None)
+        """
+        input_str = str(input_val).strip()
+        if "@" in input_str:
+            # Luban @ 语法: "目录/sheet名@文件名.xlsx"
+            # @ 之前 = 目录/sheet名, @ 之后 = 文件名
+            before_at, after_at = input_str.split("@", 1)
+            # before_at 的最后一段是 sheet 名，前面是目录
+            before_parts = before_at.rstrip("/").rsplit("/", 1)
+            if len(before_parts) == 2:
+                directory = before_parts[0]
+                sheet_name = before_parts[1]
+            else:
+                directory = ""
+                sheet_name = before_parts[0]
+            # after_at 是文件名
+            file_name = after_at.strip()
+            if directory:
+                excel_path = self.data_dir / directory / file_name
+            else:
+                excel_path = self.data_dir / file_name
+            return (excel_path, sheet_name)
+        else:
+            # 无 @ 语法: 直接作为相对路径
+            return (self.data_dir / input_str, None)
+
     def _get_table_excel_path(self, table_name: str, sheet_name: str = None) -> Optional[tuple]:
         """获取表对应的 Excel 文件路径和 sheet 名
-        
+
         Returns:
             (excel_path, sheet_name) 或 None
         """
         # 先尝试从 __tables__.xlsx 查找
         table = self.get_table(table_name)
-        
+
         if table:
             input_val = table.get("input", "")
             if not input_val or isinstance(input_val, bool):
                 # 尝试从 mode 字段获取
                 mode_str = table.get("mode", "")
                 if mode_str and isinstance(mode_str, str):
-                    excel_files = list(self.data_dir.glob(f"**/{mode_str}"))
-                    if excel_files:
-                        return (excel_files[0], mode_str)
+                    # mode 字段直接作为文件名查找
+                    resolved = self.data_dir / mode_str
+                    if resolved.exists():
+                        return (resolved, mode_str)
+                    # 尝试 glob 查找（mode 可能只是文件名部分）
+                    matches = list(self.data_dir.glob(f"**/{mode_str}"))
+                    if matches:
+                        return (matches[0], mode_str)
                 return None
-            
-            # 解析 input 字段（可能包含 @sheet 名）
-            if "@" in str(input_val):
-                file_part, sheet_part = str(input_val).split("@", 1)
-            else:
-                file_part = str(input_val)
-                sheet_part = None
-            
-            # 查找文件
-            excel_files = list(self.data_dir.glob("**/*.xlsx"))
-            for excel_file in excel_files:
-                if file_part in str(excel_file) or file_part == excel_file.name:
-                    # 确定 sheet 名
-                    if sheet_name:
-                        final_sheet = sheet_name
-                    elif sheet_part:
-                        final_sheet = sheet_part
-                    else:
-                        final_sheet = None  # 使用第一个 sheet
-                    return (excel_file, final_sheet)
-            
+
+            # 使用 _resolve_input_path 直接构建路径
+            excel_path, resolved_sheet = self._resolve_input_path(input_val)
+
+            if excel_path.exists():
+                # 确定 sheet 名优先级: 调用者指定 > input 解析 > None
+                final_sheet = sheet_name or resolved_sheet
+                return (excel_path, final_sheet)
+
+            # 文件不存在，回退到 glob 搜索（兼容旧格式或路径拼写差异）
+            file_name = excel_path.name
+            matches = list(self.data_dir.glob(f"**/{file_name}"))
+            if matches:
+                final_sheet = sheet_name or resolved_sheet
+                return (matches[0], final_sheet)
+
             return None
-        
+
         # 尝试从自动导入表查找
         # 提取表短名
         short_name = table_name.split(".")[-1] if "." in table_name else table_name
@@ -1026,7 +1135,7 @@ class LubanConfigHelper:
             record_type = short_name[2:]
         else:
             record_type = short_name
-        
+
         # 查找 #RecordType-*.xlsx 格式的文件
         for excel_file in self.data_dir.rglob(f"#*.xlsx"):
             file_name = excel_file.stem  # 去掉 .xlsx
@@ -1038,24 +1147,26 @@ class LubanConfigHelper:
                     file_record_type = name_part.split("-")[0]
                 else:
                     file_record_type = name_part
-                
+
                 if file_record_type == record_type:
                     return (excel_file, None)
-        
+
         return None
     
-    def list_fields(self, table_name: str, sheet_name: str = None) -> Optional[List[Dict[str, Any]]]:
-        """列出表的所有字段"""
+    def list_fields(self, table_name: str, sheet_name: str = None) -> List[Dict[str, Any]]:
+        """列出表的所有字段
+
+        数据文件缺失或解析失败时返回空列表，而非 None。
+        """
         result = self._get_table_excel_path(table_name, sheet_name)
         if not result:
-            print(f"错误: 未找到表 {table_name} 的数据文件")
-            return None
-        
+            return []
+
         excel_path, actual_sheet = result
         data = self._parse_excel_data(excel_path, actual_sheet)
         if data:
             return data.get("fields", [])
-        return None
+        return []
     
     def _infer_field_group(self, field_name: str, field_type: str) -> str:
         """根据字段名和类型推断默认分组
@@ -1550,6 +1661,131 @@ class LubanConfigHelper:
     
     # ==================== 数据行操作 ====================
     
+    def _parse_luban_sheet(self, sheet) -> LubanSheetStructure:
+        """统一解析 Luban xlsx 工作表结构
+
+        扫描标题行（##var/##type/##group/##），提取字段定义，
+        检测结构错误（缺失行、列不对齐、数据行 A 列非空等）。
+
+        Args:
+            sheet: openpyxl worksheet 对象
+
+        Returns:
+            LubanSheetStructure 标准化解析结果
+        """
+        result = LubanSheetStructure()
+
+        # Phase 1: 扫描标题行
+        var_row = None
+        type_row = None
+        group_row = None
+        comment_rows = []
+        last_header_row = 0
+
+        for i, row in enumerate(sheet.iter_rows(values_only=True), 1):
+            cell_a = row[0] if row else None
+            if cell_a and str(cell_a).startswith("##"):
+                if cell_a == "##var":
+                    if var_row is not None:
+                        result.format_warnings.append(f"第 {i} 行: 重复的 ##var 行（首次出现在第 {result.var_row_num} 行）")
+                    result.var_row_num = i
+                    var_row = list(row)
+                elif cell_a == "##type":
+                    result.type_row_num = i
+                    type_row = list(row)
+                elif cell_a == "##group":
+                    result.group_row_num = i
+                    group_row = list(row)
+                elif cell_a == "##":
+                    comment_rows.append(list(row))
+                    result.comment_row_nums.append(i)
+                else:
+                    # 未知 ## 标记（如 ##column 纵表）
+                    result.format_warnings.append(f"第 {i} 行: 未知标题标记 '{cell_a}'")
+                last_header_row = i
+            else:
+                # 第一个非 ## 行 = 数据起始
+                result.data_start_row = i
+                break
+
+        if result.data_start_row == 0:
+            result.data_start_row = last_header_row + 1
+
+        # Phase 2: 结构完整性检查
+        if result.var_row_num == 0:
+            result.format_errors.append("缺少 ##var 行（Luban 必需）")
+        if result.type_row_num is None:
+            result.format_errors.append("缺少 ##type 行（Luban 必需，字段类型定义）")
+        if result.group_row_num is None:
+            result.format_warnings.append("缺少 ##group 行（建议添加，Luban 分组策略可能需要）")
+        if not comment_rows:
+            result.format_warnings.append("缺少 ## 注释行（建议添加，提升可读性）")
+
+        # Phase 3: 列对齐检查
+        if var_row and type_row:
+            var_count = len([v for v in var_row[1:] if v])
+            type_count = len(type_row) - 1  # 减去 ##type 标记列
+            if var_count > type_count:
+                result.format_errors.append(
+                    f"##var 有 {var_count} 个字段，##type 只有 {type_count} 列，"
+                    f"缺少 {var_count - type_count} 个字段类型定义"
+                )
+
+        # Phase 4: 提取字段定义
+        if var_row and type_row:
+            for j in range(1, len(var_row)):
+                field_name = var_row[j] if j < len(var_row) else None
+                field_type = type_row[j] if j < len(type_row) else None
+
+                if field_name:
+                    # 检查字段类型是否为空
+                    if not field_type:
+                        result.format_errors.append(f"字段 '{field_name}' 缺少类型定义（##type 行第 {j+1} 列为空）")
+
+                    # 合并注释行
+                    comments = []
+                    for desc_row in comment_rows:
+                        if j < len(desc_row) and desc_row[j]:
+                            comments.append(str(desc_row[j]))
+
+                    # 提取分组
+                    field_group = None
+                    if group_row and j < len(group_row):
+                        field_group = group_row[j]
+
+                    result.fields.append({
+                        "index": j - 1,
+                        "name": field_name,
+                        "type": field_type or "",
+                        "comment": " ".join(comments) if comments else "",
+                        "group": field_group
+                    })
+
+        # Phase 5: 数据行 A 列检查
+        if result.data_start_row > 0:
+            for row in sheet.iter_rows(min_row=result.data_start_row, values_only=True):
+                if all(c is None for c in row):
+                    continue  # 跳过空行
+                if row[0] is not None:
+                    # A 列有值 — 可能是标签行(#tag)或格式错误
+                    val_a = str(row[0])
+                    if val_a.startswith("#") and not val_a.startswith("##"):
+                        # 数据标签行，合法
+                        pass
+                    else:
+                        result.format_errors.append(
+                            f"数据行 A 列应为空，实际值为 '{val_a}'"
+                            f"（Luban 要求字段值从 B 列开始）"
+                        )
+                        break  # 只报第一个
+
+        # 保存原始行数据供后续使用
+        result.var_row = var_row
+        result.type_row = type_row
+        result.group_row = group_row
+
+        return result
+
     def _get_data_start_row(self, sheet) -> int:
         """获取数据起始行号"""
         last_header_row = 4  # 默认头部4行（##var, ##type, ##, ##group）
@@ -1733,10 +1969,10 @@ class LubanConfigHelper:
             if row[0] == field_name:
                 result = {
                     "name": row[0],
-                    "type": row[1] if len(row) > 1 else None,
-                    "comment": row[2] if len(row) > 2 else None,
-                    "group": row[3] if len(row) > 3 else None,
-                    "value": row[4] if len(row) > 4 else None
+                    "type": self._cell(row, 1, None),
+                    "comment": self._cell(row, 2, None),
+                    "group": self._cell(row, 3, None),
+                    "value": self._cell(row, 4, None)
                 }
                 wb.close()
                 return result
@@ -2231,12 +2467,12 @@ class LubanConfigHelper:
     # ==================== 验证功能 ====================
     
     def validate_table(self, table_name: str, sheet_name: str = None) -> Dict[str, Any]:
-        """验证表数据
-        
+        """验证表数据（基于 _parse_luban_sheet 统一解析器）
+
         Args:
             table_name: 表名称
             sheet_name: Sheet名
-            
+
         Returns:
             验证结果 {"valid": bool, "errors": [], "warnings": []}
         """
@@ -2245,19 +2481,19 @@ class LubanConfigHelper:
             "errors": [],
             "warnings": []
         }
-        
+
         # 检查表是否存在
         result_path = self._get_table_excel_path(table_name, sheet_name)
         if not result_path:
             result["valid"] = False
             result["errors"].append(f"表 {table_name} 不存在或没有对应的数据文件")
             return result
-        
+
         excel_path, actual_sheet = result_path
-        
+
         try:
             wb = openpyxl.load_workbook(excel_path)
-            
+
             if actual_sheet:
                 if actual_sheet not in wb.sheetnames:
                     result["valid"] = False
@@ -2267,60 +2503,47 @@ class LubanConfigHelper:
                 sheet = wb[actual_sheet]
             else:
                 sheet = wb.active
-            
-            # 检查 ##var 行
-            var_row = list(sheet.iter_rows(min_row=1, max_row=1, values_only=True))[0]
-            if var_row[0] != "##var":
-                result["warnings"].append("第一行第一列应为 ##var")
-            
-            # 检查 ##type 行
-            type_row = list(sheet.iter_rows(min_row=2, max_row=2, values_only=True))[0]
-            if type_row[0] != "##type":
-                result["warnings"].append("第二行第一列应为 ##type")
-            
-            # 获取字段信息
-            fields = []
-            for i, (name, type_val) in enumerate(zip(var_row[1:], type_row[1:])):
-                if name and not str(name).startswith("##"):
-                    fields.append({
-                        "index": i,
-                        "name": name,
-                        "type": type_val or ""
-                    })
-            
-            if not fields:
+
+            # 使用统一解析器
+            structure = self._parse_luban_sheet(sheet)
+
+            # 将结构错误/警告合并到结果
+            result["errors"].extend(structure.format_errors)
+            result["warnings"].extend(structure.format_warnings)
+
+            # 字段级检查
+            if not structure.fields:
                 result["warnings"].append("表没有定义字段")
-            
-            # 检查数据行
-            data_start = self._get_data_start_row(sheet)
-            row_idx = 0
-            for row in sheet.iter_rows(min_row=data_start, values_only=True):
-                if all(c is None for c in row[1:len(fields)+1]):
-                    continue
-                
-                for field in fields:
-                    col_idx = field["index"] + 1
-                    if col_idx < len(row):
-                        value = row[col_idx]
-                        field_type = field["type"]
-                        
-                        # 简单类型验证
-                        if value is not None:
-                            error = self._validate_value(value, field_type, field["name"], row_idx)
-                            if error:
-                                result["errors"].append(error)
-                
-                row_idx += 1
-            
+
+            # 数据行值类型校验
+            if structure.data_start_row > 0 and structure.fields:
+                row_idx = 0
+                for row in sheet.iter_rows(min_row=structure.data_start_row, values_only=True):
+                    if all(c is None for c in row[1:len(structure.fields)+1]):
+                        continue
+
+                    for field in structure.fields:
+                        col_idx = field["index"] + 1
+                        if col_idx < len(row):
+                            value = row[col_idx]
+                            field_type = field["type"]
+
+                            if value is not None:
+                                error = self._validate_value(value, field_type, field["name"], row_idx)
+                                if error:
+                                    result["errors"].append(error)
+
+                    row_idx += 1
+
             wb.close()
-            
+
         except Exception as e:
             result["valid"] = False
             result["errors"].append(f"读取表失败: {e}")
-        
+
         if result["errors"]:
             result["valid"] = False
-        
+
         return result
     
     def _validate_value(self, value: Any, field_type: str, field_name: str, row_idx: int) -> Optional[str]:
@@ -2383,13 +2606,29 @@ class LubanConfigHelper:
     
     def gen(self, output_dir: str = None, luban_cmd: str = "dotnet run --project Luban.CLI") -> bool:
         """调用 Luban CLI 生成代码
-        
+
         Args:
             output_dir: 输出目录
             luban_cmd: Luban CLI 命令
         """
         import subprocess
         import shutil
+
+        # Pre-validation: 检查所有表的数据文件格式
+        validate_result = self.validate_all()
+        format_errors = []
+        for detail in validate_result["details"]:
+            # 只关注 format_errors（结构错误），不关注值类型错误
+            for err in detail.get("errors", []):
+                if any(kw in err for kw in ["缺少", "##type", "##var", "A 列", "类型定义"]):
+                    format_errors.append(f"  {detail['table']}: {err}")
+
+        if format_errors:
+            print("✗ 数据文件格式检查失败，请先修复以下错误：")
+            for err in format_errors:
+                print(err)
+            print("\n提示: 使用 'validate' 命令查看完整错误列表")
+            return False
         
         # 检查 Luban.CLI 是否存在
         luban_cli_path = self.data_dir.parent / "Luban.CLI"
@@ -2477,12 +2716,16 @@ class LubanConfigHelper:
                 for ref in refs:
                     if ref in index:
                         index[ref].append(f"{bean_name}.{field['name']}")
-        
-        # 索引表
+
+        # 索引表 — 优先通过 value_type 关联到已索引的 Bean，避免解析数据文件
         tables = self.list_tables()
         for table in tables:
             table_name = table["full_name"]
-            # 获取表字段
+            value_type = table.get("value_type", "")
+            if value_type and value_type in index:
+                # 表的记录类型已通过 Bean 索引，无需重复解析数据文件
+                continue
+            # value_type 未在 Bean 中注册（如自动推导类型），尝试解析数据文件
             fields = self.list_fields(table_name)
             for field in fields:
                 field_type = field.get("type", "")
@@ -2496,7 +2739,7 @@ class LubanConfigHelper:
     def _extract_type_refs(self, type_str: str) -> List[str]:
         """从类型字符串中提取引用的类型名"""
         refs = []
-        
+
         # 移除容器类型
         type_str = type_str.strip()
         
@@ -2693,20 +2936,15 @@ class LubanConfigHelper:
         if not input_file:
             input_file = f"{table_name.lower()}.xlsx"
         
-        # 构建字段定义
-        fields_str = ",".join([
-            f"{f['name']}:{f['type']}:{f['comment']}:{f['group']}"
-            for f in template["fields"]
-        ])
-        
         # 调用 add_table
         print(f"从模板 '{template_name}' 创建表 {full_name}")
         return self.add_table(
-            name=full_name,
-            fields=fields_str,
+            full_name=full_name,
+            fields=template["fields"],
             input_file=input_file,
             comment=template["name"],
-            index=template["fields"][0]["name"]  # 第一个字段作为主键
+            index=template["fields"][0]["name"],  # 第一个字段作为主键
+            auto_import=False
         )
     
     # ==================== 数据迁移 ====================
@@ -2767,7 +3005,7 @@ class LubanConfigHelper:
                         # 更新 input 字段
                         wb = openpyxl.load_workbook(self.tables_file)
                         sheet = wb.active
-                        sheet.cell(row=target_row, column=4, value=new_input)
+                        sheet.cell(row=target_row, column=5, value=new_input)  # E列 = input
                         wb.save(self.tables_file)
                         wb.close()
                         
@@ -2825,7 +3063,7 @@ class LubanConfigHelper:
                 value = sheet.cell(row=source_row, column=col).value
                 if col == 2:  # 表名列
                     value = target_name
-                if col == 4 and copy_data:  # input 列
+                if col == 5 and copy_data:  # E列 = input 列
                     value = target_input if source_input else value
                 sheet.cell(row=new_row, column=col, value=value)
             
@@ -2973,7 +3211,7 @@ class LubanConfigHelper:
                     full_value_type = value_type
                 
                 auto_tables.append({
-                    "file": str(file_path.relative_to(self.data_dir)),
+                    "file": file_path.relative_to(self.data_dir).as_posix(),
                     "full_name": full_name,
                     "value_type": full_value_type,
                     "comment": comment,
@@ -3064,8 +3302,8 @@ class LubanConfigHelper:
             if row[0]:  # name
                 aliases.append({
                     "name": row[0],
-                    "value": row[1] if len(row) > 1 else "",
-                    "comment": row[2] if len(row) > 2 else ""
+                    "value": self._cell(row, 1),
+                    "comment": self._cell(row, 2)
                 })
         
         wb.close()
@@ -3987,7 +4225,7 @@ class LubanConfigHelper:
         excel_files = list(self.data_dir.glob("**/*.xlsx"))
         
         for excel_file in excel_files:
-            if file_part in str(excel_file) or file_part == excel_file.name:
+            if file_part in excel_file.as_posix() or file_part == excel_file.name:
                 try:
                     return self._parse_excel_data(excel_file)
                 except Exception as e:
@@ -4042,7 +4280,10 @@ class LubanConfigHelper:
             for j in range(1, len(var_row)):
                 field_name = var_row[j] if j < len(var_row) else None
                 field_type = type_row[j] if j < len(type_row) else None
-                
+                # 规范化: openpyxl 空单元格返回 None
+                if field_type is None:
+                    field_type = ""
+
                 if field_name:
                     # 合并所有描述行的注释
                     comments = []
@@ -4116,6 +4357,44 @@ class LubanConfigHelper:
         return True
 
 
+def _parse_fields_arg(fields_str: str) -> list:
+    """解析字段定义字符串，支持两种格式:
+    1. JSON 数组: [{"name":"Id","type":"int","comment":"ID"}, ...]
+    2. CSV 简写: name1:type1:comment1,name2:type2:comment2
+
+    自动检测: 以 '[' 开头按 JSON 解析，否则按 CSV 解析。
+    """
+    fields_str = fields_str.strip()
+    if not fields_str:
+        return []
+
+    # JSON 格式检测
+    if fields_str.startswith("["):
+        try:
+            fields = json.loads(fields_str)
+            # 验证每个字段至少有 name
+            for f in fields:
+                if not isinstance(f, dict) or "name" not in f:
+                    raise ValueError(f"字段缺少 name: {f}")
+            return fields
+        except json.JSONDecodeError as e:
+            print(f"错误: JSON 解析失败: {e}")
+            return []
+
+    # CSV 简写格式: name:type:comment,name:type:comment
+    fields = []
+    for field_str in fields_str.split(","):
+        parts = field_str.split(":")
+        if not parts[0].strip():
+            continue
+        fields.append({
+            "name": parts[0].strip(),
+            "type": parts[1].strip() if len(parts) > 1 else "",
+            "comment": parts[2].strip() if len(parts) > 2 else ""
+        })
+    return fields
+
+
 def main():
     parser = argparse.ArgumentParser(description="luban_skill - Luban 配置编辑器辅助脚本")
     parser.add_argument("--data-dir", default="DataTables/Datas", help="数据目录路径")
@@ -4128,19 +4407,19 @@ def main():
     
     enum_list = enum_subparsers.add_parser("list", help="列出所有枚举")
     enum_get = enum_subparsers.add_parser("get", help="获取枚举详情")
-    enum_get.add_argument("name", help="枚举名称")
+    enum_get.add_argument("name", metavar="NAME", help="枚举名称")
     enum_add = enum_subparsers.add_parser("add", help="新增枚举")
-    enum_add.add_argument("name", help="枚举全名 (如 test.EWeaponType)")
+    enum_add.add_argument("name", metavar="NAME", help="枚举全名 (如 test.EWeaponType)")
     enum_add.add_argument("--values", required=True, help="枚举值，格式: name1=value1:alias1,name2=value2:alias2")
     enum_add.add_argument("--comment", default="", help="枚举注释")
     enum_add.add_argument("--flags", action="store_true", help="是否为标志枚举")
     enum_delete = enum_subparsers.add_parser("delete", help="删除枚举")
-    enum_delete.add_argument("name", help="枚举名称")
+    enum_delete.add_argument("name", metavar="NAME", help="枚举名称")
     enum_delete.add_argument("--force", action="store_true", help="强制删除，忽略引用检查")
     
     # 更新枚举命令
     enum_update = enum_subparsers.add_parser("update", help="更新枚举属性")
-    enum_update.add_argument("name", help="枚举名称")
+    enum_update.add_argument("name", metavar="NAME", help="枚举名称")
     enum_update.add_argument("--comment", default=None, help="注释")
     enum_update.add_argument("--flags", default=None, action="store_true", help="是否为标志枚举")
     
@@ -4150,34 +4429,38 @@ def main():
     
     bean_list = bean_subparsers.add_parser("list", help="列出所有 Bean")
     bean_get = bean_subparsers.add_parser("get", help="获取 Bean 详情")
-    bean_get.add_argument("name", help="Bean 名称")
+    bean_get.add_argument("name", metavar="NAME", help="Bean 名称")
     bean_add = bean_subparsers.add_parser("add", help="新增 Bean")
-    bean_add.add_argument("name", help="Bean 全名")
-    bean_add.add_argument("--fields", required=True, help="字段定义，格式: name1:type1:comment1,name2:type2:comment2")
+    bean_add.add_argument("name", metavar="NAME", help="Bean 全名")
+    bean_add.add_argument("--fields", default="", help="字段定义，格式: name1:type1:comment1,name2:type2:comment2 或 JSON 数组")
+    bean_add.add_argument("--file", default="", help="从 JSON 文件读取字段定义")
     bean_add.add_argument("--parent", default="", help="父类名称")
     bean_add.add_argument("--comment", default="", help="Bean 注释")
+    bean_add.add_argument("--value-type", type=int, default=0, dest="value_type", help="是否为值类型（0=普通类，1=值类型/struct），用于 list<Bean> 中的 Bean 必须设为1")
+    bean_add.add_argument("--sep", default="", help="分隔符（用于 list 类型元素分隔）")
     bean_delete = bean_subparsers.add_parser("delete", help="删除 Bean")
-    bean_delete.add_argument("name", help="Bean 名称")
+    bean_delete.add_argument("name", metavar="NAME", help="Bean 名称")
     bean_delete.add_argument("--force", action="store_true", help="强制删除，忽略引用检查")
     
     # 更新 Bean 命令
     bean_update = bean_subparsers.add_parser("update", help="更新 Bean 属性")
-    bean_update.add_argument("name", help="Bean 名称")
+    bean_update.add_argument("name", metavar="NAME", help="Bean 名称")
     bean_update.add_argument("--sep", default=None, help="分隔符（用于 list 类型元素分隔，如 '|' 或 '#'")
     bean_update.add_argument("--comment", default=None, help="注释")
     bean_update.add_argument("--alias", default=None, help="别名")
     bean_update.add_argument("--parent", default=None, help="父类名称")
+    bean_update.add_argument("--value-type", type=int, default=None, dest="value_type", help="是否为值类型（0=普通类，1=值类型/struct）")
     
     # 表命令
     table_parser = subparsers.add_parser("table", help="表操作")
     table_subparsers = table_parser.add_subparsers(dest="table_command")
     table_list = table_subparsers.add_parser("list", help="列出所有表")
     table_get = table_subparsers.add_parser("get", help="获取表数据")
-    table_get.add_argument("name", help="表名称")
+    table_get.add_argument("name", metavar="NAME", help="表名称")
     
     # 新增表命令
     table_add = table_subparsers.add_parser("add", help="新增配置表")
-    table_add.add_argument("name", help="表全名 (如 test.TbItem)")
+    table_add.add_argument("name", metavar="NAME", help="表全名 (如 test.TbItem)")
     table_add.add_argument("--fields", required=True, 
                           help="字段定义，格式: name1:type1:comment1:group1,name2:type2:comment2:group2")
     table_add.add_argument("--value-type", default="", help="值类型")
@@ -4187,17 +4470,17 @@ def main():
     table_add.add_argument("--comment", default="", help="表注释")
     table_add.add_argument("--index", default="", help="主键定义 (如 id 或 id1+id2)")
     table_add.add_argument("--groups", default="", help="分组列表 (如 c,s)，启用 ##group 行")
-    table_add.add_argument("--no-auto-import", action="store_true", help="不使用自动导入格式（传统方式）")
+    table_add.add_argument("--auto-import", action="store_true", help="使用 # 前缀自动导入格式（不推荐，默认在 __tables__.xlsx 正式注册）")
     table_add.add_argument("--vertical", action="store_true", help="使用纵表模式（适合单例表）")
     
     # 删除表命令
     table_delete = table_subparsers.add_parser("delete", help="删除配置表")
-    table_delete.add_argument("name", help="表名称")
+    table_delete.add_argument("name", metavar="NAME", help="表名称")
     table_delete.add_argument("--delete-data", action="store_true", help="同时删除数据文件")
     
     # 更新表命令
     table_update = table_subparsers.add_parser("update", help="更新表属性")
-    table_update.add_argument("name", help="表名称")
+    table_update.add_argument("name", metavar="NAME", help="表名称")
     table_update.add_argument("--comment", default=None, help="注释")
     table_update.add_argument("--input", default=None, help="输入文件名")
     table_update.add_argument("--mode", default=None, help="模式")
@@ -4208,18 +4491,18 @@ def main():
     
     # 迁移到自动导入格式命令
     table_migrate = table_subparsers.add_parser("migrate-auto", help="迁移表到自动导入格式")
-    table_migrate.add_argument("name", nargs="?", default=None, help="表名称（不指定则迁移所有）")
+    table_migrate.add_argument("name", metavar="NAME", nargs="?", default=None, help="表名称（不指定则迁移所有）")
     
     # 设置偏好命令
     pref_parser = subparsers.add_parser("pref", help="用户偏好设置")
     pref_subparsers = pref_parser.add_subparsers(dest="pref_command")
     
     pref_set = pref_subparsers.add_parser("set", help="设置偏好")
-    pref_set.add_argument("key", help="偏好键名")
-    pref_set.add_argument("value", help="偏好值")
+    pref_set.add_argument("key", metavar="KEY", help="偏好键名")
+    pref_set.add_argument("value", metavar="VALUE", help="偏好值")
     
     pref_get = pref_subparsers.add_parser("get", help="获取偏好")
-    pref_get.add_argument("key", help="偏好键名")
+    pref_get.add_argument("key", metavar="KEY", help="偏好键名")
     
     pref_list = pref_subparsers.add_parser("list", help="列出所有偏好")
     
@@ -4229,13 +4512,13 @@ def main():
     
     # 列出字段
     field_list = field_subparsers.add_parser("list", help="列出表的所有字段")
-    field_list.add_argument("table", help="表名称")
+    field_list.add_argument("table", metavar="TABLE", help="表名称")
     field_list.add_argument("--sheet", default="", help="Sheet名称（多 sheet 文件需要指定）")
     
     # 添加字段
     field_add = field_subparsers.add_parser("add", help="添加字段")
-    field_add.add_argument("table", help="表名称")
-    field_add.add_argument("name", help="字段名")
+    field_add.add_argument("table", metavar="TABLE", help="表名称")
+    field_add.add_argument("name", metavar="NAME", help="字段名")
     field_add.add_argument("--type", default="", help="字段类型")
     field_add.add_argument("--comment", default="", help="字段注释")
     field_add.add_argument("--group", default="", help="字段分组")
@@ -4244,8 +4527,8 @@ def main():
     
     # 修改字段
     field_update = field_subparsers.add_parser("update", help="修改字段")
-    field_update.add_argument("table", help="表名称")
-    field_update.add_argument("name", help="原字段名")
+    field_update.add_argument("table", metavar="TABLE", help="表名称")
+    field_update.add_argument("name", metavar="NAME", help="原字段名")
     field_update.add_argument("--new-name", default=None, help="新字段名")
     field_update.add_argument("--type", default=None, help="新类型")
     field_update.add_argument("--comment", default=None, help="新注释")
@@ -4254,21 +4537,21 @@ def main():
     
     # 删除字段
     field_delete = field_subparsers.add_parser("delete", help="删除字段（危险操作）")
-    field_delete.add_argument("table", help="表名称")
-    field_delete.add_argument("name", help="字段名")
+    field_delete.add_argument("table", metavar="TABLE", help="表名称")
+    field_delete.add_argument("name", metavar="NAME", help="字段名")
     field_delete.add_argument("--sheet", default="", help="Sheet名称（多 sheet 文件需要指定）")
     field_delete.add_argument("--force", action="store_true", help="强制删除，跳过确认")
     
     # 禁用字段
     field_disable = field_subparsers.add_parser("disable", help="禁用字段（注释列，不导出但保留数据）")
-    field_disable.add_argument("table", help="表名称")
-    field_disable.add_argument("name", help="字段名")
+    field_disable.add_argument("table", metavar="TABLE", help="表名称")
+    field_disable.add_argument("name", metavar="NAME", help="字段名")
     field_disable.add_argument("--sheet", default="", help="Sheet名称（多 sheet 文件需要指定）")
     
     # 启用字段
     field_enable = field_subparsers.add_parser("enable", help="启用字段（取消注释列）")
-    field_enable.add_argument("table", help="表名称")
-    field_enable.add_argument("name", help="字段名")
+    field_enable.add_argument("table", metavar="TABLE", help="表名称")
+    field_enable.add_argument("name", metavar="NAME", help="字段名")
     field_enable.add_argument("--sheet", default="", help="Sheet名称（多 sheet 文件需要指定）")
     
     # 数据行操作命令
@@ -4277,43 +4560,43 @@ def main():
     
     # 列出数据行
     row_list = row_subparsers.add_parser("list", help="列出数据行")
-    row_list.add_argument("table", help="表名称")
+    row_list.add_argument("table", metavar="TABLE", help="表名称")
     row_list.add_argument("--sheet", default="", help="Sheet名称")
     row_list.add_argument("--start", type=int, default=0, help="起始行索引（从0开始）")
     row_list.add_argument("--limit", type=int, default=100, help="返回行数限制")
     
     # 添加数据行
     row_add = row_subparsers.add_parser("add", help="添加数据行")
-    row_add.add_argument("table", help="表名称")
+    row_add.add_argument("table", metavar="TABLE", help="表名称")
     row_add.add_argument("--data", help="数据JSON格式，如 '{\"id\":1,\"name\":\"test\"}'")
     row_add.add_argument("--file", help="从JSON文件读取数据（推荐用于PowerShell）")
     row_add.add_argument("--sheet", default="", help="Sheet名称")
     
     # 更新数据行
     row_update = row_subparsers.add_parser("update", help="更新数据行")
-    row_update.add_argument("table", help="表名称")
-    row_update.add_argument("index", type=int, help="行索引（从0开始）")
+    row_update.add_argument("table", metavar="TABLE", help="表名称")
+    row_update.add_argument("index", metavar="INDEX", type=int, help="行索引（从0开始）")
     row_update.add_argument("--data", help="更新数据JSON格式")
     row_update.add_argument("--file", help="从JSON文件读取数据（推荐用于PowerShell）")
     row_update.add_argument("--sheet", default="", help="Sheet名称")
     
     # 删除数据行
     row_delete = row_subparsers.add_parser("delete", help="删除数据行")
-    row_delete.add_argument("table", help="表名称")
-    row_delete.add_argument("index", type=int, help="行索引（从0开始）")
+    row_delete.add_argument("table", metavar="TABLE", help="表名称")
+    row_delete.add_argument("index", metavar="INDEX", type=int, help="行索引（从0开始）")
     row_delete.add_argument("--sheet", default="", help="Sheet名称")
     row_delete.add_argument("--force", action="store_true", help="强制删除，跳过确认")
     
     # 查询单行（按字段值）
     row_get = row_subparsers.add_parser("get", help="按字段值查询数据行")
-    row_get.add_argument("table", help="表名称")
+    row_get.add_argument("table", metavar="TABLE", help="表名称")
     row_get.add_argument("--field", required=True, help="字段名")
     row_get.add_argument("--value", required=True, help="字段值")
     row_get.add_argument("--sheet", default="", help="Sheet名称")
     
     # 多条件查询
     row_query = row_subparsers.add_parser("query", help="按多条件查询数据行")
-    row_query.add_argument("table", help="表名称")
+    row_query.add_argument("table", metavar="TABLE", help="表名称")
     row_query.add_argument("--conditions", required=True, help="查询条件JSON，如 '{\"type\":\"Weapon\",\"quality\":5}'")
     row_query.add_argument("--sheet", default="", help="Sheet名称")
     row_query.add_argument("--limit", type=int, default=100, help="返回行数限制")
@@ -4324,31 +4607,31 @@ def main():
     
     # 批量添加字段
     batch_fields = batch_subparsers.add_parser("fields", help="批量添加字段")
-    batch_fields.add_argument("table", help="表名称")
+    batch_fields.add_argument("table", metavar="TABLE", help="表名称")
     batch_fields.add_argument("--data", required=True, help="字段JSON数组，如 '[{\"name\":\"f1\",\"type\":\"int\"}]'")
     batch_fields.add_argument("--sheet", default="", help="Sheet名称")
     
     # 批量添加数据行
     batch_rows = batch_subparsers.add_parser("rows", help="批量添加数据行")
-    batch_rows.add_argument("table", help="表名称")
+    batch_rows.add_argument("table", metavar="TABLE", help="表名称")
     batch_rows.add_argument("--data", required=True, help="数据行JSON数组")
     batch_rows.add_argument("--sheet", default="", help="Sheet名称")
     
     # 导入导出命令
     export_parser = subparsers.add_parser("export", help="导出表数据为JSON")
-    export_parser.add_argument("table", help="表名称")
+    export_parser.add_argument("table", metavar="TABLE", help="表名称")
     export_parser.add_argument("--output", default=None, help="输出文件路径（默认打印到控制台）")
     export_parser.add_argument("--sheet", default="", help="Sheet名称")
     
     import_parser = subparsers.add_parser("import", help="从JSON导入数据")
-    import_parser.add_argument("table", help="表名称")
-    import_parser.add_argument("file", help="输入JSON文件路径")
+    import_parser.add_argument("table", metavar="TABLE", help="表名称")
+    import_parser.add_argument("file", metavar="FILE", help="输入JSON文件路径")
     import_parser.add_argument("--sheet", default="", help="Sheet名称")
     import_parser.add_argument("--mode", default="append", choices=["append", "replace"], help="导入模式")
     
     # 验证命令
     validate_parser = subparsers.add_parser("validate", help="验证表数据")
-    validate_parser.add_argument("table", nargs="?", default=None, help="表名称（不指定则验证所有表）")
+    validate_parser.add_argument("table", metavar="TABLE", nargs="?", default=None, help="表名称（不指定则验证所有表）")
     validate_parser.add_argument("--sheet", default="", help="Sheet名称")
     validate_parser.add_argument("--all", action="store_true", help="验证所有表")
     
@@ -4359,7 +4642,7 @@ def main():
     
     # 引用检查命令
     ref_parser = subparsers.add_parser("ref", help="引用完整性检查")
-    ref_parser.add_argument("type", help="类型名称（枚举或Bean）")
+    ref_parser.add_argument("type", metavar="TYPE", help="类型名称（枚举或Bean）")
     
     # 模板命令
     template_parser = subparsers.add_parser("template", help="配置模板操作")
@@ -4367,26 +4650,26 @@ def main():
     
     template_list = template_subparsers.add_parser("list", help="列出所有模板")
     template_create = template_subparsers.add_parser("create", help="从模板创建表")
-    template_create.add_argument("template", help="模板名称")
-    template_create.add_argument("table", help="表名称（不含模块）")
+    template_create.add_argument("template", metavar="TEMPLATE", help="模板名称")
+    template_create.add_argument("table", metavar="TABLE", help="表名称（不含模块）")
     template_create.add_argument("--module", default="test", help="模块名")
     template_create.add_argument("--input", default=None, help="输入文件名")
     
     # 迁移命令
     rename_parser = subparsers.add_parser("rename", help="重命名表")
-    rename_parser.add_argument("old_name", help="原表名")
-    rename_parser.add_argument("new_name", help="新表名")
+    rename_parser.add_argument("old_name", metavar="OLD_NAME", help="原表名")
+    rename_parser.add_argument("new_name", metavar="NEW_NAME", help="新表名")
     rename_parser.add_argument("--migrate-data", action="store_true", help="迁移数据文件")
     
     copy_parser = subparsers.add_parser("copy", help="复制表")
-    copy_parser.add_argument("source", help="源表名")
-    copy_parser.add_argument("target", help="目标表名")
+    copy_parser.add_argument("source", metavar="SOURCE", help="源表名")
+    copy_parser.add_argument("target", metavar="TARGET", help="目标表名")
     copy_parser.add_argument("--copy-data", action="store_true", help="复制数据文件")
     
     # 差异对比命令
     diff_parser = subparsers.add_parser("diff", help="差异对比")
-    diff_parser.add_argument("table1", help="表1名称")
-    diff_parser.add_argument("table2", help="表2名称或JSON文件")
+    diff_parser.add_argument("table1", metavar="TABLE1", help="表1名称")
+    diff_parser.add_argument("table2", metavar="TABLE2", help="表2名称或JSON文件")
     diff_parser.add_argument("--json", action="store_true", help="table2 是 JSON 文件路径")
     
     # 自动导入表命令
@@ -4395,7 +4678,7 @@ def main():
     
     auto_list = auto_subparsers.add_parser("list", help="列出自动导入的表")
     auto_create = auto_subparsers.add_parser("create", help="创建自动导入表")
-    auto_create.add_argument("name", help="表名（如 #Item 或 #Item-道具表）")
+    auto_create.add_argument("name", metavar="NAME", help="表名（如 #Item 或 #Item-道具表）")
     auto_create.add_argument("--fields", default="", help="字段定义，格式 name:type:comment")
     
     # 常量别名命令
@@ -4404,31 +4687,31 @@ def main():
     
     alias_list = alias_subparsers.add_parser("list", help="列出所有常量别名")
     alias_add = alias_subparsers.add_parser("add", help="添加常量别名")
-    alias_add.add_argument("name", help="别名名")
-    alias_add.add_argument("value", help="别名值")
+    alias_add.add_argument("name", metavar="NAME", help="别名名")
+    alias_add.add_argument("value", metavar="VALUE", help="别名值")
     alias_add.add_argument("--comment", default="", help="注释")
     alias_delete = alias_subparsers.add_parser("delete", help="删除常量别名")
-    alias_delete.add_argument("name", help="别名名")
+    alias_delete.add_argument("name", metavar="NAME", help="别名名")
     alias_resolve = alias_subparsers.add_parser("resolve", help="解析常量别名")
-    alias_resolve.add_argument("name", help="别名名")
+    alias_resolve.add_argument("name", metavar="NAME", help="别名名")
     
     # 数据标签命令
     tag_parser = subparsers.add_parser("tag", help="数据标签操作")
     tag_subparsers = tag_parser.add_subparsers(dest="tag_command")
     
     tag_list = tag_subparsers.add_parser("list", help="列出表的数据标签")
-    tag_list.add_argument("table", help="表名称")
+    tag_list.add_argument("table", metavar="TABLE", help="表名称")
     tag_list.add_argument("--sheet", default="", help="Sheet名称")
     
     tag_add = tag_subparsers.add_parser("add", help="给数据行添加标签")
-    tag_add.add_argument("table", help="表名称")
-    tag_add.add_argument("index", type=int, help="行索引")
-    tag_add.add_argument("tag", help="标签名")
+    tag_add.add_argument("table", metavar="TABLE", help="表名称")
+    tag_add.add_argument("index", metavar="INDEX", type=int, help="行索引")
+    tag_add.add_argument("tag", metavar="TAG", help="标签名")
     tag_add.add_argument("--sheet", default="", help="Sheet名称")
     
     tag_remove = tag_subparsers.add_parser("remove", help="移除数据行标签")
-    tag_remove.add_argument("table", help="表名称")
-    tag_remove.add_argument("index", type=int, help="行索引")
+    tag_remove.add_argument("table", metavar="TABLE", help="表名称")
+    tag_remove.add_argument("index", metavar="INDEX", type=int, help="行索引")
     tag_remove.add_argument("--sheet", default="", help="Sheet名称")
     
     # 字段变体命令
@@ -4436,20 +4719,20 @@ def main():
     variant_subparsers = variant_parser.add_subparsers(dest="variant_command")
     
     variant_list = variant_subparsers.add_parser("list", help="列出字段变体")
-    variant_list.add_argument("table", help="表名称")
-    variant_list.add_argument("field", help="字段名")
+    variant_list.add_argument("table", metavar="TABLE", help="表名称")
+    variant_list.add_argument("field", metavar="FIELD", help="字段名")
     variant_list.add_argument("--sheet", default="", help="Sheet名称")
     
     variant_add = variant_subparsers.add_parser("add", help="添加字段变体")
-    variant_add.add_argument("table", help="表名称")
-    variant_add.add_argument("field", help="字段名")
-    variant_add.add_argument("variant", help="变体名（如 zh, en）")
+    variant_add.add_argument("table", metavar="TABLE", help="表名称")
+    variant_add.add_argument("field", metavar="FIELD", help="字段名")
+    variant_add.add_argument("variant", metavar="VARIANT", help="变体名（如 zh, en）")
     variant_add.add_argument("--sheet", default="", help="Sheet名称")
     
     # 多行结构命令
     multirow_parser = subparsers.add_parser("multirow", help="多行结构列表操作")
-    multirow_parser.add_argument("table", help="表名称")
-    multirow_parser.add_argument("field", help="字段名")
+    multirow_parser.add_argument("table", metavar="TABLE", help="表名称")
+    multirow_parser.add_argument("field", metavar="FIELD", help="字段名")
     multirow_parser.add_argument("--disable", action="store_true", help="禁用多行结构")
     multirow_parser.add_argument("--sheet", default="", help="Sheet名称")
     
@@ -4459,7 +4742,7 @@ def main():
 
     # type info - 查询单个类型详情
     type_info = type_subparsers.add_parser("info", help="查询类型详情")
-    type_info.add_argument("name", help="类型名，如 'int', 'list<int>', 'test.EQuality'")
+    type_info.add_argument("name", metavar="NAME", help="类型名，如 'int', 'list<int>', 'test.EQuality'")
 
     # type list - 列出所有可用类型
     type_list = type_subparsers.add_parser("list", help="列出所有可用类型")
@@ -4468,17 +4751,17 @@ def main():
 
     # type validate - 验证类型是否有效
     type_validate = type_subparsers.add_parser("validate", help="验证类型字符串是否有效")
-    type_validate.add_argument("name", help="类型名字符串")
+    type_validate.add_argument("name", metavar="NAME", help="类型名字符串")
 
     # type suggest - 根据字段名建议类型
     type_suggest = type_subparsers.add_parser("suggest", help="根据字段名建议类型")
-    type_suggest.add_argument("field_name", help="字段名，如 'item_id', 'name', 'quality'")
+    type_suggest.add_argument("field_name", metavar="FIELD_NAME", help="字段名，如 'item_id', 'name', 'quality'")
     type_suggest.add_argument("--context", choices=["item", "skill", "monster", "quest", "general"],
                              default="general", help="上下文类型")
 
     # type search - 搜索类型
     type_search = type_subparsers.add_parser("search", help="搜索类型")
-    type_search.add_argument("keyword", help="搜索关键词")
+    type_search.add_argument("keyword", metavar="KEYWORD", help="搜索关键词")
     type_search.add_argument("--category", choices=["enum", "bean", "all"],
                             default="all", help="搜索类别")
 
@@ -4546,16 +4829,17 @@ def main():
             else:
                 print(f"未找到 Bean: {args.name}")
         elif args.bean_command == "add":
-            # 解析字段
-            fields = []
-            for field_str in args.fields.split(","):
-                parts = field_str.split(":")
-                fields.append({
-                    "name": parts[0],
-                    "type": parts[1] if len(parts) > 1 else "",
-                    "comment": parts[2] if len(parts) > 2 else ""
-                })
-            helper.add_bean(args.name, fields, args.parent, args.comment)
+            # 解析字段: 支持 --fields (CSV或JSON) 或 --file (JSON文件)
+            fields_str = args.fields
+            if args.file:
+                with open(args.file, "r", encoding="utf-8") as f:
+                    fields_str = f.read().strip()
+            if not fields_str:
+                print("错误: 需要指定 --fields 或 --file")
+                return
+            fields = _parse_fields_arg(fields_str)
+            helper.add_bean(args.name, fields, args.parent, args.comment,
+                            value_type=args.value_type, sep=args.sep)
         elif args.bean_command == "delete":
             helper.delete_bean_safe(args.name, args.force)
         elif args.bean_command == "update":
@@ -4564,7 +4848,8 @@ def main():
                 sep=args.sep,
                 comment=args.comment,
                 alias=args.alias,
-                parent=args.parent
+                parent=args.parent,
+                value_type=args.value_type
             )
     
     # 表操作
@@ -4579,19 +4864,19 @@ def main():
             else:
                 print(f"未找到表：{args.name}")
         elif args.table_command == "add":
-            # 解析字段
+            # 解析字段: 支持 JSON 数组或 CSV 简写
+            raw_fields = _parse_fields_arg(args.fields)
             fields = []
-            for field_str in args.fields.split(","):
-                parts = field_str.split(":")
-                field_name = parts[0] if len(parts) > 0 else ""
-                field_type = parts[1] if len(parts) > 1 else ""
-                field_comment = parts[2] if len(parts) > 2 else ""
-                field_group = parts[3] if len(parts) > 3 else ""
-                
+            for f in raw_fields:
+                field_name = f.get("name", "")
+                field_type = f.get("type", "")
+                field_comment = f.get("comment", "")
+                field_group = f.get("group", "")
+
                 # 自动推断分组
                 if not field_group:
                     field_group = helper._infer_field_group(field_name, field_type)
-                
+
                 field = {
                     "name": field_name,
                     "type": field_type,
@@ -4604,7 +4889,7 @@ def main():
             groups = args.groups.split(",") if args.groups else None
             
             # 判断是否使用自动导入格式
-            auto_import = not args.no_auto_import if hasattr(args, 'no_auto_import') else None
+            auto_import = args.auto_import if hasattr(args, 'auto_import') else None
             vertical = args.vertical if hasattr(args, 'vertical') else False
             
             helper.add_table(

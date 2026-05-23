@@ -127,6 +127,23 @@ Schema 定义文件列表。
 | `groups` | string[] | 是 | 此目标包含的分组 |
 | `topModule` | string | 否 | 代码额外顶层命名空间 |
 
+**效果示例：**
+- `topModule=cfg` → 生成 `cfg.TbItem`、`cfg.Tables`
+- `topModule=GameConfig` → 生成 `GameConfig.TbItem`、`GameConfig.Tables`
+
+### xargs
+
+可选字段，格式为键值对数组。通常通过命令行 `-x` 传递，也可在 luban.conf 中预定义：
+
+```json
+"xargs": [
+    {"key1": "value1"},
+    {"key2": "value2"}
+]
+```
+
+多数项目使用命令行 `-x` 传递，luban.conf 中留空数组即可。
+
 ## 常用分组策略
 
 | 分组 | 用途 |
