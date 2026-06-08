@@ -101,16 +101,29 @@ namespace TEngine
         public void Callback()
         {
             _isExecute = true;
-            for (var i = 0; i < _listExist.Count; i++)
+            try
             {
-                var d = _listExist[i];
-                if (d is Action action)
+                for (var i = 0; i < _listExist.Count; i++)
                 {
-                    action();
+                    var d = _listExist[i];
+                    if (d is Action action)
+                    {
+                        try
+                        {
+                            action();
+                        }
+                        catch (Exception e)
+                        {
+                            Log.Error("Event handler exception. EventId: {0}, Error: {1}",
+                                RuntimeId.ToString(_eventType), e.Message);
+                        }
+                    }
                 }
             }
-
-            CheckModify();
+            finally
+            {
+                CheckModify();
+            }
         }
 
         /// <summary>
@@ -121,16 +134,29 @@ namespace TEngine
         public void Callback<TArg1>(TArg1 arg1)
         {
             _isExecute = true;
-            for (var i = 0; i < _listExist.Count; i++)
+            try
             {
-                var d = _listExist[i];
-                if (d is Action<TArg1> action)
+                for (var i = 0; i < _listExist.Count; i++)
                 {
-                    action(arg1);
+                    var d = _listExist[i];
+                    if (d is Action<TArg1> action)
+                    {
+                        try
+                        {
+                            action(arg1);
+                        }
+                        catch (Exception e)
+                        {
+                            Log.Error("Event handler exception. EventId: {0}, Error: {1}",
+                                RuntimeId.ToString(_eventType), e.Message);
+                        }
+                    }
                 }
             }
-
-            CheckModify();
+            finally
+            {
+                CheckModify();
+            }
         }
 
         /// <summary>
@@ -143,16 +169,29 @@ namespace TEngine
         public void Callback<TArg1, TArg2>(TArg1 arg1, TArg2 arg2)
         {
             _isExecute = true;
-            for (var i = 0; i < _listExist.Count; i++)
+            try
             {
-                var d = _listExist[i];
-                if (d is Action<TArg1, TArg2> action)
+                for (var i = 0; i < _listExist.Count; i++)
                 {
-                    action(arg1, arg2);
+                    var d = _listExist[i];
+                    if (d is Action<TArg1, TArg2> action)
+                    {
+                        try
+                        {
+                            action(arg1, arg2);
+                        }
+                        catch (Exception e)
+                        {
+                            Log.Error("Event handler exception. EventId: {0}, Error: {1}",
+                                RuntimeId.ToString(_eventType), e.Message);
+                        }
+                    }
                 }
             }
-
-            CheckModify();
+            finally
+            {
+                CheckModify();
+            }
         }
 
         /// <summary>
@@ -167,16 +206,29 @@ namespace TEngine
         public void Callback<TArg1, TArg2, TArg3>(TArg1 arg1, TArg2 arg2, TArg3 arg3)
         {
             _isExecute = true;
-            for (var i = 0; i < _listExist.Count; i++)
+            try
             {
-                var d = _listExist[i];
-                if (d is Action<TArg1, TArg2, TArg3> action)
+                for (var i = 0; i < _listExist.Count; i++)
                 {
-                    action(arg1, arg2, arg3);
+                    var d = _listExist[i];
+                    if (d is Action<TArg1, TArg2, TArg3> action)
+                    {
+                        try
+                        {
+                            action(arg1, arg2, arg3);
+                        }
+                        catch (Exception e)
+                        {
+                            Log.Error("Event handler exception. EventId: {0}, Error: {1}",
+                                RuntimeId.ToString(_eventType), e.Message);
+                        }
+                    }
                 }
             }
-
-            CheckModify();
+            finally
+            {
+                CheckModify();
+            }
         }
 
         /// <summary>
@@ -193,16 +245,29 @@ namespace TEngine
         public void Callback<TArg1, TArg2, TArg3, TArg4>(TArg1 arg1, TArg2 arg2, TArg3 arg3, TArg4 arg4)
         {
             _isExecute = true;
-            for (var i = 0; i < _listExist.Count; i++)
+            try
             {
-                var d = _listExist[i];
-                if (d is Action<TArg1, TArg2, TArg3, TArg4> action)
+                for (var i = 0; i < _listExist.Count; i++)
                 {
-                    action(arg1, arg2, arg3, arg4);
+                    var d = _listExist[i];
+                    if (d is Action<TArg1, TArg2, TArg3, TArg4> action)
+                    {
+                        try
+                        {
+                            action(arg1, arg2, arg3, arg4);
+                        }
+                        catch (Exception e)
+                        {
+                            Log.Error("Event handler exception. EventId: {0}, Error: {1}",
+                                RuntimeId.ToString(_eventType), e.Message);
+                        }
+                    }
                 }
             }
-
-            CheckModify();
+            finally
+            {
+                CheckModify();
+            }
         }
 
         /// <summary>
@@ -221,16 +286,29 @@ namespace TEngine
         public void Callback<TArg1, TArg2, TArg3, TArg4, TArg5>(TArg1 arg1, TArg2 arg2, TArg3 arg3, TArg4 arg4, TArg5 arg5)
         {
             _isExecute = true;
-            for (var i = 0; i < _listExist.Count; i++)
+            try
             {
-                var d = _listExist[i];
-                if (d is Action<TArg1, TArg2, TArg3, TArg4, TArg5> action)
+                for (var i = 0; i < _listExist.Count; i++)
                 {
-                    action(arg1, arg2, arg3, arg4, arg5);
+                    var d = _listExist[i];
+                    if (d is Action<TArg1, TArg2, TArg3, TArg4, TArg5> action)
+                    {
+                        try
+                        {
+                            action(arg1, arg2, arg3, arg4, arg5);
+                        }
+                        catch (Exception e)
+                        {
+                            Log.Error("Event handler exception. EventId: {0}, Error: {1}",
+                                RuntimeId.ToString(_eventType), e.Message);
+                        }
+                    }
                 }
             }
-
-            CheckModify();
+            finally
+            {
+                CheckModify();
+            }
         }
 
         /// <summary>
@@ -251,16 +329,29 @@ namespace TEngine
         public void Callback<TArg1, TArg2, TArg3, TArg4, TArg5, TArg6>(TArg1 arg1, TArg2 arg2, TArg3 arg3, TArg4 arg4, TArg5 arg5, TArg6 arg6)
         {
             _isExecute = true;
-            for (var i = 0; i < _listExist.Count; i++)
+            try
             {
-                var d = _listExist[i];
-                if (d is Action<TArg1, TArg2, TArg3, TArg4, TArg5, TArg6> action)
+                for (var i = 0; i < _listExist.Count; i++)
                 {
-                    action(arg1, arg2, arg3, arg4, arg5, arg6);
+                    var d = _listExist[i];
+                    if (d is Action<TArg1, TArg2, TArg3, TArg4, TArg5, TArg6> action)
+                    {
+                        try
+                        {
+                            action(arg1, arg2, arg3, arg4, arg5, arg6);
+                        }
+                        catch (Exception e)
+                        {
+                            Log.Error("Event handler exception. EventId: {0}, Error: {1}",
+                                RuntimeId.ToString(_eventType), e.Message);
+                        }
+                    }
                 }
             }
-
-            CheckModify();
+            finally
+            {
+                CheckModify();
+            }
         }
     }
 }
