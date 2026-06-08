@@ -375,8 +375,8 @@ namespace TEngine
                     return;
                 }
 
-                subScene.UnloadAsync();
-                subScene.UnloadAsync().Completed += @base =>
+                var unloadHandle = subScene.UnloadAsync();
+                unloadHandle.Completed += _ =>
                 {
                     _subScenes.Remove(location);
                     _handlingScene.Remove(location);
