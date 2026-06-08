@@ -76,10 +76,11 @@ namespace TEngine.Tests
             FlushScheduler();
             Assert.AreEqual("100", _goldText.Value, "首次设置应正确更新");
 
-            // 断开数据流（模拟 Dispose）
-            _gold.OnValueChanged = null;
-            _goldText.OnValueChanged = null;
+            // 模拟 DataContext Dispose：释放属性断开数据流
+            _gold.Dispose();
+            _goldText.Dispose();
 
+            // Dispose 后赋值不触发任何回调
             _gold.Value = 999;
             FlushScheduler();
 

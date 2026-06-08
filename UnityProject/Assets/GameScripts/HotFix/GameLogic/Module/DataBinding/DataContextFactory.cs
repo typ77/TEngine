@@ -9,7 +9,7 @@ namespace GameLogic.DataBinding
     /// 通过 DataContextAttribute 反射查找 View 对应的 DataContext 类型，
     /// 使用 Activator.CreateInstance 创建实例，并缓存工厂委托。
     /// </summary>
-    internal static class DataContextFactory
+    public static class DataContextFactory
     {
         private static readonly Dictionary<Type, Func<DataContext>> _factories = new();
 
