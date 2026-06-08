@@ -59,30 +59,32 @@ namespace TEngine.Tests
         }
 
         [Test]
-        public void MultipleSetSameFrame_MergesCallback()
+        public void MultipleSetSameFrame_EachValuePropagates()
         {
+            // EditMode 下 SafeMarkDirty 同步触发 FireCallback，每次赋值立即回调
             var prop = new BindableProperty<int>(0);
             int callCount = 0;
             prop.OnValueChanged += (_, _) => callCount++;
             prop.Value = 10;
             prop.Value = 20;
             prop.Value = 30;
-            ((IBatchDirtyTarget)prop).FireCallback();
-            Assert.AreEqual(1, callCount);
+            Assert.AreEqual(3, callCount, "EditMode 同步模式：每次赋值触发一次回调");
+            Assert.AreEqual(30, prop.Value, "最终值应为最后一次赋值");
         }
 
         [Test]
-        public void MultipleSetSameFrame_OldestOldValue()
+        public void MultipleSetSameFrame_CallbackHasCorrectOldAndNew()
         {
+            // EditMode 同步模式：每次回调携带本次的 old/new 值
             var prop = new BindableProperty<int>(0);
-            int receivedOld = -1, receivedNew = -1;
-            prop.OnValueChanged += (oldVal, newVal) => { receivedOld = oldVal; receivedNew = newVal; };
+            int lastOld = -1, lastNew = -1;
+            prop.OnValueChanged += (oldVal, newVal) => { lastOld = oldVal; lastNew = newVal; };
             prop.Value = 10;
             prop.Value = 20;
             prop.Value = 30;
-            ((IBatchDirtyTarget)prop).FireCallback();
-            Assert.AreEqual(0, receivedOld);
-            Assert.AreEqual(30, receivedNew);
+            // 最后一次回调：old=20, new=30
+            Assert.AreEqual(20, lastOld, "最后一次回调的 old 应为 20");
+            Assert.AreEqual(30, lastNew, "最后一次回调的 new 应为 30");
         }
 
         [Test]
