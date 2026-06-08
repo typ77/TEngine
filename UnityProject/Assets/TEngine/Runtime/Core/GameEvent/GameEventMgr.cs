@@ -10,19 +10,12 @@ namespace TEngine
     {
         private readonly List<int> _listEventTypes;
         private readonly List<Delegate> _listHandles;
-        private readonly bool _isInit = false;
 
         /// <summary>
         /// 游戏事件管理器构造函数。
         /// </summary>
         public GameEventMgr()
         {
-            if (_isInit)
-            {
-                return;
-            }
-
-            _isInit = true;
             _listEventTypes = new List<int>();
             _listHandles = new List<Delegate>();
         }
@@ -32,11 +25,6 @@ namespace TEngine
         /// </summary>
         public void Clear()
         {
-            if (!_isInit)
-            {
-                return;
-            }
-
             for (int i = 0; i < _listEventTypes.Count; ++i)
             {
                 var eventType = _listEventTypes[i];

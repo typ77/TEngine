@@ -329,18 +329,18 @@ namespace GameLogic
             {
                 if (isAsync)
                 {
-                    var uiInstance = await UIModule.Resource.LoadGameObjectAsync(location, parent: UIModule.UIRoot);
+                    var uiInstance = await UIModule.Instance.Resource.LoadGameObjectAsync(location, parent: UIModule.Instance.UIRoot);
                     Handle_Completed(uiInstance);
                 }
                 else
                 {
-                    var uiInstance = UIModule.Resource.LoadGameObject(location, parent: UIModule.UIRoot);
+                    var uiInstance = UIModule.Instance.Resource.LoadGameObject(location, parent: UIModule.Instance.UIRoot);
                     Handle_Completed(uiInstance);
                 }
             }
             else
             {
-                GameObject panel = Object.Instantiate(Resources.Load<GameObject>(location), UIModule.UIRoot);
+                GameObject panel = Object.Instantiate(Resources.Load<GameObject>(location), UIModule.Instance.UIRoot);
                 Handle_Completed(panel);
             }
         }
@@ -440,11 +440,12 @@ namespace GameLogic
 
             RemoveAllUIEvent();
 
-            for (int i = 0; i < ListChild.Count; i++)
+            var snapshot = ListChild.ToArray();
+            ListChild.Clear();
+            for (int i = 0; i < snapshot.Length; i++)
             {
-                var uiChild = ListChild[i];
-                uiChild.CallDestroy();
-                uiChild.OnDestroyWidget();
+                snapshot[i].CallDestroy();
+                snapshot[i].OnDestroyWidget();
             }
 
             // 注销回调函数

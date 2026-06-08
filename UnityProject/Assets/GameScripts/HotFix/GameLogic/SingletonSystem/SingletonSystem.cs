@@ -69,7 +69,7 @@ namespace GameLogic
         private static readonly List<IDrawGizmosSelected> _drawGizmosSelecteds = new List<IDrawGizmosSelected>();
 #endif
         
-        private static readonly Dictionary<string, GameObject> _gameObjects = new Dictionary<string, GameObject>();
+        private static readonly Dictionary<int, GameObject> _gameObjects = new Dictionary<int, GameObject>();
 
         public static void Retain(ISingleton singleton)
         {
@@ -84,7 +84,7 @@ namespace GameLogic
         {
             CheckInit();
 
-            if (_gameObjects.TryAdd(go.name, go))
+            if (_gameObjects.TryAdd(go.GetInstanceID(), go))
             {
                 if (Application.isPlaying)
                 {
@@ -137,9 +137,9 @@ namespace GameLogic
 
         public static void Release(GameObject go, object singleton)
         {
-            if (_gameObjects != null && _gameObjects.ContainsKey(go.name))
+            if (_gameObjects != null && _gameObjects.ContainsKey(go.GetInstanceID()))
             {
-                _gameObjects.Remove(go.name);
+                _gameObjects.Remove(go.GetInstanceID());
                 Object.Destroy(go);
                 ReleaseLifeCycle(singleton);
             }
@@ -247,22 +247,22 @@ namespace GameLogic
             Resources.UnloadUnusedAssets();
         }
 
-        public static GameObject GetGameObject(string name)
+        public static GameObject GetGameObject(int instanceId)
         {
             GameObject go = null;
             if (_gameObjects != null)
             {
-                _gameObjects.TryGetValue(name, out go);
+                _gameObjects.TryGetValue(instanceId, out go);
             }
 
             return go;
         }
 
-        internal static bool ContainsKey(string name)
+        internal static bool ContainsKey(int instanceId)
         {
             if (_gameObjects != null)
             {
-                return _gameObjects.ContainsKey(name);
+                return _gameObjects.ContainsKey(instanceId);
             }
 
             return false;

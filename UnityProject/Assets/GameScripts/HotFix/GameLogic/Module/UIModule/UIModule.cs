@@ -15,7 +15,7 @@ namespace GameLogic
     public sealed partial class UIModule : Singleton<UIModule>, IUpdate
     {
         // 核心字段
-        private static Transform _instanceRoot = null;          // UI根节点变换组件
+        private Transform _instanceRoot = null;          // UI根节点变换组件
         private bool _enableErrorLog = true;                    // 是否启用错误日志
         private Camera _uiCamera = null;                        // UI专用摄像机
         private readonly List<UIWindow> _uiStack = new List<UIWindow>(128); // 窗口堆栈
@@ -28,12 +28,12 @@ namespace GameLogic
         public const int WINDOW_SHOW_LAYER = 5; // UI
 
         // 资源加载接口
-        public static IUIResourceLoader Resource;
+        public IUIResourceLoader Resource;
         
         /// <summary>
         /// UI根节点访问属性
         /// </summary>
-        public static Transform UIRoot => _instanceRoot;
+        public Transform UIRoot => _instanceRoot;
 
         /// <summary>
         /// UI摄像机访问属性
@@ -121,7 +121,7 @@ namespace GameLogic
         /// <param name="safeRect">安全区域矩形（基于屏幕像素坐标）。</param>
         public static void ApplyScreenSafeRect(Rect safeRect)
         {
-            CanvasScaler scaler = UIRoot.GetComponentInParent<CanvasScaler>();
+            CanvasScaler scaler = Instance.UIRoot.GetComponentInParent<CanvasScaler>();
             if (scaler == null)
             {
                 Log.Error($"Not found {nameof(CanvasScaler)} !");
@@ -140,7 +140,7 @@ namespace GameLogic
             float offsetMaxY = scaler.referenceResolution.y - height - posY;
 
             // 注意：安全区坐标系的原点为左下角	
-            var rectTrans = UIRoot.transform as RectTransform;
+            var rectTrans = Instance.UIRoot.transform as RectTransform;
             if (rectTrans != null)
             {
                 rectTrans.offsetMin = new Vector2(posX, posY); //锚框状态下的屏幕左下角偏移向量
@@ -435,7 +435,7 @@ namespace GameLogic
         /// </summary>
         public void CloseAll(bool isShutDown = false)
         {
-            for (int i = 0; i < _uiStack.Count; i++)
+            for (int i = _uiStack.Count - 1; i >= 0; i--)
             {
                 UIWindow window = _uiStack[i];
                 window.InternalDestroy(isShutDown);

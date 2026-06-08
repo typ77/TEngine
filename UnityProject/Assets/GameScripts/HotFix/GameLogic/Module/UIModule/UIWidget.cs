@@ -163,7 +163,7 @@ namespace GameLogic
         /// <returns></returns>
         public bool CreateByPath(string resPath, UIBase parentUI, Transform parentTrans = null, bool visible = true)
         {
-            GameObject goInst = UIModule.Resource.LoadGameObject(resPath, parent: parentTrans);
+            GameObject goInst = UIModule.Instance.Resource.LoadGameObject(resPath, parent: parentTrans);
             if (goInst == null)
             {
                 return false;

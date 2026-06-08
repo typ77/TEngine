@@ -403,7 +403,7 @@ namespace GameLogic
         /// <returns>UIWidget实例。</returns>
         public T CreateWidgetByPath<T>(Transform parentTrans, string assetLocation, bool visible = true) where T : UIWidget, new()
         {
-            GameObject goInst = UIModule.Resource.LoadGameObject(assetLocation, parent: parentTrans);
+            GameObject goInst = UIModule.Instance.Resource.LoadGameObject(assetLocation, parent: parentTrans);
             return CreateWidget<T>(goInst, visible);
         }
 
@@ -417,7 +417,7 @@ namespace GameLogic
         /// <returns>UIWidget实例。</returns>
         public async UniTask<T> CreateWidgetByPathAsync<T>(Transform parentTrans, string assetLocation, bool visible = true) where T : UIWidget, new()
         {
-            GameObject goInst = await UIModule.Resource.LoadGameObjectAsync(assetLocation, parentTrans, gameObject.GetCancellationTokenOnDestroy());
+            GameObject goInst = await UIModule.Instance.Resource.LoadGameObjectAsync(assetLocation, parentTrans, gameObject.GetCancellationTokenOnDestroy());
             return CreateWidget<T>(goInst, visible);
         }
 
