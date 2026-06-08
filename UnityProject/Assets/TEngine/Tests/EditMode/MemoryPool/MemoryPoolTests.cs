@@ -49,7 +49,7 @@ namespace TEngine.Tests
         {
             var obj = MemoryPool.Acquire<TestMemory>();
             MemoryPool.Release(obj);
-            Assert.Throws<Exception>(() => MemoryPool.Release(obj));
+            Assert.Throws<GameFrameworkException>(() => MemoryPool.Release(obj));
         }
 
         [Test]
