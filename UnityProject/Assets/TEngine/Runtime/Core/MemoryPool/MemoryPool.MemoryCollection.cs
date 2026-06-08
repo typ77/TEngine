@@ -47,7 +47,7 @@ namespace TEngine
             {
                 if (typeof(T) != _memoryType)
                 {
-                    throw new Exception("Type is invalid.");
+                    throw new GameFrameworkException("Type is invalid.");
                 }
 
                 _usingMemoryCount++;
@@ -87,21 +87,20 @@ namespace TEngine
                 {
                     if (_enableStrictCheck && _memories.Contains(memory))
                     {
-                        throw new Exception("The memory has been released.");
+                        throw new GameFrameworkException("The memory has been released.");
                     }
 
                     _memories.Enqueue(memory);
+                    _releaseMemoryCount++;
+                    _usingMemoryCount--;
                 }
-
-                _releaseMemoryCount++;
-                _usingMemoryCount--;
             }
 
             public void Add<T>(int count) where T : class, IMemory, new()
             {
                 if (typeof(T) != _memoryType)
                 {
-                    throw new Exception("Type is invalid.");
+                    throw new GameFrameworkException("Type is invalid.");
                 }
 
                 lock (_memories)

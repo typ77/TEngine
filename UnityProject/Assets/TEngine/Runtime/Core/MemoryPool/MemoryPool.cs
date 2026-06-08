@@ -92,7 +92,7 @@ namespace TEngine
         {
             if (memory == null)
             {
-                throw new Exception("Memory is invalid.");
+                throw new GameFrameworkException("Memory is invalid.");
             }
 
             Type memoryType = memory.GetType();
@@ -170,17 +170,17 @@ namespace TEngine
 
             if (memoryType == null)
             {
-                throw new Exception("Memory type is invalid.");
+                throw new GameFrameworkException("Memory type is invalid.");
             }
 
             if (!memoryType.IsClass || memoryType.IsAbstract)
             {
-                throw new Exception("Memory type is not a non-abstract class type.");
+                throw new GameFrameworkException("Memory type is not a non-abstract class type.");
             }
 
             if (!typeof(IMemory).IsAssignableFrom(memoryType))
             {
-                throw new Exception(string.Format("Memory type '{0}' is invalid.", memoryType.FullName));
+                throw new GameFrameworkException(string.Format("Memory type '{0}' is invalid.", memoryType.FullName));
             }
         }
 
@@ -188,7 +188,7 @@ namespace TEngine
         {
             if (memoryType == null)
             {
-                throw new Exception("MemoryType is invalid.");
+                throw new GameFrameworkException("MemoryType is invalid.");
             }
 
             MemoryCollection memoryCollection = null;
