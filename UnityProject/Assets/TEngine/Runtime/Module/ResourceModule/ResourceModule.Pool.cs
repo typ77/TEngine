@@ -46,10 +46,19 @@
         /// <param name="asset">要卸载的资源。</param>
         public void UnloadAsset(object asset)
         {
-            if (_assetPool != null)
+            if (_assetPool == null)
             {
-                _assetPool.Unspawn(asset);
+                Log.Warning("ResourceModule: UnloadAsset called before object pool is initialized.");
+                return;
             }
+
+            if (asset == null)
+            {
+                Log.Warning("ResourceModule: UnloadAsset called with null asset.");
+                return;
+            }
+
+            _assetPool.Unspawn(asset);
         }
         
         /// <summary>
