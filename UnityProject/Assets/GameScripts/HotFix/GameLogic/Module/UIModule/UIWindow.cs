@@ -226,6 +226,11 @@ namespace GameLogic
         /// 是否加载完毕。
         /// </summary>
         internal bool IsLoadDone = false;
+
+        /// <summary>
+        /// 加载是否失败。
+        /// </summary>
+        internal bool LoadFailed { get; private set; } = false;
         
         /// <summary>
         /// UI是否销毁。
@@ -470,6 +475,10 @@ namespace GameLogic
         {
             if (panel == null)
             {
+                Log.Error("UIWindow: Failed to load panel for '{0}'.", WindowName);
+                IsLoadDone = true;
+                LoadFailed = true;
+                _prepareCallback?.Invoke(this);
                 return;
             }
 

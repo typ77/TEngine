@@ -335,6 +335,8 @@ namespace GameLogic
             return false;
         }
         
+        private const float UI_LOAD_TIMEOUT_SECONDS = 30f;
+
         private async UniTask<T> ShowUIAwaitImp<T>(bool isAsync, params System.Object[] userDatas) where T : UIWindow , new()
         {
             Type type = typeof(T);
@@ -349,16 +351,28 @@ namespace GameLogic
                 window = CreateInstance<T>();
                 Push(window); //首次压入
                 window.InternalLoad(window.AssetName, OnWindowPrepare, isAsync, userDatas).Forget();
-                float time = 0f;
-                while (!window.IsLoadDone)
+
+                using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(UI_LOAD_TIMEOUT_SECONDS));
+                try
                 {
-                    time += Time.deltaTime;
-                    if (time > 60f)
-                    {
-                        break;
-                    }
-                    await UniTask.Yield();
+                    await UniTask.WaitUntil(
+                        () => window.IsLoadDone || window.LoadFailed,
+                        cancellationToken: cts.Token);
                 }
+                catch (OperationCanceledException)
+                {
+                    Log.Error("UIModule: ShowUI await timeout for '{0}' ({1}s).", windowName, UI_LOAD_TIMEOUT_SECONDS);
+                    Pop(window);
+                    window.InternalDestroy();
+                    return null;
+                }
+
+                if (window.LoadFailed)
+                {
+                    Log.Error("UIModule: ShowUI failed to load '{0}'.", windowName);
+                    return null;
+                }
+
                 return window as T;
             }
         }
@@ -468,6 +482,13 @@ namespace GameLogic
 
         private void OnWindowPrepare(UIWindow window)
         {
+            if (window.LoadFailed)
+            {
+                Log.Warning("UIModule: Window '{0}' load failed, removing.", window.WindowName);
+                Pop(window);
+                window.InternalDestroy(isShutDown: false);
+                return;
+            }
             window.InternalCreate();
             window.InternalRefresh();
             OnSortWindowDepth(window.WindowLayer);
@@ -567,7 +588,7 @@ namespace GameLogic
             {
                 return null;
             }
-            
+
             var ret = window as T;
 
             if (ret == null)
@@ -580,16 +601,22 @@ namespace GameLogic
                 return ret;
             }
 
-            float time = 0f;
-            while (!ret.IsLoadDone)
+            try
             {
-                time += Time.deltaTime;
-                if (time > 60f)
-                {
-                    break;
-                }
-                await UniTask.Yield(cancellationToken: cancellationToken);
+                await UniTask.WaitUntil(
+                    () => ret.IsLoadDone || ret.LoadFailed,
+                    cancellationToken: cancellationToken);
             }
+            catch (OperationCanceledException)
+            {
+                return null;
+            }
+
+            if (ret.LoadFailed)
+            {
+                return null;
+            }
+
             return ret;
         }
 
@@ -608,7 +635,7 @@ namespace GameLogic
             }
 
             var ret = window as T;
-            
+
             if (ret == null)
             {
                 return;
@@ -618,16 +645,20 @@ namespace GameLogic
 
             async UniTaskVoid GetUIAsyncImp(Action<T> ctx)
             {
-                float time = 0f;
-                while (!ret.IsLoadDone)
+                try
                 {
-                    time += Time.deltaTime;
-                    if (time > 60f)
-                    {
-                        break;
-                    }
-                    await UniTask.Yield();
+                    await UniTask.WaitUntil(() => ret.IsLoadDone || ret.LoadFailed);
                 }
+                catch (OperationCanceledException)
+                {
+                    return;
+                }
+
+                if (ret.LoadFailed)
+                {
+                    return;
+                }
+
                 ctx?.Invoke(ret);
             }
         }

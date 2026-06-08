@@ -20,6 +20,7 @@ namespace TEngine
         private float _fadeoutTimer;
         private const float FADEOUT_DURATION = 0.2f;
         private bool _inPool;
+        private AssetHandle _currentHandle;
 
         /// <summary>
         /// 音频代理辅助器运行时状态。
@@ -312,6 +313,13 @@ namespace TEngine
         /// <param name="handle">资源操作句柄。</param>
         void OnAssetLoadComplete(AssetHandle handle)
         {
+            // 释放旧的非池化 handle
+            if (_currentHandle != null && !_inPool)
+            {
+                _currentHandle.Dispose();
+            }
+            _currentHandle = handle;
+
             if (handle != null)
             {
                 if (_inPool)
@@ -326,6 +334,7 @@ namespace TEngine
                 {
                     handle.Dispose();
                 }
+                _currentHandle = null;
 
                 _audioAgentRuntimeState = AudioAgentRuntimeState.End;
                 string path = _pendingLoad.Path;
@@ -413,6 +422,13 @@ namespace TEngine
             if (_audioData != null)
             {
                 AudioData.DeAlloc(_audioData);
+                _audioData = null;
+            }
+
+            if (_currentHandle != null && !_inPool)
+            {
+                _currentHandle.Dispose();
+                _currentHandle = null;
             }
         }
     }
