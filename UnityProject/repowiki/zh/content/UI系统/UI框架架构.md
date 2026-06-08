@@ -283,6 +283,8 @@ UIM->>UIM : OnSortWindowDepth/OnSetWindowVisible
   - 可见性与深度：OnSortWindowDepth按层级分配深度，OnSetWindowVisible根据FullScreen进行遮挡处理
   - 生命周期：ShowUI/ShowUIAsync/CloseUI/HideUI/CloseAll，统一调度窗口生命周期
   - 资源加载：通过IUIResourceLoader抽象，支持同步与异步加载
+  - **单例实例化**：`UIModule` 继承 `Singleton<UIModule>`，`_instanceRoot`（UIRoot）和 `_resourceLoader`（Resource）为实例字段，UIBase/UIWindow/UIWidget 内部通过 `UIModule.Instance` 访问
+  - **加载失败防护**：UIWindow 新增 `LoadFailed` 标志，异步等待方法检测此标志后立即返回 `null`，防止僵尸窗口
 - 关键流程
   - ShowUI：TryGetWindow命中则重新压栈并触发TryInvoke；未命中则创建实例并InternalLoad
   - HideUI：若HideTimeToClose>0则延时关闭，否则直接CloseUI

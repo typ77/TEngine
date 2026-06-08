@@ -71,7 +71,7 @@ RT --> GT
 - [IAudioModule.cs:1-128](file://Assets/TEngine/Runtime/Module/AudioModule/IAudioModule.cs#L1-L128)
 - [AudioModule.cs:1-571](file://Assets/TEngine/Runtime/Module/AudioModule/AudioModule.cs#L1-L571)
 - [AudioCategory.cs:1-196](file://Assets/TEngine/Runtime/Module/AudioModule/AudioCategory.cs#L1-L196)
-- [AudioAgent.cs:1-419](file://Assets/TEngine/Runtime/Module/AudioModule/AudioAgent.cs#L1-L419)
+- [AudioAgent.cs:1-434](file://Assets/TEngine/Runtime/Module/AudioModule/AudioAgent.cs#L1-L434)
 - [AudioGroupConfig.cs:1-70](file://Assets/TEngine/Runtime/Module/AudioModule/AudioGroupConfig.cs#L1-L70)
 - [AudioType.cs:1-34](file://Assets/TEngine/Runtime/Module/AudioModule/AudioType.cs#L1-L34)
 - [LanguageSource.cs:1-179](file://Assets/TEngine/Runtime/Module/LocalizationModule/Core/LanguageSource/LanguageSource.cs#L1-L179)
@@ -109,7 +109,7 @@ RT --> GT
 - [IAudioModule.cs:1-128](file://Assets/TEngine/Runtime/Module/AudioModule/IAudioModule.cs#L1-L128)
 - [AudioModule.cs:1-571](file://Assets/TEngine/Runtime/Module/AudioModule/AudioModule.cs#L1-L571)
 - [AudioCategory.cs:1-196](file://Assets/TEngine/Runtime/Module/AudioModule/AudioCategory.cs#L1-L196)
-- [AudioAgent.cs:1-419](file://Assets/TEngine/Runtime/Module/AudioModule/AudioAgent.cs#L1-L419)
+- [AudioAgent.cs:1-434](file://Assets/TEngine/Runtime/Module/AudioModule/AudioAgent.cs#L1-L434)
 - [AudioGroupConfig.cs:1-70](file://Assets/TEngine/Runtime/Module/AudioModule/AudioGroupConfig.cs#L1-L70)
 - [AudioType.cs:1-34](file://Assets/TEngine/Runtime/Module/AudioModule/AudioType.cs#L1-L34)
 - [LanguageSource.cs:1-179](file://Assets/TEngine/Runtime/Module/LocalizationModule/Core/LanguageSource/LanguageSource.cs#L1-L179)
@@ -184,6 +184,9 @@ class AudioAgent {
 -float _volume
 -float _duration
 -float _fadeoutTimer
+-bool _inPool
+-AssetHandle _currentHandle
+-LoadRequest _pendingLoad
 +AudioData AudioData
 +bool IsFree
 +float Duration
@@ -244,7 +247,7 @@ LocalizationManager --> LanguageSourceData
 - [IAudioModule.cs:1-128](file://Assets/TEngine/Runtime/Module/AudioModule/IAudioModule.cs#L1-L128)
 - [AudioModule.cs:1-571](file://Assets/TEngine/Runtime/Module/AudioModule/AudioModule.cs#L1-L571)
 - [AudioCategory.cs:1-196](file://Assets/TEngine/Runtime/Module/AudioModule/AudioCategory.cs#L1-L196)
-- [AudioAgent.cs:1-419](file://Assets/TEngine/Runtime/Module/AudioModule/AudioAgent.cs#L1-L419)
+- [AudioAgent.cs:1-434](file://Assets/TEngine/Runtime/Module/AudioModule/AudioAgent.cs#L1-L434)
 - [LanguageSource.cs:1-179](file://Assets/TEngine/Runtime/Module/LocalizationModule/Core/LanguageSource/LanguageSource.cs#L1-L179)
 - [LanguageSourceData.cs:1-177](file://Assets/TEngine/Runtime/Module/LocalizationModule/Core/LanguageSource/LanguageSourceData.cs#L1-L177)
 - [RealTimeTranslation.cs:1-132](file://Assets/TEngine/Runtime/Module/LocalizationModule/Core/Extension/RealTimeTranslation.cs#L1-L132)
@@ -301,7 +304,7 @@ AM-->>Caller : 返回AudioAgent
 - [IAudioModule.cs:1-128](file://Assets/TEngine/Runtime/Module/AudioModule/IAudioModule.cs#L1-L128)
 - [AudioModule.cs:1-571](file://Assets/TEngine/Runtime/Module/AudioModule/AudioModule.cs#L1-L571)
 - [AudioCategory.cs:1-196](file://Assets/TEngine/Runtime/Module/AudioModule/AudioCategory.cs#L1-L196)
-- [AudioAgent.cs:1-419](file://Assets/TEngine/Runtime/Module/AudioModule/AudioAgent.cs#L1-L419)
+- [AudioAgent.cs:1-434](file://Assets/TEngine/Runtime/Module/AudioModule/AudioAgent.cs#L1-L434)
 
 ### 音频分类与代理机制
 - AudioCategory
@@ -334,7 +337,7 @@ Running --> End(["结束"])
 
 章节来源
 - [AudioCategory.cs:1-196](file://Assets/TEngine/Runtime/Module/AudioModule/AudioCategory.cs#L1-L196)
-- [AudioAgent.cs:1-419](file://Assets/TEngine/Runtime/Module/AudioModule/AudioAgent.cs#L1-L419)
+- [AudioAgent.cs:1-434](file://Assets/TEngine/Runtime/Module/AudioModule/AudioAgent.cs#L1-L434)
 
 ### 配置与类型
 - AudioGroupConfig
@@ -440,7 +443,7 @@ RT["RealTimeTranslation"] --> GT["GoogleTranslation"]
 - [IAudioModule.cs:1-128](file://Assets/TEngine/Runtime/Module/AudioModule/IAudioModule.cs#L1-L128)
 - [AudioModule.cs:1-571](file://Assets/TEngine/Runtime/Module/AudioModule/AudioModule.cs#L1-L571)
 - [AudioCategory.cs:1-196](file://Assets/TEngine/Runtime/Module/AudioModule/AudioCategory.cs#L1-L196)
-- [AudioAgent.cs:1-419](file://Assets/TEngine/Runtime/Module/AudioModule/AudioAgent.cs#L1-L419)
+- [AudioAgent.cs:1-434](file://Assets/TEngine/Runtime/Module/AudioModule/AudioAgent.cs#L1-L434)
 - [LanguageSource.cs:1-179](file://Assets/TEngine/Runtime/Module/LocalizationModule/Core/LanguageSource/LanguageSource.cs#L1-L179)
 - [LanguageSourceData.cs:1-177](file://Assets/TEngine/Runtime/Module/LocalizationModule/Core/LanguageSource/LanguageSourceData.cs#L1-L177)
 - [RealTimeTranslation.cs:1-132](file://Assets/TEngine/Runtime/Module/LocalizationModule/Core/Extension/RealTimeTranslation.cs#L1-L132)
@@ -451,7 +454,7 @@ RT["RealTimeTranslation"] --> GT["GoogleTranslation"]
 - [IAudioModule.cs:1-128](file://Assets/TEngine/Runtime/Module/AudioModule/IAudioModule.cs#L1-L128)
 - [AudioModule.cs:1-571](file://Assets/TEngine/Runtime/Module/AudioModule/AudioModule.cs#L1-L571)
 - [AudioCategory.cs:1-196](file://Assets/TEngine/Runtime/Module/AudioModule/AudioCategory.cs#L1-L196)
-- [AudioAgent.cs:1-419](file://Assets/TEngine/Runtime/Module/AudioModule/AudioAgent.cs#L1-L419)
+- [AudioAgent.cs:1-434](file://Assets/TEngine/Runtime/Module/AudioModule/AudioAgent.cs#L1-L434)
 - [LanguageSource.cs:1-179](file://Assets/TEngine/Runtime/Module/LocalizationModule/Core/LanguageSource/LanguageSource.cs#L1-L179)
 - [LanguageSourceData.cs:1-177](file://Assets/TEngine/Runtime/Module/LocalizationModule/Core/LanguageSource/LanguageSourceData.cs#L1-L177)
 - [RealTimeTranslation.cs:1-132](file://Assets/TEngine/Runtime/Module/LocalizationModule/Core/Extension/RealTimeTranslation.cs#L1-L132)
@@ -464,6 +467,7 @@ RT["RealTimeTranslation"] --> GT["GoogleTranslation"]
   - 渐出停止：Stop(fadeout)避免突停噪声，同时平滑过渡
   - 资源池：PutInAudioPool/RemoveClipFromPool/CleanSoundPool降低重复加载成本
   - 3D衰减：合理设置minDistance/maxDistance与RolloffMode，平衡性能与听感
+  - **资源泄漏防护**：AudioAgent 通过 `_currentHandle`（AssetHandle）追踪已加载资源，`Destroy()` 时对非池化 handle 执行 `Dispose()`；若有未完成的异步加载（`_pendingLoad`），延迟释放直到加载完成后清理，防止句柄泄漏
 - 本地化
   - 术语与资产字典：一次性建立，避免频繁序列化
   - 批量翻译：使用GoogleTranslation的批量接口减少网络往返

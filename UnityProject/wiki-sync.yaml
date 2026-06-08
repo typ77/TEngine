@@ -1,0 +1,51 @@
+# wiki-sync.yaml — TEngine 项目文档同步配置
+version: "1.0"
+
+source_paths:
+  - path: "Assets/TEngine/Runtime"
+    label: "TEngine Runtime"
+  - path: "Assets/GameScripts/HotFix/GameLogic"
+    label: "GameLogic (HotFix)"
+  - path: "Assets/TEngine/Tests"
+    label: "Tests"
+
+wiki_root: "repowiki"
+
+mappings:
+  - source_pattern: "Assets/TEngine/Runtime/Core/GameEvent/**"
+    wiki_path: "zh/content/事件系统"
+  - source_pattern: "Assets/TEngine/Runtime/Core/MemoryPool/**"
+    wiki_path: "zh/content/内存管理"
+  - source_pattern: "Assets/TEngine/Runtime/Module/ResourceModule/**"
+    wiki_path: "zh/content/资源管理系统"
+  - source_pattern: "Assets/TEngine/Runtime/Module/AudioModule/**"
+    wiki_path: "zh/content/API参考/音频与本地化API.md"
+  - source_pattern: "Assets/GameScripts/HotFix/GameLogic/Module/UIModule/**"
+    wiki_path: "zh/content/UI系统"
+  - source_pattern: "Assets/GameScripts/HotFix/GameLogic/SingletonSystem/**"
+    wiki_path: "zh/content/核心系统/单例系统"
+  - source_pattern: "Assets/GameScripts/HotFix/GameLogic/GameModule.cs"
+    wiki_path: "zh/content/API参考/核心API.md"
+  - source_pattern: "Assets/TEngine/Tests/**"
+    wiki_path: "zh/content/开发者指南"
+
+ignore:
+  source: ["**/*.meta", "**/bin/**", "**/obj/**"]
+  wiki: ["**/草稿/**", "**/Archive/**", "**/_*"]
+
+conflict_strategy: prefer_code
+
+write_enabled: true
+
+backup:
+  enabled: true
+  directory: ".wiki-sync-backups"
+
+sensitive_patterns:
+  - pattern: "(api[_-]?key|secret|password|token|pwd)\\s*[:=]\\s*\\S+"
+    replacement: "<REDACTED>"
+
+report:
+  default_output: "wiki-sync-report.md"
+  include_diff_detail: true
+  include_suggestions: true
