@@ -1,6 +1,8 @@
 using System;
+using System.Text.RegularExpressions;
 using System.Threading;
 using NUnit.Framework;
+using UnityEngine.TestTools;
 
 namespace TEngine.Tests
 {
@@ -204,14 +206,15 @@ namespace TEngine.Tests
         public void Exception_TimerIsHandled_OthersContinue()
         {
             int normalCount = 0;
-            var exceptionHandle = _module.Delay(1f, () => { /* 异常回调 */ });
+            var exceptionHandle = _module.Delay(1f, () => throw new InvalidOperationException("test"));
             var normalHandle = _module.Delay(1f, () => normalCount++);
 
+            LogAssert.Expect(UnityEngine.LogType.Error, new Regex(@"\[Timer\] 回调异常.*test"));
             Tick(1.1f);
 
-            // 验证核心业务逻辑：异常定时器已失效，正常定时器执行了
+            // 验证核心业务逻辑：异常定时器被标记删除，正常定时器仍正常触发
             Assert.IsFalse(exceptionHandle.IsValid, "异常定时器应该已失效");
-            Assert.IsTrue(normalHandle.IsValid, "正常定时器应该仍然有效");
+            Assert.IsFalse(normalHandle.IsValid, "正常定时器已正常执行完毕");
             Assert.AreEqual(1, normalCount, "正常定时器应该执行一次");
         }
 
@@ -222,16 +225,18 @@ namespace TEngine.Tests
         public void MultipleException_TimersHandledIndependently()
         {
             int callCount = 0;
-            var handle1 = _module.Delay(1f, () => { /* 异常 1 */ });
-            var handle2 = _module.Delay(1f, () => { /* 异常 2 */ });
+            var handle1 = _module.Delay(1f, () => throw new InvalidOperationException("test1"));
+            var handle2 = _module.Delay(1f, () => throw new InvalidOperationException("test2"));
             var normalHandle = _module.Delay(1f, () => callCount++);
 
+            LogAssert.Expect(UnityEngine.LogType.Error, new Regex(@"\[Timer\] 回调异常.*test1"));
+            LogAssert.Expect(UnityEngine.LogType.Error, new Regex(@"\[Timer\] 回调异常.*test2"));
             Tick(1.1f);
 
-            // 验证：所有异常定时器失效，正常定时器执行
+            // 验证：所有异常定时器失效，正常定时器仍正常触发
             Assert.IsFalse(handle1.IsValid, "异常定时器 1 应该失效");
             Assert.IsFalse(handle2.IsValid, "异常定时器 2 应该失效");
-            Assert.IsTrue(normalHandle.IsValid, "正常定时器应该有效");
+            Assert.IsFalse(normalHandle.IsValid, "正常定时器已正常执行完毕");
             Assert.AreEqual(1, callCount, "正常定时器应该执行一次");
         }
 
