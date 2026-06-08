@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using GameLogic.DataBinding;
 using NUnit.Framework;
@@ -47,16 +48,14 @@ namespace TEngine.Tests
         }
 
         [Test]
-        public void Add_FiresEvent_AfterFireCallback()
+        public void Add_FiresEvent_SyncInEditMode()
         {
+            // EditMode 下 SafeMarkDirty 同步触发 FireCallback，无需手动 Flush
             ListChangeType? received = null;
             _list.OnChanged += args => received = args.Type;
 
             _list.Add(new Item(1, "a"));
-            Assert.IsNull(received); // 尚未 Flush
-
-            ((IBatchDirtyTarget)_list).FireCallback();
-            Assert.AreEqual(ListChangeType.Add, received);
+            Assert.AreEqual(ListChangeType.Add, received, "EditMode 同步模式：Add 后立即触发事件");
         }
 
         [Test]
@@ -190,24 +189,22 @@ namespace TEngine.Tests
         }
 
         [Test]
-        public void MultipleOps_MergesToReplaceAll()
+        public void MultipleOps_EachFiresImmediatelyInEditMode()
         {
-            ListChangeType? received = null;
-            IReadOnlyList<Item> newItems = null;
-            _list.OnChanged += args =>
-            {
-                received = args.Type;
-                newItems = args.NewItems;
-            };
+            // EditMode 同步模式：每次操作立即触发回调，不合并
+            var receivedTypes = new List<ListChangeType>();
+            _list.OnChanged += args => receivedTypes.Add(args.Type);
 
             _list.Add(new Item(1, "a"));
             _list.Add(new Item(2, "b"));
             _list.Add(new Item(3, "c"));
-            ((IBatchDirtyTarget)_list).FireCallback();
 
-            // 多次操作合并为 ReplaceAll
-            Assert.AreEqual(ListChangeType.ReplaceAll, received);
-            Assert.AreEqual(3, newItems.Count);
+            // 每次 Add 立即触发，共 3 次
+            Assert.AreEqual(3, receivedTypes.Count, "EditMode 同步模式：每次操作触发一次回调");
+            Assert.AreEqual(ListChangeType.Add, receivedTypes[0]);
+            Assert.AreEqual(ListChangeType.Add, receivedTypes[1]);
+            Assert.AreEqual(ListChangeType.Add, receivedTypes[2]);
+            Assert.AreEqual(3, _list.Count, "集合应包含所有添加的元素");
         }
 
         [Test]
