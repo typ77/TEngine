@@ -604,5 +604,54 @@ namespace GameLogic
         }
 
         #endregion
+
+        // ──── 数据绑定扩展 ────
+
+        private List<DataBinding.Binding> _bindings;
+        internal DataBinding.DataContext _dataContext;
+
+        public virtual DataBinding.DataContext DataContext => _dataContext;
+
+        public T GetDataContext<T>() where T : DataBinding.DataContext
+        {
+            return _dataContext as T;
+        }
+
+        public void Bind<T>(DataBinding.BindableProperty<T> property, Action<T> onChanged)
+        {
+            if (property == null) throw new ArgumentNullException(nameof(property));
+            if (onChanged == null) throw new ArgumentNullException(nameof(onChanged));
+
+            if (_bindings == null) _bindings = new List<DataBinding.Binding>();
+
+            Action<T, T> wrapper = (oldVal, newVal) => onChanged(newVal);
+            property.OnValueChanged += wrapper;
+            _bindings.Add(new DataBinding.Binding(() => property.OnValueChanged -= wrapper));
+
+            onChanged(property.Value);
+        }
+
+        public void Bind<T>(DataBinding.BindableProperty<T> property, Action<T, T> onChanged)
+        {
+            if (property == null) throw new ArgumentNullException(nameof(property));
+            if (onChanged == null) throw new ArgumentNullException(nameof(onChanged));
+
+            if (_bindings == null) _bindings = new List<DataBinding.Binding>();
+
+            property.OnValueChanged += onChanged;
+            _bindings.Add(new DataBinding.Binding(() => property.OnValueChanged -= onChanged));
+
+            onChanged(property.Value, property.Value);
+        }
+
+        protected virtual void SetupBindings() { }
+
+        internal void RemoveAllBindings()
+        {
+            if (_bindings == null) return;
+            foreach (var binding in _bindings)
+                binding.Unsubscribe();
+            _bindings.Clear();
+        }
     }
 }
