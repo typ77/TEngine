@@ -25,5 +25,8 @@ namespace GameLogic
 
         /// <summary>是否已登录。</summary>
         public readonly BindableProperty<bool> IsLoggedIn = new BindableProperty<bool>(false);
+
+        /// <summary>金币数量（可为负数，由 DataContext 层决定显示策略）。</summary>
+        public readonly BindableProperty<long> Gold = new BindableProperty<long>(1000);
     }
 }

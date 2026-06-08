@@ -6,7 +6,7 @@ namespace GameLogic
     /// 登录模块业务操作层（MVE — Service 层）。
     ///
     /// 职责：
-    /// - 封装登录相关的业务逻辑（模拟登录、登出等）
+    /// - 封装登录相关的业务逻辑（模拟登录、登出、金币变动等）
     /// - 操作 Model 层数据，触发响应式更新链
     /// - View 层只调用 Service，不直接操作 Model
     ///
@@ -32,7 +32,7 @@ namespace GameLogic
         };
 
         /// <summary>
-        /// 模拟随机登录：随机分配账号名并增加登录计数。
+        /// 模拟随机登录：随机分配账号名、扣减金币、增加登录计数。
         /// </summary>
         public void RandomLogin()
         {
@@ -40,6 +40,9 @@ namespace GameLogic
             model.AccountName.Value = RandomNames[Random.Range(0, RandomNames.Length)];
             model.LoginCount.Value++;
             model.IsLoggedIn.Value = true;
+
+            // 模拟金币随机变动（可能变为负数，触发 DataContext converter 演示）
+            model.Gold.Value += Random.Range(-1500, 500);
         }
 
         /// <summary>
