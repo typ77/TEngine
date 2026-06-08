@@ -52,7 +52,7 @@ namespace GameLogic.DataBinding
                 _value = value;
 
                 if (OnValueChanged != null)
-                    BatchScheduler.Instance.MarkDirty(this);
+                    BatchScheduler.SafeMarkDirty(this);
             }
         }
 

@@ -195,7 +195,7 @@ namespace GameLogic.DataBinding
             _operationCount++;
             if (_operationCount == 1) _firstEventArgs = args;
             _isDirty = true;
-            BatchScheduler.Instance.MarkDirty(this);
+            BatchScheduler.SafeMarkDirty(this);
         }
 
         void IBatchDirtyTarget.FireCallback()

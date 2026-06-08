@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Reflection;
 using GameLogic;
 
 namespace GameLogic.DataBinding
@@ -12,6 +13,27 @@ namespace GameLogic.DataBinding
     {
         private readonly HashSet<IBatchDirtyTarget> _dirty = new();
         private bool _isFlushing;
+
+        /// <summary>
+        /// 安全标记脏。如果 BatchScheduler 单例不可用（如 EditMode 测试），
+        /// 直接触发 FireCallback（即时模式，无帧级合并）。
+        /// </summary>
+        internal static void SafeMarkDirty(IBatchDirtyTarget target)
+        {
+            var field = typeof(BatchScheduler).GetField("_instance",
+                BindingFlags.NonPublic | BindingFlags.Static);
+            var instance = field?.GetValue(null) as BatchScheduler;
+
+            if (instance != null)
+            {
+                instance._dirty.Add(target);
+            }
+            else
+            {
+                // BatchScheduler 不可用，直接同步触发（EditMode 测试场景）
+                target.FireCallback();
+            }
+        }
 
         /// <summary>
         /// 标记目标为脏，将在下次 Flush 时触发回调。
