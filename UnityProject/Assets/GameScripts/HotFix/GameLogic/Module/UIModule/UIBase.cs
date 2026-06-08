@@ -646,7 +646,7 @@ namespace GameLogic
 
         protected virtual void SetupBindings() { }
 
-        internal void RemoveAllBindings()
+        public void RemoveAllBindings()
         {
             if (_bindings == null) return;
             foreach (var binding in _bindings)
