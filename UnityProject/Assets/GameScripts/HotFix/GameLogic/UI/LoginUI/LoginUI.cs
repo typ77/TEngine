@@ -1,3 +1,4 @@
+using GameLogic.DataBinding;
 using UnityEngine.UI;
 using TEngine;
 using Log = TEngine.Log;
@@ -20,7 +21,7 @@ namespace GameLogic
     /// </summary>
     [Window(UILayer.UI)]
     [DataContext(typeof(LoginDataContext))]
-    class LoginUI : UIWindow
+    public class LoginUI : UIWindow
     {
         private InputField m_inputAccount;
         private InputField m_inputPassword;
@@ -33,7 +34,7 @@ namespace GameLogic
             m_inputPassword = FindChildComponent<InputField>("m_inputPassword");
             m_btnLogin = FindChildComponent<Button>("m_btnLogin");
             m_textAccount = FindChildComponent<Text>("m_text_Account");
-            RegisterButtonClick(m_btnLogin, OnLoginClicked);
+            m_btnLogin.onClick.AddListener(OnLoginClicked);
         }
 
         protected override void SetupBindings()
