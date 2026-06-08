@@ -81,7 +81,7 @@ namespace GameLogic.DataBinding
             if (_isDisposed) return;
             _isDirty = true;
             if (OnValueChanged != null)
-                BatchScheduler.Instance.MarkDirty(this);
+                BatchScheduler.SafeMarkDirty(this);
         }
 
         /// <summary>
