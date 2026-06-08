@@ -928,16 +928,20 @@ namespace TEngine
         /// <param name="loadAssetCallbacks">加载资源回调函数集。</param>
         /// <param name="userData">用户自定义数据。</param>
         /// <param name="packageName">指定资源包的名称。不传使用默认资源包。</param>
-        public async UniTaskVoid LoadAssetAsync(string location, Type assetType, int priority, LoadAssetCallbacks loadAssetCallbacks, object userData, string packageName = "")
+        public async void LoadAssetAsync(string location, Type assetType, int priority, LoadAssetCallbacks loadAssetCallbacks, object userData, string packageName = "")
         {
+            try
+            {
             if (string.IsNullOrEmpty(location))
             {
-                throw new GameFrameworkException("Asset name is invalid.");
+                loadAssetCallbacks?.LoadAssetFailureCallback?.Invoke(location, LoadResourceStatus.NotExist, "Asset name is invalid.", userData);
+                return;
             }
 
             if (loadAssetCallbacks == null)
             {
-                throw new GameFrameworkException("Load asset callbacks is invalid.");
+                Log.Error("LoadAssetAsync: loadAssetCallbacks is null.");
+                return;
             }
 
             if (!CheckLocationValid(location, packageName))
@@ -1019,6 +1023,12 @@ namespace TEngine
 
                     loadAssetCallbacks.LoadAssetSuccessCallback(location, handle.AssetObject, duration, userData);
                 }
+            }
+            }
+            catch (Exception e)
+            {
+                Log.Error("LoadAssetAsync(Type) exception: {0}", e.Message);
+                loadAssetCallbacks?.LoadAssetFailureCallback?.Invoke(location, LoadResourceStatus.AssetError, e.Message, userData);
             }
         }
 
