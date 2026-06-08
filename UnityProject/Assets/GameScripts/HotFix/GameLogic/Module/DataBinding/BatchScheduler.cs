@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using GameLogic;
 
 namespace GameLogic.DataBinding
 {
