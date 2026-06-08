@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using NUnit.Framework;
+using UnityEngine.TestTools;
 
 namespace TEngine.Tests
 {
@@ -33,6 +34,7 @@ namespace TEngine.Tests
         [Test]
         public void Callback_SecondHandlerThrows_ThirdStillExecutes()
         {
+            LogAssert.Expect(UnityEngine.LogType.Error, new Regex("Event handler exception.*test"));
             var callOrder = new List<int>();
             _data.AddHandler(new Action(() => callOrder.Add(1)));
             _data.AddHandler(new Action(() => { callOrder.Add(2); throw new InvalidOperationException("test"); }));
@@ -47,10 +49,11 @@ namespace TEngine.Tests
         [Test]
         public void Callback_AllHandlersThrow_CheckModifyStillRuns()
         {
+            LogAssert.Expect(UnityEngine.LogType.Error, new Regex("Event handler exception.*err1"));
+            LogAssert.Expect(UnityEngine.LogType.Error, new Regex("Event handler exception.*err2"));
             _data.AddHandler(new Action(() => throw new Exception("err1")));
             _data.AddHandler(new Action(() => throw new Exception("err2")));
             Assert.DoesNotThrow(() => _data.Callback());
-            // _isExecute should be reset, so AddHandler should work
             bool added = _data.AddHandler(new Action(() => { }));
             Assert.IsTrue(added);
         }
@@ -58,6 +61,8 @@ namespace TEngine.Tests
         [Test]
         public void Callback_AddHandlerAfterException_NewHandlerApplied()
         {
+            LogAssert.Expect(UnityEngine.LogType.Error, new Regex("Event handler exception.*err"));
+            LogAssert.Expect(UnityEngine.LogType.Error, new Regex("Event handler exception.*err"));
             var called = false;
             _data.AddHandler(new Action(() => throw new Exception("err")));
             _data.Callback();
@@ -89,6 +94,7 @@ namespace TEngine.Tests
         [Test]
         public void Callback_WithArg_ExceptionIsolation()
         {
+            LogAssert.Expect(UnityEngine.LogType.Error, new Regex("Event handler exception.*err"));
             var received = new List<string>();
             _data.AddHandler(new Action<string>(s => received.Add(s)));
             _data.AddHandler(new Action<string>(s => { received.Add(s); throw new Exception("err"); }));
