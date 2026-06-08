@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Threading;
 using Cysharp.Threading.Tasks;
 using GameLogic;
+using GameLogic.DataBinding;
 using TEngine;
 using UnityEngine;
 using UnityEngine.UI;
@@ -489,6 +490,13 @@ namespace GameLogic
                 window.InternalDestroy(isShutDown: false);
                 return;
             }
+
+            var ctx = DataContextFactory.CreateFor(window.GetType());
+            if (ctx != null)
+            {
+                window._dataContext = ctx;
+            }
+
             window.InternalCreate();
             window.InternalRefresh();
             OnSortWindowDepth(window.WindowLayer);
