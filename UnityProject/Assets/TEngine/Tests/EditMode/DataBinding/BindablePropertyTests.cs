@@ -156,6 +156,18 @@ namespace TEngine.Tests
             Assert.IsTrue(fired);
         }
 
-        private readonly record struct TestData(int Id, string Name);
+        private struct TestData : IEquatable<TestData>
+        {
+            public int Id;
+            public string Name;
+
+            public TestData(int id, string name) { Id = id; Name = name; }
+
+            public bool Equals(TestData other) => Id == other.Id && Name == other.Name;
+            public override bool Equals(object obj) => obj is TestData other && Equals(other);
+            public override int GetHashCode() => HashCode.Combine(Id, Name);
+            public static bool operator ==(TestData left, TestData right) => left.Equals(right);
+            public static bool operator !=(TestData left, TestData right) => !left.Equals(right);
+        }
     }
 }

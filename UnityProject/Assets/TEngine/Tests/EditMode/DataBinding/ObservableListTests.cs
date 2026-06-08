@@ -7,7 +7,19 @@ namespace TEngine.Tests
     [TestFixture]
     public class ObservableListTests : DataBindingTestBase
     {
-        private readonly record struct Item(int Id, string Name);
+        private struct Item : IEquatable<Item>
+        {
+            public int Id;
+            public string Name;
+
+            public Item(int id, string name) { Id = id; Name = name; }
+
+            public bool Equals(Item other) => Id == other.Id && Name == other.Name;
+            public override bool Equals(object obj) => obj is Item other && Equals(other);
+            public override int GetHashCode() => HashCode.Combine(Id, Name);
+            public static bool operator ==(Item left, Item right) => left.Equals(right);
+            public static bool operator !=(Item left, Item right) => !left.Equals(right);
+        }
 
         private ObservableList<Item> _list;
 
