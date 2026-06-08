@@ -37,6 +37,7 @@ namespace GameLogic.DataBinding
             };
             source.OnValueChanged += handler;
             _unsubscribers.Add(() => source.OnValueChanged -= handler);
+            _ownedProperties.Add(target);
         }
 
         /// <summary>
@@ -56,10 +57,8 @@ namespace GameLogic.DataBinding
             source2.OnValueChanged += h2;
             _unsubscribers.Add(() => source1.OnValueChanged -= h1);
             _unsubscribers.Add(() => source2.OnValueChanged -= h2);
+            _ownedProperties.Add(target);
         }
-
-        /// <summary>
-        /// 三源标量映射：source1 + source2 + source3 → target（经 converter 转换）。
         /// 任一 source 变化时重新计算 target。
         /// </summary>
         protected void MapProperty<T1, T2, T3, TTarget>(
@@ -79,6 +78,7 @@ namespace GameLogic.DataBinding
             _unsubscribers.Add(() => source1.OnValueChanged -= h1);
             _unsubscribers.Add(() => source2.OnValueChanged -= h2);
             _unsubscribers.Add(() => source3.OnValueChanged -= h3);
+            _ownedProperties.Add(target);
         }
 
         /// <summary>

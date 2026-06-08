@@ -28,5 +28,14 @@ namespace GameLogic
 
         /// <summary>金币数量（可为负数，由 DataContext 层决定显示策略）。</summary>
         public readonly BindableProperty<long> Gold = new BindableProperty<long>(1000);
+
+        protected override void OnRelease()
+        {
+            AccountName.Dispose();
+            LoginCount.Dispose();
+            IsLoggedIn.Dispose();
+            Gold.Dispose();
+            base.OnRelease();
+        }
     }
 }

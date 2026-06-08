@@ -15,14 +15,19 @@ namespace GameLogic.DataBinding
         private bool _isFlushing;
 
         /// <summary>
+        /// 缓存的反射字段，避免每次 SafeMarkDirty 都做反射查找。
+        /// </summary>
+        private static readonly FieldInfo _instanceField =
+            typeof(BatchScheduler).GetField("_instance",
+                BindingFlags.NonPublic | BindingFlags.Static);
+
+        /// <summary>
         /// 安全标记脏。如果 BatchScheduler 单例不可用（如 EditMode 测试），
         /// 直接触发 FireCallback（即时模式，无帧级合并）。
         /// </summary>
         internal static void SafeMarkDirty(IBatchDirtyTarget target)
         {
-            var field = typeof(BatchScheduler).GetField("_instance",
-                BindingFlags.NonPublic | BindingFlags.Static);
-            var instance = field?.GetValue(null) as BatchScheduler;
+            var instance = _instanceField?.GetValue(null) as BatchScheduler;
 
             if (instance != null)
             {

@@ -170,7 +170,7 @@ namespace GameLogic.DataBinding
             NotifyChanged(new ListChangedEventArgs<T>
             {
                 Type = ListChangeType.AddRange,
-                NewItems = list.ToList().AsReadOnly()
+                NewItems = (list is List<T> listT ? listT : list.ToList()).AsReadOnly()
             });
         }
 

@@ -283,6 +283,12 @@ namespace GameLogic
         {
             RemoveAllBindings();
 
+            if (_dataContext != null)
+            {
+                _dataContext.Dispose();
+                _dataContext = null;
+            }
+
             Parent?.SetUpdateDirty();
 
             RemoveAllUIEvent();

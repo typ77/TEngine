@@ -726,14 +726,16 @@ namespace GameLogic
         /// <summary>
         /// 绑定 string 资源路径属性到 Image.sprite。值变更时通过 SetSprite 异步加载并设置图片。
         /// 资源加载/释放由 SetSpriteExtensions 内部管理。
+        /// UI 销毁时自动取消未完成的异步加载（通过 CancellationTokenOnDestroy）。
         /// </summary>
         public void BindSprite(Image image, DataBinding.BindableProperty<string> prop)
         {
             if (image == null || prop == null) return;
+            var ct = image.GetCancellationTokenOnDestroy();
             Bind(prop, location =>
             {
-                if (!string.IsNullOrEmpty(location))
-                    image.SetSprite(location);
+                if (!string.IsNullOrEmpty(location) && image != null)
+                    image.SetSprite(location, cancellationToken: ct);
             });
         }
     }
