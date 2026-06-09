@@ -4,16 +4,74 @@
 
 ![TEngine Logo](Books/src/TEngine.png)
 
-**Unity 框架解决方案**
+**Unity 框架解决方案（社区修改版）**
 
 [![Unity Version](https://img.shields.io/badge/Unity-2021.3.20%2B-blue.svg?style=flat-square)](https://unity3d.com/)
-[![License](https://img.shields.io/github/license/ALEXTANGXIAO/TEngine?style=flat-square)](LICENSE)
-[![Last Commit](https://img.shields.io/github/last-commit/ALEXTANGXIAO/TEngine?style=flat-square)](https://github.com/ALEXTANGXIAO/TEngine)
-[![Issues](https://img.shields.io/github/issues/ALEXTANGXIAO/TEngine?style=flat-square)](https://github.com/ALEXTANGXIAO/TEngine/issues)
-[![Top Language](https://img.shields.io/github/languages/top/ALEXTANGXIAO/TEngine?style=flat-square)](https://github.com/ALEXTANGXIAO/TEngine)
+[![License](https://img.shields.io/github/license/typ77/TEngine?style=flat-square)](LICENSE)
+[![Last Commit](https://img.shields.io/github/last-commit/typ77/TEngine?style=flat-square)](https://github.com/typ77/TEngine)
+[![Issues](https://img.shields.io/github/issues/typ77/TEngine?style=flat-square)](https://github.com/typ77/TEngine/issues)
+[![Top Language](https://img.shields.io/github/languages/top/typ77/TEngine?style=flat-square)](https://github.com/typ77/TEngine)
 [![DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/Alex-Rachel/TEngine)
 
 </div>
+
+---
+
+## 🔄 二次修改说明
+
+### 作者自述
+
+说实话，一开始没打算做这个开源项目。奈何 token 有点多，无所事事就让 AI 帮我做了一下 coding。又加上我对原项目略有点想法（你们先别管我理解得对不对，反正我就是这么想的），做了二次修改。
+
+这个项目在我的工作项目中已有实践。为避免侵害公司权益，所有代码均由 AI 撰写，全程未使用原项目代码。我的角色是：**提出实现思路 → 最大限度的还原 → 做好 code review 和审核工作**。此乃本项目的初心。
+
+继续 MIT 协议。不保证 100% 能同步官方版本。我的修改是因为我对此事的认识是这样，并不代表我的正确性，请各位看官见谅。
+
+### 与官方版本的关系
+
+- 本项目 fork 自 [ALEXTANGXIAO/TEngine](https://github.com/ALEXTANGXIAO/TEngine)，保留原项目核心架构
+- 新增和修改的部分为独立实现，不包含原项目代码
+- 后续可能派生出独立项目
+
+### 修改内容清单
+
+#### 1. UI 数据绑定系统（新增）
+
+| 改了什么 | 解决什么问题 | 现状 |
+|----------|-------------|------|
+| `BindableProperty<T>` 响应式属性包装器 | 数据变了 UI 不知道，手动调 OnRefresh 容易遗漏 | ✅ 完成，14 个测试覆盖 |
+| `ObservableList<T>` 响应式集合 | 列表变更通知粒度太粗 | ✅ 完成，29 个测试（含边界检查） |
+| `BatchScheduler` 帧级批次合并 | 同帧多次赋值导致 UI 多次刷新 | ✅ 完成，两轮 Flush 机制 |
+| `DataContext` 多源聚合 + 转换 | 多数据源组合复杂，View 直接依赖 Model | ✅ 完成，MapProperty 1~4 源 |
+| `UIBase` Bind / BindText 等便捷方法 | 绑定代码冗长，每个组件都要写 lambda | ✅ 完成，8 个便捷方法 |
+| `DataContextAttribute` + Factory 自动注入 | 手动管理 DataContext 生命周期易遗漏 | ✅ 完成，含缓存清理 |
+| MVE 四层架构标杆（LoginUI） | 缺乏架构参考示例 | ✅ 完成，Model/Service/DataContext/View |
+
+#### 2. 框架质量加固（修改）
+
+| 改了什么 | 解决什么问题 | 现状 |
+|----------|-------------|------|
+| `EventDelegateData` 异常隔离 | 单个 handler 异常导致后续 handler 不执行 | ✅ 完成，7 个测试覆盖 |
+| `ResourceModule` 死代码清理 | `async void` 泄漏、UnloadAsset 空池告警 | ✅ 完成 |
+| `MemoryPool` 线程安全 + 异常统一 | 线程安全隐患、异常类型不一致 | ✅ 完成，5 个测试覆盖 |
+| 集合安全遍历 + Singleton Key 改进 | 遍历中修改集合导致异常 | ✅ 完成 |
+| 代码规范统一 | 命名不一致、冗余 using 等 | ✅ 完成 |
+
+#### 3. Timer 模块重写（修改）
+
+| 改了什么 | 解决什么问题 | 现状 |
+|----------|-------------|------|
+| `IndexedMinHeap` 最小堆定时器 | 原实现遍历查找效率低 | ✅ 完成，23 个测试覆盖 |
+| `TimerNode` 对象池化 | 频繁 new 对象产生 GC | ✅ 完成 |
+| Timer 诊断窗口 | 缺少运行时定时器调试手段 | ✅ 完成 |
+
+#### 4. 测试体系建设（新增）
+
+| 改了什么 | 解决什么问题 | 现状 |
+|----------|-------------|------|
+| EditMode 测试框架（102 用例） | 原项目无单元测试 | ✅ 完成，覆盖 Timer/Event/MemoryPool/DataBinding |
+| PlayMode 测试框架 | 需要验证运行时帧级行为 | ✅ 完成，测试基础设施已搭建 |
+| 测试基础类 `DataBindingTestBase` | 测试环境重复搭建 | ✅ 完成 |
 
 ---
 
@@ -29,7 +87,7 @@
 - 🔄 **热更新支持** - 集成 HybridCLR，全平台热更新流程已跑通
 - 📦 **资源管理** - 集成 YooAsset，支持 LRU、ARC 缓存策略，自动资源释放
 - 📊 **配置表系统** - 集成 Luban，支持懒加载、异步加载、同步加载
-- 🎨 **UI 框架** - 商业化 UI 开发流程，支持代码自动生成
+- 🎨 **UI 框架** - 商业化 UI 开发流程，支持代码自动生成 + 响应式数据绑定
 - 🌍 **全平台支持** - Windows、Android、iOS、WebGL、微信小游戏等
 
 ---
@@ -42,10 +100,6 @@
 - [核心模块](#-核心模块)
 - [项目结构](#-项目结构)
 - [系统要求](#-系统要求)
-- [服务器支持](#-服务器支持)
-- [开源项目推荐](#-开源项目推荐)
-- [Demo 项目](#-demo-项目)
-- [贡献与支持](#-贡献与支持)
 
 ---
 
@@ -62,7 +116,7 @@
 
 1. **克隆项目**
    ```bash
-   git clone https://github.com/ALEXTANGXIAO/TEngine.git
+   git clone https://github.com/typ77/TEngine.git
    ```
 
 2. **打开项目**
@@ -295,6 +349,7 @@ sequenceDiagram
 | 💾 **内存池模块** | [3-3-内存池模块](Books/3-3-内存池模块.md) | 轻量级内存池管理 |
 | 🎮 **对象池模块** | [3-4-对象池模块](Books/3-4-对象池模块.md) | 游戏对象池管理 |
 | 🎨 **UI 模块** | [3-5-UI模块](Books/3-5-UI模块.md) | 商业化 UI 框架，支持代码生成 |
+| 🔗 **UI 数据绑定** | [UI数据绑定](UnityProject/repowiki/zh/content/UI系统/UI数据绑定.md) | 响应式数据绑定系统（新增） |
 | 📊 **配置表模块** | [3-6-配置表模块](Books/3-6-配置表模块.md) | Luban 配置表系统 |
 | 🔄 **流程模块** | [3-7-流程模块](Books/3-7-流程模块.md) | 商业化启动流程 |
 | 🌐 **网络模块** | [3-8-网络模块](Books/3-8-网络模块.md) | 网络通信模块 |
@@ -318,6 +373,7 @@ sequenceDiagram
 - ✅ 支持 string/int 事件 ID
 - ✅ 支持 MVE（Model-View-Event）架构
 - ✅ UI 生命周期自动绑定事件清理
+- ✅ 单 handler 异常隔离，不影响后续 handler 执行（修改增强）
 
 ### UI 模块 (UIModule)
 
@@ -326,6 +382,8 @@ sequenceDiagram
 - ✅ UIWindow/UIWidget 分层设计
 - ✅ 支持全屏面板管理
 - ✅ 事件驱动架构
+- ✅ **响应式数据绑定** — BindableProperty + DataContext + 帧级批次合并（新增）
+- ✅ **便捷绑定方法** — BindText / BindInteractable / BindToggle / BindSlider / BindSprite（新增）
 
 ### 配置表模块 (ConfigSystem)
 
@@ -343,6 +401,15 @@ sequenceDiagram
 - ProcedureCreateDownloader → ProcedureDownloadFile
 - ProcedureDownloadOver → ProcedureClearCache
 - ProcedureLoadAssembly → ProcedureStartGame
+
+### 数据绑定模块 (DataBinding) 🆕
+
+- ✅ BindableProperty\<T\> 响应式属性，赋值自动通知
+- ✅ ObservableList\<T\> 响应式集合，增删改事件驱动
+- ✅ BatchScheduler 帧级批次合并，同帧多次赋值合并为一次回调
+- ✅ DataContext 多源聚合 + 格式转换，View 不直接依赖 Model
+- ✅ MVE 四层架构：Model → Service → DataContext → View
+- ✅ 零外部依赖，纯 C# 实现，与现有 OnRefresh / GameEvent 共存
 
 ---
 
@@ -365,6 +432,7 @@ Assets/
 ├── TEngine/              # 框架核心目录
 │   ├── Editor/           # TEngine 编辑器核心代码
 │   ├── Runtime/          # TEngine 运行时核心代码
+│   ├── Tests/            # 单元测试目录 🆕
 │   └── AssetSetting/     # YooAsset 资源设置
 └── GameScripts/          # 程序集目录
     ├── Main/             # 主程序程序集（启动器与流程）
@@ -373,7 +441,13 @@ Assets/
         ├── GameProto/    # 游戏配置协议程序集 [Dll]
         └── GameLogic/    # 游戏业务逻辑程序集 [Dll]
             ├── GameApp.cs                  # 热更主入口
-            └── GameApp_RegisterSystem.cs   # 热更主入口注册系统
+            ├── GameApp_RegisterSystem.cs   # 热更主入口注册系统
+            ├── Module/DataBinding/         # 数据绑定模块 🆕
+            └── UI/LoginUI/                 # MVE 四层架构示例 🆕
+                ├── LoginModel.cs           # 纯数据层
+                ├── LoginService.cs         # 业务操作层
+                ├── LoginDataContext.cs     # 数据映射层
+                └── LoginUI.cs              # 视图层
 ```
 
 ---
@@ -398,52 +472,6 @@ Assets/
 
 - .NET 4.x
 - Visual Studio 2019+ 或 Rider
-
----
-
-## 🌐 服务器支持
-
-TEngine 本身为**纯净的客户端框架**，不强绑定任何服务器。但针对个人开发以及中小型公司开发双端，我们推荐使用 **C# 服务器**。
-
-### 为什么选择 .NET Core？
-
-.NET Core 8.0 在性能和设计上具有显著优势：
-- ⚡ **高性能** - AOT、JIT 混合编译
-- 🔧 **组件化结构** - 模块化设计
-- 🔥 **热重载** - 提升开发效率
-- 📈 **性能测试** - 除 C++ 外，性能表现优异
-
-### 服务器框架推荐
-
-- **[GameNetty](https://github.com/ALEXTANGXIAO/GameNetty)** - 源于 ETServer，首次拆分最新的 ET8.1 的前后端解决方案（包），客户端最精简约 750k，几乎零成本无侵入嵌入
-- **[Fantasy](https://github.com/qq362946/Fantasy)** - 源于 ETServer 但极为简洁，更好上手的商业级服务器框架（Fantasy 分支已集成）
-
----
-
-## 🌟 开源项目推荐
-
-| 项目 | 描述 | 链接 |
-|------|------|------|
-| **YooAsset** | 商业级经历百万 DAU 游戏验证的资源管理系统 | [GitHub](https://github.com/tuyoogame/YooAsset) |
-| **HybridCLR** | 特性完整、零成本、高性能、低内存的近乎完美的 Unity 全平台原生 C# 热更方案 | [GitHub](https://github.com/focus-creative-games/hybridclr) |
-| **Luban** | 最佳游戏配置解决方案 | [GitHub](https://github.com/focus-creative-games/luban) |
-| **Fantasy** | 源于 ETServer 但极为简洁，更好上手的商业级服务器框架 | [GitHub](https://github.com/qq362946/Fantasy) |
-| **GameNetty** | 源于 ETServer，首次拆分最新的 ET8.1 的前后端解决方案 | [GitHub](https://github.com/ALEXTANGXIAO/GameNetty) |
-| **JEngine** | 使 Unity 开发的游戏支持热更新的解决方案 | [GitHub](https://github.com/JasonXuDeveloper/JEngine) |
-
-### 社区 Demo
-
-- **[TowerDefense-TEngine-Demo](https://github.com/daydayasobi/TowerDefense-TEngine-Demo)** - 群友大佬的塔防 Demo
-
----
-
-## 🎮 Demo 项目
-
-最新的 Demo 飞机大战位于 **demo 分支**，欢迎体验！
-
-```bash
-git checkout demo
-```
 
 ---
 
@@ -477,30 +505,10 @@ git checkout demo
 
 ---
 
-## 🤝 贡献与支持
-
-## 🙏 感谢所有为 TEngine 做出贡献的开发者
-
-[![Contributors](https://contrib.rocks/image?repo=Alex-Rachel/TEngine)](https://github.com/Alex-Rachel/TEngine/graphs/contributors)
-
-### 贡献
-
-欢迎提交 Issue 和 Pull Request！
-
-### 支持项目
-
-如果 TEngine 对您有帮助，欢迎支持项目发展：
-
-[☕ 请我喝杯奶茶](Books/Donate.md)
-
-您的赞助会让我们做得更快更好！如果觉得 TEngine 对您有帮助，不妨请我可爱的女儿买杯奶茶吧~ 🥤
-
----
-
 <div align="center">
 
-**Made with ❤️ by TEngine Team**
+**Fork of [TEngine](https://github.com/ALEXTANGXIAO/TEngine) · Made with 🤖 + ❤️**
 
-[⭐ Star](https://github.com/ALEXTANGXIAO/TEngine) | [🐛 Issues](https://github.com/ALEXTANGXIAO/TEngine/issues) | [📖 Wiki](https://deepwiki.com/Alex-Rachel/TEngine)
+[⭐ Star](https://github.com/typ77/TEngine) | [🐛 Issues](https://github.com/typ77/TEngine/issues) | [📖 Wiki](https://deepwiki.com/Alex-Rachel/TEngine)
 
 </div>
