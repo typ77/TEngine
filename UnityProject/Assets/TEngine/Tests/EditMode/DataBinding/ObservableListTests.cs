@@ -253,5 +253,100 @@ namespace TEngine.Tests
 
             Assert.IsFalse(fired);
         }
+
+        // ──── 边界检查测试（P2 I1）────
+
+        [Test]
+        public void Insert_NegativeIndex_ThrowsArgumentOutOfRangeException()
+        {
+            Assert.Throws<ArgumentOutOfRangeException>(() => _list.Insert(-1, new Item(1, "a")));
+        }
+
+        [Test]
+        public void Insert_IndexGreaterThanCount_ThrowsArgumentOutOfRangeException()
+        {
+            _list.Add(new Item(1, "a"));
+            Assert.Throws<ArgumentOutOfRangeException>(() => _list.Insert(2, new Item(2, "b")));
+        }
+
+        [Test]
+        public void Insert_AtCount_IsAllowed()
+        {
+            _list.Add(new Item(1, "a"));
+            Assert.DoesNotThrow(() => _list.Insert(1, new Item(2, "b")));
+            Assert.AreEqual(2, _list.Count);
+            Assert.AreEqual(new Item(2, "b"), _list[1]);
+        }
+
+        [Test]
+        public void RemoveAt_NegativeIndex_ThrowsArgumentOutOfRangeException()
+        {
+            Assert.Throws<ArgumentOutOfRangeException>(() => _list.RemoveAt(-1));
+        }
+
+        [Test]
+        public void RemoveAt_IndexEqualToCount_ThrowsArgumentOutOfRangeException()
+        {
+            _list.Add(new Item(1, "a"));
+            Assert.Throws<ArgumentOutOfRangeException>(() => _list.RemoveAt(1));
+        }
+
+        [Test]
+        public void RemoveAt_EmptyList_ThrowsArgumentOutOfRangeException()
+        {
+            Assert.Throws<ArgumentOutOfRangeException>(() => _list.RemoveAt(0));
+        }
+
+        [Test]
+        public void Move_NegativeFromIndex_ThrowsArgumentOutOfRangeException()
+        {
+            _list.Add(new Item(1, "a"));
+            Assert.Throws<ArgumentOutOfRangeException>(() => _list.Move(-1, 0));
+        }
+
+        [Test]
+        public void Move_NegativeToIndex_ThrowsArgumentOutOfRangeException()
+        {
+            _list.Add(new Item(1, "a"));
+            Assert.Throws<ArgumentOutOfRangeException>(() => _list.Move(0, -1));
+        }
+
+        [Test]
+        public void Move_FromIndexOutOfRange_ThrowsArgumentOutOfRangeException()
+        {
+            _list.Add(new Item(1, "a"));
+            Assert.Throws<ArgumentOutOfRangeException>(() => _list.Move(1, 0));
+        }
+
+        [Test]
+        public void Move_ToIndexOutOfRange_ThrowsArgumentOutOfRangeException()
+        {
+            _list.Add(new Item(1, "a"));
+            Assert.Throws<ArgumentOutOfRangeException>(() => _list.Move(0, 1));
+        }
+
+        [Test]
+        public void Replace_NegativeIndex_ThrowsArgumentOutOfRangeException()
+        {
+            Assert.Throws<ArgumentOutOfRangeException>(() => _list.Replace(-1, new Item(1, "a")));
+        }
+
+        [Test]
+        public void Replace_IndexOutOfRange_ThrowsArgumentOutOfRangeException()
+        {
+            _list.Add(new Item(1, "a"));
+            Assert.Throws<ArgumentOutOfRangeException>(() => _list.Replace(1, new Item(2, "b")));
+        }
+
+        // ──── DataContextFactory 缓存测试（P2 I5）────
+
+        [Test]
+        public void DataContextFactory_ResetCache_ClearsFactories()
+        {
+            DataContextFactory.ResetCache();
+            // 多次调用不应抛异常
+            DataContextFactory.ResetCache();
+            Assert.Pass("ResetCache 可安全重复调用");
+        }
     }
 }

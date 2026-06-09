@@ -64,11 +64,13 @@ namespace GameLogic.DataBinding
         }
 
         /// <summary>
-        /// 在指定位置插入元素。
+        /// 在指定位置插入元素。index 允许等于 Count（尾部插入）。
         /// </summary>
         public void Insert(int index, T item)
         {
             if (_isDisposed) return;
+            if ((uint)index > (uint)_items.Count)
+                throw new ArgumentOutOfRangeException(nameof(index));
             _items.Insert(index, item);
             NotifyChanged(new ListChangedEventArgs<T>
             {
@@ -101,6 +103,8 @@ namespace GameLogic.DataBinding
         public void RemoveAt(int index)
         {
             if (_isDisposed) return;
+            if ((uint)index >= (uint)_items.Count)
+                throw new ArgumentOutOfRangeException(nameof(index));
             _items.RemoveAt(index);
             NotifyChanged(new ListChangedEventArgs<T>
             {
@@ -134,6 +138,10 @@ namespace GameLogic.DataBinding
         public void Move(int fromIndex, int toIndex)
         {
             if (_isDisposed) return;
+            if ((uint)fromIndex >= (uint)_items.Count)
+                throw new ArgumentOutOfRangeException(nameof(fromIndex));
+            if ((uint)toIndex >= (uint)_items.Count)
+                throw new ArgumentOutOfRangeException(nameof(toIndex));
             var item = _items[fromIndex];
             _items.RemoveAt(fromIndex);
             _items.Insert(toIndex, item);
@@ -189,6 +197,14 @@ namespace GameLogic.DataBinding
             });
         }
 
+        /// <summary>
+        /// 记录一次变更操作，由 BatchScheduler 在帧末统一触发回调。
+        /// <para>
+        /// 合并语义：同帧多次操作（_operationCount > 1）会合并为一次 ReplaceAll 事件，
+        /// 丢弃各次操作的原始类型和参数。单次操作保留原始事件类型。
+        /// Phase 3 引入 UIListWidget 时可能需要更细粒度的 Diff 模式。
+        /// </para>
+        /// </summary>
         private void NotifyChanged(in ListChangedEventArgs<T> args)
         {
             if (OnChanged == null) return;
@@ -198,6 +214,14 @@ namespace GameLogic.DataBinding
             BatchScheduler.SafeMarkDirty(this);
         }
 
+        /// <summary>
+        /// 由 BatchScheduler.Flush 调用。触发合并后的回调。
+        /// <para>
+        /// 合并规则：
+        /// - 单次操作：保留原始事件类型（Add/Insert/Replace 等）
+        /// - 多次操作：统一合并为 ReplaceAll，携带当前全量快照
+        /// </para>
+        /// </summary>
         void IBatchDirtyTarget.FireCallback()
         {
             if (!_isDirty || _isDisposed) return;
