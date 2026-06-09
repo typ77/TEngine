@@ -35,43 +35,37 @@
 
 ### 修改内容清单
 
-#### 1. UI 数据绑定系统（新增）
+#### 1. Timer 模块重写
 
-| 改了什么 | 解决什么问题 | 现状 |
-|----------|-------------|------|
-| `BindableProperty<T>` 响应式属性包装器 | 数据变了 UI 不知道，手动调 OnRefresh 容易遗漏 | ✅ 完成，14 个测试覆盖 |
-| `ObservableList<T>` 响应式集合 | 列表变更通知粒度太粗 | ✅ 完成，29 个测试（含边界检查） |
-| `BatchScheduler` 帧级批次合并 | 同帧多次赋值导致 UI 多次刷新 | ✅ 完成，两轮 Flush 机制 |
-| `DataContext` 多源聚合 + 转换 | 多数据源组合复杂，View 直接依赖 Model | ✅ 完成，MapProperty 1~4 源 |
-| `UIBase` Bind / BindText 等便捷方法 | 绑定代码冗长，每个组件都要写 lambda | ✅ 完成，8 个便捷方法 |
-| `DataContextAttribute` + Factory 自动注入 | 手动管理 DataContext 生命周期易遗漏 | ✅ 完成，含缓存清理 |
-| MVE 四层架构标杆（LoginUI） | 缺乏架构参考示例 | ✅ 完成，Model/Service/DataContext/View |
+**原因**：原定时器模块基于线性遍历，定时器数量增长后效率低下，多定时器场景下形成性能瓶颈。频繁创建销毁 Timer 对象产生 GC 压力。
 
-#### 2. 框架质量加固（修改）
+**方案**：使用最小堆（IndexedMinHeap）实现定时器调度，TimerNode 对象池化复用，新增 Editor 诊断窗口用于运行时调试。
 
-| 改了什么 | 解决什么问题 | 现状 |
-|----------|-------------|------|
-| `EventDelegateData` 异常隔离 | 单个 handler 异常导致后续 handler 不执行 | ✅ 完成，7 个测试覆盖 |
-| `ResourceModule` 死代码清理 | `async void` 泄漏、UnloadAsset 空池告警 | ✅ 完成 |
-| `MemoryPool` 线程安全 + 异常统一 | 线程安全隐患、异常类型不一致 | ✅ 完成，5 个测试覆盖 |
-| 集合安全遍历 + Singleton Key 改进 | 遍历中修改集合导致异常 | ✅ 完成 |
-| 代码规范统一 | 命名不一致、冗余 using 等 | ✅ 完成 |
+**现状**：✅ 完成，23 个测试覆盖
 
-#### 3. Timer 模块重写（修改）
+#### 2. UI 数据绑定系统
 
-| 改了什么 | 解决什么问题 | 现状 |
-|----------|-------------|------|
-| `IndexedMinHeap` 最小堆定时器 | 原实现遍历查找效率低 | ✅ 完成，23 个测试覆盖 |
-| `TimerNode` 对象池化 | 频繁 new 对象产生 GC | ✅ 完成 |
-| Timer 诊断窗口 | 缺少运行时定时器调试手段 | ✅ 完成 |
+**原因**：原 UI 刷新完全依赖手动调用 `OnRefresh()`，数据变化后 UI 不知道要更新。同一数据多处展示时，改一处要改多处。列表刷新粒度太粗，一个道具变了要刷新整个列表。
 
-#### 4. 测试体系建设（新增）
+**方案**：新增响应式数据绑定模块（BindableProperty / ObservableList / BatchScheduler / DataContext），实现 Model 赋值自动传播到 View。帧级批次合并避免高频刷新。DataContext 多源聚合+格式转换，View 不直接依赖 Model。UIBase 新增 BindText / BindInteractable 等便捷方法简化绑定代码。
 
-| 改了什么 | 解决什么问题 | 现状 |
-|----------|-------------|------|
-| EditMode 测试框架（102 用例） | 原项目无单元测试 | ✅ 完成，覆盖 Timer/Event/MemoryPool/DataBinding |
-| PlayMode 测试框架 | 需要验证运行时帧级行为 | ✅ 完成，测试基础设施已搭建 |
-| 测试基础类 `DataBindingTestBase` | 测试环境重复搭建 | ✅ 完成 |
+**现状**：✅ 完成，102 个测试覆盖
+
+#### 3. 框架质量加固
+
+**原因**：事件系统中单个 handler 异常会导致后续 handler 全部中断。资源模块存在 async void 泄漏和空池未告警问题。内存池有线程安全隐患和异常类型不一致。
+
+**方案**：EventDelegateData 内联 try-catch 异常隔离。ResourceModule 清理死代码、增加泄漏防护。MemoryPool 统一线程安全和异常处理。集合遍历安全改造，代码规范统一。
+
+**现状**：✅ 完成，12 个测试覆盖
+
+#### 4. 测试体系
+
+**原因**：原项目无单元测试，修改代码后无法验证正确性。
+
+**方案**：搭建 EditMode + PlayMode 测试框架，覆盖 Timer、事件系统、内存池、数据绑定四大模块。
+
+**现状**：✅ 完成，102 个 EditMode 用例
 
 ---
 
