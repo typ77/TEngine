@@ -281,8 +281,16 @@ namespace GameLogic
         /// </summary>
         protected internal void OnDestroyWidget()
         {
+            RemoveAllBindings();
+
+            if (_dataContext != null)
+            {
+                _dataContext.Dispose();
+                _dataContext = null;
+            }
+
             Parent?.SetUpdateDirty();
-            
+
             RemoveAllUIEvent();
 
             foreach (var uiChild in ListChild)

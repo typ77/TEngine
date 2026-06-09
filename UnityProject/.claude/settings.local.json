@@ -6,7 +6,20 @@
       "Bash(openspec status:*)",
       "Bash(openspec instructions:*)",
       "Bash(msbuild:*)",
-      "Bash(openspec:*)"
+      "Bash(openspec:*)",
+      "mcp__codegraph__codegraph_files",
+      "mcp__codegraph__codegraph_explore",
+      "mcp__plugin_context-mode_context-mode__ctx_execute_file",
+      "Bash(rtk git *)",
+      "Bash(rtk git commit -m 'docs: TEngine 代码质量重构实施计划 \\(20 个任务, 3 Phase\\) *)",
+      "mcp__plugin_context-mode_context-mode__ctx_search",
+      "mcp__plugin_context-mode_context-mode__ctx_batch_execute",
+      "Bash(rtk ls *)",
+      "Bash(dotnet test *)",
+      "Bash(echo \"EXIT: $?\")",
+      "mcp__plugin_context-mode_context-mode__ctx_execute",
+      "mcp__UnityMCP__read_console",
+      "mcp__UnityMCP__refresh_unity"
     ]
   }
 }

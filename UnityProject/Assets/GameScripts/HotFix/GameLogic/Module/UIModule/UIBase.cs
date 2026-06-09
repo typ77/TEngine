@@ -3,8 +3,12 @@ using System.Collections.Generic;
 using Cysharp.Threading.Tasks;
 using TEngine;
 using UnityEngine;
+using UnityEngine.UI;
 #if ENABLE_OBFUZ
 using Obfuz;
+#endif
+#if UNITY_TEXTMESHPRO
+using TMPro;
 #endif
 
 namespace GameLogic
@@ -604,5 +608,135 @@ namespace GameLogic
         }
 
         #endregion
+
+        // ──── 数据绑定扩展 ────
+
+        private List<DataBinding.Binding> _bindings;
+        internal DataBinding.DataContext _dataContext;
+
+        public virtual DataBinding.DataContext DataContext => _dataContext;
+
+        public T GetDataContext<T>() where T : DataBinding.DataContext
+        {
+            return _dataContext as T;
+        }
+
+        public void Bind<T>(DataBinding.BindableProperty<T> property, Action<T> onChanged)
+        {
+            if (property == null) throw new ArgumentNullException(nameof(property));
+            if (onChanged == null) throw new ArgumentNullException(nameof(onChanged));
+
+            if (_bindings == null) _bindings = new List<DataBinding.Binding>();
+
+            Action<T, T> wrapper = (oldVal, newVal) => onChanged(newVal);
+            property.OnValueChanged += wrapper;
+            _bindings.Add(new DataBinding.Binding(() => property.OnValueChanged -= wrapper));
+
+            onChanged(property.Value);
+        }
+
+        public void Bind<T>(DataBinding.BindableProperty<T> property, Action<T, T> onChanged)
+        {
+            if (property == null) throw new ArgumentNullException(nameof(property));
+            if (onChanged == null) throw new ArgumentNullException(nameof(onChanged));
+
+            if (_bindings == null) _bindings = new List<DataBinding.Binding>();
+
+            property.OnValueChanged += onChanged;
+            _bindings.Add(new DataBinding.Binding(() => property.OnValueChanged -= onChanged));
+
+            onChanged(property.Value, property.Value);
+        }
+
+        protected virtual void SetupBindings() { }
+
+        public void RemoveAllBindings()
+        {
+            if (_bindings == null) return;
+            foreach (var binding in _bindings)
+                binding.Unsubscribe();
+            _bindings.Clear();
+        }
+
+        // ──── 组件感知便捷绑定 ────
+
+        /// <summary>
+        /// 绑定 string 属性到 Text.text。值变更时自动刷新文本。
+        /// </summary>
+        public void BindText(Text text, DataBinding.BindableProperty<string> prop)
+        {
+            if (text == null || prop == null) return;
+            Bind(prop, value => text.text = value);
+        }
+
+        /// <summary>
+        /// 绑定 string 属性到 TextMeshProUGUI.text。值变更时自动刷新文本。
+        /// </summary>
+        public void BindText(TMPro.TextMeshProUGUI tmp, DataBinding.BindableProperty<string> prop)
+        {
+            if (tmp == null || prop == null) return;
+            Bind(prop, value => tmp.text = value);
+        }
+
+        /// <summary>
+        /// 绑定 string 属性到 InputField.text。值变更时自动刷新输入框内容。
+        /// </summary>
+        public void BindText(InputField input, DataBinding.BindableProperty<string> prop)
+        {
+            if (input == null || prop == null) return;
+            Bind(prop, value => input.text = value);
+        }
+
+        /// <summary>
+        /// 绑定 bool 属性到 Selectable.interactable。值变更时自动切换交互状态。
+        /// </summary>
+        public void BindInteractable(Selectable selectable, DataBinding.BindableProperty<bool> prop)
+        {
+            if (selectable == null || prop == null) return;
+            Bind(prop, value => selectable.interactable = value);
+        }
+
+        /// <summary>
+        /// 绑定 bool 属性到 Toggle.isOn。值变更时自动切换开关状态。
+        /// </summary>
+        public void BindToggle(Toggle toggle, DataBinding.BindableProperty<bool> prop)
+        {
+            if (toggle == null || prop == null) return;
+            Bind(prop, value => toggle.isOn = value);
+        }
+
+        /// <summary>
+        /// 绑定 float 属性到 Slider.value。值变更时自动刷新滑块位置。
+        /// </summary>
+        public void BindSlider(Slider slider, DataBinding.BindableProperty<float> prop)
+        {
+            if (slider == null || prop == null) return;
+            Bind(prop, value => slider.value = value);
+        }
+
+        /// <summary>
+        /// 绑定 int 属性到 Slider.value（自动 int→float 转换）。值变更时自动刷新滑块位置。
+        /// </summary>
+        public void BindSlider(Slider slider, DataBinding.BindableProperty<int> prop)
+        {
+            if (slider == null || prop == null) return;
+            Bind(prop, value => slider.value = value);
+        }
+
+        /// <summary>
+        /// 绑定 string 资源路径属性到 Image.sprite。值变更时通过 SetSprite 异步加载并设置图片。
+        /// 资源加载/释放由 SetSpriteExtensions 内部管理。
+        /// UI 销毁时自动取消未完成的异步加载（通过 CancellationTokenOnDestroy）。
+        /// </summary>
+        public void BindSprite(Image image, DataBinding.BindableProperty<string> prop)
+        {
+            if (image == null || prop == null) return;
+            var ct = image.GetCancellationTokenOnDestroy();
+            Bind(prop, location =>
+            {
+                if (!string.IsNullOrEmpty(location) && image != null)
+                    image.SetSprite(location, cancellationToken: ct);
+            });
+        }
     }
 }

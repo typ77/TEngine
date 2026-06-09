@@ -55,9 +55,9 @@ UIBind --> UIWidget
 
 图表来源
 - [UIBase.cs:18-608](file://Assets/GameScripts/HotFix/GameLogic/Module/UIModule/UIBase.cs#L18-L608)
-- [UIWindow.cs:11-524](file://Assets/GameScripts/HotFix/GameLogic/Module/UIModule/UIWindow.cs#L11-L524)
+- [UIWindow.cs:11-538](file://Assets/GameScripts/HotFix/GameLogic/Module/UIModule/UIWindow.cs#L11-L538)
 - [UIWidget.cs:7-315](file://Assets/GameScripts/HotFix/GameLogic/Module/UIModule/UIWidget.cs#L7-L315)
-- [UIModule.cs:15-732](file://Assets/GameScripts/HotFix/GameLogic/Module/UIModule/UIModule.cs#L15-L732)
+- [UIModule.cs:15-759](file://Assets/GameScripts/HotFix/GameLogic/Module/UIModule/UIModule.cs#L15-L759)
 - [WindowAttribute.cs:5-78](file://Assets/GameScripts/HotFix/GameLogic/Module/UIModule/WindowAttribute.cs#L5-L78)
 - [ScriptGenerator.cs:8-343](file://Assets/Editor/UIScriptGenerator/ScriptGenerator.cs#L8-L343)
 - [ScriptGeneratorSetting.cs:10-207](file://Assets/Editor/UIScriptGenerator/ScriptGeneratorSetting.cs#L10-L207)
@@ -78,9 +78,9 @@ UIBind --> UIWidget
 
 章节来源
 - [UIBase.cs:18-608](file://Assets/GameScripts/HotFix/GameLogic/Module/UIModule/UIBase.cs#L18-L608)
-- [UIWindow.cs:11-524](file://Assets/GameScripts/HotFix/GameLogic/Module/UIModule/UIWindow.cs#L11-L524)
+- [UIWindow.cs:11-538](file://Assets/GameScripts/HotFix/GameLogic/Module/UIModule/UIWindow.cs#L11-L538)
 - [UIWidget.cs:7-315](file://Assets/GameScripts/HotFix/GameLogic/Module/UIModule/UIWidget.cs#L7-L315)
-- [UIModule.cs:15-732](file://Assets/GameScripts/HotFix/GameLogic/Module/UIModule/UIModule.cs#L15-L732)
+- [UIModule.cs:15-759](file://Assets/GameScripts/HotFix/GameLogic/Module/UIModule/UIModule.cs#L15-L759)
 - [WindowAttribute.cs:5-78](file://Assets/GameScripts/HotFix/GameLogic/Module/UIModule/WindowAttribute.cs#L5-L78)
 - [ScriptGenerator.cs:8-343](file://Assets/Editor/UIScriptGenerator/ScriptGenerator.cs#L8-L343)
 - [ScriptGeneratorSetting.cs:10-207](file://Assets/Editor/UIScriptGenerator/ScriptGeneratorSetting.cs#L10-L207)
@@ -168,9 +168,9 @@ UIWindow ..> WindowAttribute : "反射读取"
 
 图表来源
 - [UIBase.cs:18-608](file://Assets/GameScripts/HotFix/GameLogic/Module/UIModule/UIBase.cs#L18-L608)
-- [UIWindow.cs:11-524](file://Assets/GameScripts/HotFix/GameLogic/Module/UIModule/UIWindow.cs#L11-L524)
+- [UIWindow.cs:11-538](file://Assets/GameScripts/HotFix/GameLogic/Module/UIModule/UIWindow.cs#L11-L538)
 - [UIWidget.cs:7-315](file://Assets/GameScripts/HotFix/GameLogic/Module/UIModule/UIWidget.cs#L7-L315)
-- [UIModule.cs:15-732](file://Assets/GameScripts/HotFix/GameLogic/Module/UIModule/UIModule.cs#L15-L732)
+- [UIModule.cs:15-759](file://Assets/GameScripts/HotFix/GameLogic/Module/UIModule/UIModule.cs#L15-L759)
 - [WindowAttribute.cs:20-77](file://Assets/GameScripts/HotFix/GameLogic/Module/UIModule/WindowAttribute.cs#L20-L77)
 
 ## 详细组件分析
@@ -206,6 +206,7 @@ UIWindow ..> WindowAttribute : "反射读取"
   - Canvas/GraphicRaycaster：Canvas与射线检测组件。
   - Depth：窗口Canvas排序层级。
   - Visible：可见性控制，同时控制交互性与层级。
+  - **LoadFailed**：加载失败标志（`internal bool LoadFailed { get; }`），当资源加载异常时由 UIModule 设置为 `true`，异步等待方法（ShowUIAsyncAwait、GetUIAsyncAwait、GetUIAsync）检测到此标志后立即返回 `null`，避免无限等待僵尸窗口。
 - 生命周期
   - InternalLoad/InternalCreate/InternalRefresh/InternalUpdate/InternalDestroy：内部生命周期编排。
   - Hide/Close：隐藏与关闭窗口。
@@ -214,7 +215,7 @@ UIWindow ..> WindowAttribute : "反射读取"
   - SetUIFit/SetUINotFit：刘海屏适配与排除适配区域。
 
 章节来源
-- [UIWindow.cs:11-524](file://Assets/GameScripts/HotFix/GameLogic/Module/UIModule/UIWindow.cs#L11-L524)
+- [UIWindow.cs:11-538](file://Assets/GameScripts/HotFix/GameLogic/Module/UIModule/UIWindow.cs#L11-L538)
 
 ### UIWidget 小部件组件API
 - 属性
@@ -235,7 +236,10 @@ UIWindow ..> WindowAttribute : "反射读取"
 - 窗口管理
   - ShowUI/ShowUIAsync/ShowUIAsyncAwait：打开窗口（同步/异步/等待）。
   - HideUI/CloseUI/CloseAll/CloseAllWithOut：隐藏、关闭、全部关闭、保留特定窗口。
-  - GetUIAsyncAwait/GetUIAsync：异步获取已存在的窗口实例。
+  - GetUIAsyncAwait/GetUIAsync：异步获取已存在的窗口实例，支持 LoadFailed 检测与超时返回 `null`。
+- 实例属性（通过 `UIModule.Instance` 访问）
+  - **UIRoot**：UI 根节点 Transform（实例属性，非静态字段）。
+  - **Resource**：资源加载器 `IUIResourceLoader`（实例字段，非静态字段）。UIBase/UIWindow/UIWidget 内部统一通过 `UIModule.Instance.Resource` 加载资源。
 - 可见性与层级
   - OnSortWindowDepth：按层级重排窗口Depth。
   - OnSetWindowVisible：自顶向下设置可见性，处理全屏遮挡。
@@ -243,7 +247,7 @@ UIWindow ..> WindowAttribute : "反射读取"
   - LAYER_DEEP/WINDOW_DEEP/WINDOW_HIDE_LAYER/WINDOW_SHOW_LAYER：层级与层位常量。
 
 章节来源
-- [UIModule.cs:15-732](file://Assets/GameScripts/HotFix/GameLogic/Module/UIModule/UIModule.cs#L15-L732)
+- [UIModule.cs:15-759](file://Assets/GameScripts/HotFix/GameLogic/Module/UIModule/UIModule.cs#L15-L759)
 
 ### WindowAttribute 窗口属性API
 - WindowLayer：窗口层级（Bottom/UI/Top/Tips/System）。
@@ -295,9 +299,9 @@ UIBind --> UIWidget
 
 图表来源
 - [UIBase.cs:18-608](file://Assets/GameScripts/HotFix/GameLogic/Module/UIModule/UIBase.cs#L18-L608)
-- [UIWindow.cs:11-524](file://Assets/GameScripts/HotFix/GameLogic/Module/UIModule/UIWindow.cs#L11-L524)
+- [UIWindow.cs:11-538](file://Assets/GameScripts/HotFix/GameLogic/Module/UIModule/UIWindow.cs#L11-L538)
 - [UIWidget.cs:7-315](file://Assets/GameScripts/HotFix/GameLogic/Module/UIModule/UIWidget.cs#L7-L315)
-- [UIModule.cs:15-732](file://Assets/GameScripts/HotFix/GameLogic/Module/UIModule/UIModule.cs#L15-L732)
+- [UIModule.cs:15-759](file://Assets/GameScripts/HotFix/GameLogic/Module/UIModule/UIModule.cs#L15-L759)
 - [WindowAttribute.cs:20-77](file://Assets/GameScripts/HotFix/GameLogic/Module/UIModule/WindowAttribute.cs#L20-L77)
 - [ScriptGenerator.cs:8-343](file://Assets/Editor/UIScriptGenerator/ScriptGenerator.cs#L8-L343)
 - [ScriptGeneratorSetting.cs:10-207](file://Assets/Editor/UIScriptGenerator/ScriptGeneratorSetting.cs#L10-L207)
@@ -327,6 +331,7 @@ UIBind --> UIWidget
 - 资源加载失败
   - 检查AssetName与FromResources设置，确保资源路径正确。
   - 异步加载时关注IsLoadDone状态与超时处理。
+  - 若 `LoadFailed` 为 `true`，说明资源加载过程中发生异常，异步方法会返回 `null`；检查资源路径与资源包完整性。
 - 事件未触发
   - 确认AddUIEvent注册时机与事件类型一致性。
   - 检查UIWidget/UIWindow的OnCreate/OnRefresh是否正确调用。

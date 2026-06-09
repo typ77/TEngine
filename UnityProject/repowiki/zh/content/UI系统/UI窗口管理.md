@@ -130,6 +130,8 @@ UIM-->>Caller : "窗口可见"
 - 可见性与深度：OnSortWindowDepth/OnSetWindowVisible，按层级与栈序计算sortingOrder与可见性
 - 更新循环：OnUpdate遍历窗口执行InternalUpdate
 
+> **架构变更**：`UIModule` 继承自 `Singleton<UIModule>`，其 `_instanceRoot`（UIRoot）和 `_resourceLoader`（Resource）为**实例字段**而非静态字段。UIBase、UIWindow、UIWidget 内部统一通过 `UIModule.Instance.UIRoot` 和 `UIModule.Instance.Resource` 访问资源加载器与 UI 根节点。
+
 关键流程图：ShowUIAsyncAwait
 ```mermaid
 flowchart TD
@@ -139,10 +141,14 @@ Exists --> |是| ReturnExist["直接返回窗口实例"]
 Exists --> |否| Create["创建窗口实例并压栈"]
 Create --> Load["异步加载资源并Handle_Completed"]
 Load --> Wait["等待IsLoadDone"]
-Wait --> Timeout{"超时？"}
-Timeout --> |是| ReturnNull["返回null"]
+Wait --> Failed{"LoadFailed？"}
+Failed --> |是| ReturnNull["返回null（加载失败）"]
+Failed --> |否| Timeout{"超时？"}
+Timeout --> |是| ReturnNull2["返回null（超时）"]
 Timeout --> |否| ReturnWin["返回窗口实例"]
 ```
+
+> **注意**：异步等待方法（ShowUIAsyncAwait、GetUIAsyncAwait、GetUIAsync）在轮询 `IsLoadDone` 时会同步检查 `LoadFailed` 标志，若为 `true` 则立即返回 `null`，避免无限等待已失败的窗口。
 
 图表来源
 - [UIModule.cs:338-364](file://Assets/GameScripts/HotFix/GameLogic/Module/UIModule/UIModule.cs#L338-L364)
@@ -159,6 +165,7 @@ Timeout --> |否| ReturnWin["返回窗口实例"]
 职责与机制：
 - 生命周期：InternalLoad/Handle_Completed/InternalCreate/InternalRefresh/InternalUpdate/InternalDestroy
 - 资源加载：支持从资源包或Resources加载，绑定Canvas与GraphicRaycaster
+- 加载失败处理：`LoadFailed` 属性标记资源加载是否失败，异步等待方法检测此标志后返回 `null`
 - 可见性与交互：Visible属性控制Canvas层级与Raycaster开关，Interactable联动
 - 深度排序：Depth属性根据sortingOrder与子Canvas同步更新
 - 刘海屏适配：SetUIFit/SetUINotFit系列方法
@@ -176,6 +183,7 @@ class UIWindow {
 +int HideTimeToClose
 +int Depth
 +bool Visible
++bool LoadFailed
 +void Init(name, layer, fullScreen, assetName, fromResources, hideTimeToClose)
 +UniTaskVoid InternalLoad(location, prepareCallback, isAsync, userDatas)
 +void InternalCreate()

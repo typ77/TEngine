@@ -353,6 +353,7 @@ namespace GameLogic
                 Inject();
                 ScriptGenerator();
                 BindMemberProperty();
+                SetupBindings();
                 RegisterEvent();
                 OnCreate();
             }
@@ -439,6 +440,7 @@ namespace GameLogic
             _isCreate = false;
 
             RemoveAllUIEvent();
+            RemoveAllBindings();
 
             var snapshot = ListChild.ToArray();
             ListChild.Clear();
@@ -446,6 +448,12 @@ namespace GameLogic
             {
                 snapshot[i].CallDestroy();
                 snapshot[i].OnDestroyWidget();
+            }
+
+            if (_dataContext != null)
+            {
+                _dataContext.Dispose();
+                _dataContext = null;
             }
 
             // 注销回调函数
