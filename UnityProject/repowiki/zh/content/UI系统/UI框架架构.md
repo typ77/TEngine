@@ -96,10 +96,11 @@ EditorHelper --> ScriptGen
 - [UnityEditorInspectorDrawHelper.cs:152-167](file://Assets/Editor/TEngineSettingsProvider/UnityEditorInspectorDrawHelper.cs#L152-L167)
 
 ## 核心组件
-- UIBase：UI系统抽象基类，定义UI类型、父子关系、生命周期钩子（创建、刷新、更新、销毁）、事件管理、查找子节点与组件等通用能力
-- UIWindow：窗口类，负责窗口生命周期（加载、创建、刷新、更新、销毁）、可见性与交互控制、层级排序、刘海屏适配、资源加载策略
-- UIWidget：组件类，负责组件生命周期、可见性、更新树维护、父子关系建立、Canvas层级继承
+- UIBase：UI系统抽象基类，定义UI类型、父子关系、生命周期钩子（创建、刷新、更新、销毁）、事件管理、查找子节点与组件等通用能力。支持数据绑定扩展（Bind / BindText 等便捷方法）。
+- UIWindow：窗口类，负责窗口生命周期（加载、创建、刷新、更新、销毁）、可见性与交互控制、层级排序、刘海屏适配、资源加载策略。集成 DataContext 自动创建和销毁。
+- UIWidget：组件类，负责组件生命周期、可见性、更新树维护、父子关系建立、Canvas层级继承。通过 Parent 链获取 Window 的 DataContext。
 - UIModule：UI管理模块，负责窗口栈管理、窗口显示/隐藏/关闭、层级排序、可见性计算、资源加载、编辑器脚本生成集成
+- 数据绑定：BindableProperty（响应式属性）、ObservableList（响应式集合）、BatchScheduler（帧级合并）、DataContext（多源聚合+转换）。详见 [UI数据绑定](UI数据绑定.md)。
 - WindowAttribute：窗口元数据，声明窗口层级、资源路径、是否全屏、隐藏后自动关闭等属性
 - IUIResourceLoader/UIResourceLoader：UI资源加载接口与默认实现，封装资源模块的GameObject加载能力
 - UIBindComponent：编辑器绑定组件，存储UI组件引用，供代码生成器使用

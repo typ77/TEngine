@@ -22,6 +22,8 @@ mappings:
     wiki_path: "zh/content/API参考/音频与本地化API.md"
   - source_pattern: "Assets/GameScripts/HotFix/GameLogic/Module/UIModule/**"
     wiki_path: "zh/content/UI系统"
+  - source_pattern: "Assets/GameScripts/HotFix/GameLogic/Module/DataBinding/**"
+    wiki_path: "zh/content/UI系统/UI数据绑定.md"
   - source_pattern: "Assets/GameScripts/HotFix/GameLogic/SingletonSystem/**"
     wiki_path: "zh/content/核心系统/单例系统"
   - source_pattern: "Assets/GameScripts/HotFix/GameLogic/GameModule.cs"
