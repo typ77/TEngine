@@ -1,9 +1,26 @@
-# UI 数据绑定系统设计文档 — Phase 1
+# UI 数据绑定系统设计文档 — Phase 1 + Phase 2
 
-> **版本**: v1.0  
-> **日期**: 2026-06-08  
-> **状态**: 设计评审  
-> **范围**: 标量数据绑定 + DataContext 自动聚合 + 帧级批次合并
+> **版本**: v1.1
+> **日期**: 2026-06-09
+> **状态**: 实现已完成
+> **范围**: 标量数据绑定 + DataContext 自动聚合 + 帧级批次合并 + 组件感知便捷绑定
+
+---
+
+## 变更记录（v1.0 → v1.1）
+
+| 变更 | 说明 |
+|------|------|
+| **BatchScheduler.SafeMarkDirty** | 新增静态方法，EditMode 同步退化；FieldInfo 缓存到 `static readonly` |
+| **BatchScheduler 两轮 Flush** | Round 1 处理 Model→DataContext，Round 2 处理 DataContext→View |
+| **IBatchDirtyTarget** | 统一脏标记接口，替代独立的 props/lists 分离设计 |
+| **ListChangedEventArgs** | 使用 `{ get; set; }`（非 `init`），非 `readonly struct`（C# 9 兼容） |
+| **DataContext._ownedProperties** | MapProperty 中注册 target，Dispose 时释放 output 属性 |
+| **UIBase 便捷绑定** | Phase 2 新增 BindText/BindInteractable/BindToggle/BindSlider/BindSprite |
+| **UIWidget _dataContext 清理** | OnDestroyWidget 中添加 _dataContext?.Dispose() |
+| **MVE 四层架构** | Model → Service → DataContext → View，按业务单位组织文件 |
+| **DataContext converter** | MapProperty converter 支持业务语义转换（如 Gold < 0 → "破产"） |
+| **PlayMode 测试** | 8 个测试覆盖运行时帧级合并行为 |
 
 ---
 
@@ -268,7 +285,27 @@ list.ReplaceAll(newItems);
 
 收集一帧内所有的属性/列表变更，在帧末统一触发回调。对业务代码完全透明。
 
-#### 4.3.2 工作原理
+#### 4.3.2 EditMode 兼容（SafeMarkDirty）
+
+```
+BatchScheduler.SafeMarkDirty(IBatchDirtyTarget target)
+
+运行时（PlayMode）：
+  BatchScheduler 单例存在 → instance._dirty.Add(target)
+  回调延迟到 LateUpdate 时 Flush 触发
+
+编辑器（EditMode）：
+  BatchScheduler 单例不存在（SingletonSystem 未初始化）
+  → 直接调用 target.FireCallback()（同步退化）
+  → 不做帧级合并，每次赋值立即回调
+
+性能优化：
+  FieldInfo 缓存到 static readonly 字段，避免每次赋值都做反射查找
+  private static readonly FieldInfo _instanceField = typeof(BatchScheduler)
+      .GetField("_instance", BindingFlags.NonPublic | BindingFlags.Static);
+```
+
+#### 4.3.3 工作原理
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
@@ -296,20 +333,33 @@ list.ReplaceAll(newItems);
 └─────────────────────────────────────────────────────────────┘
 ```
 
-#### 4.3.3 数据结构
+#### 4.3.4 数据结构
 
 ```
 内部状态:
-  HashSet<BindablePropertyCore>  _dirtyProps    // 本帧变化的属性
-  HashSet<ObservableListCore>    _dirtyLists    // 本帧变化的列表
-  bool                           _isFlushing    // 防止重入
+  HashSet<IBatchDirtyTarget>  _dirty          // 本帧变化的属性/列表（统一接口）
+  bool                        _isFlushing      // 防重入
 
 BindableProperty 赋值时:
-  if (!_isFlushing)              // 非刷新期间才入队
-      BatchScheduler.Instance.MarkDirty(this);
+  if (!_isFlushing && OnValueChanged != null)  // 有订阅者才入队
+      BatchScheduler.SafeMarkDirty(this);       // EditMode 兼容
+
+BindableProperty 和 ObservableList 共享 IBatchDirtyTarget 接口:
+  void FireCallback()  // 由 BatchScheduler.Flush 统一调用
 ```
 
-#### 4.3.4 防重入
+#### 4.3.5 两轮 Flush
+
+```
+Flush() 实现（两轮处理，同帧完成 Model→DataContext→View）:
+
+Round 1: 处理已有脏标记 → 触发 Model 层回调（含 DataContext converter）
+Round 2: 处理 Round 1 中新产生的脏标记 → 触发 DataContext output → View 回调
+
+效果: Model 变更 → 同帧 DataContext 转换 → 同帧 View 刷新
+```
+
+#### 4.3.6 防重入
 
 ```
 Flush 期间如果回调里又改了 Model 属性？
@@ -806,26 +856,27 @@ namespace GameLogic.DataBinding
 {
     /// <summary>
     /// 集合变更事件参数。
+    /// 注意：使用 { get; set; } 而非 { get; init; }，非 readonly struct（C# 9 兼容）。
     /// </summary>
-    public readonly struct ListChangedEventArgs<T>
+    public struct ListChangedEventArgs<T>
     {
         /// <summary>变更类型。</summary>
-        public ListChangeType Type { get; init; }
+        public ListChangeType Type { get; set; }
 
         /// <summary>受影响的索引。</summary>
-        public int Index { get; init; }
+        public int Index { get; set; }
 
         /// <summary>Move 操作的源索引。</summary>
-        public int OldIndex { get; init; }
+        public int OldIndex { get; set; }
 
         /// <summary>新增/替换后的新值。</summary>
-        public T Item { get; init; }
+        public T Item { get; set; }
 
         /// <summary>替换前的旧值（仅 Replace 类型有效）。</summary>
-        public T OldItem { get; init; }
+        public T OldItem { get; set; }
 
         /// <summary>批量操作的新值列表（AddRange/ReplaceAll 有效）。</summary>
-        public IReadOnlyList<T> NewItems { get; init; }
+        public IReadOnlyList<T> NewItems { get; set; }
     }
 
     /// <summary>
@@ -1020,8 +1071,65 @@ public partial class UIBase
     /// <summary>
     /// 移除所有绑定。在销毁时自动调用。
     /// </summary>
-    internal void RemoveAllBindings();
+    public void RemoveAllBindings();
+
+    // ──── Phase 2: 组件感知便捷绑定 ────
+
+    /// <summary>绑定 string 属性到 Text.text。</summary>
+    public void BindText(Text text, BindableProperty<string> prop);
+
+    /// <summary>绑定 string 属性到 TextMeshProUGUI.text。</summary>
+    public void BindText(TMPro.TextMeshProUGUI tmp, BindableProperty<string> prop);
+
+    /// <summary>绑定 string 属性到 InputField.text。</summary>
+    public void BindText(InputField input, BindableProperty<string> prop);
+
+    /// <summary>绑定 bool 属性到 Selectable.interactable。</summary>
+    public void BindInteractable(Selectable selectable, BindableProperty<bool> prop);
+
+    /// <summary>绑定 bool 属性到 Toggle.isOn。</summary>
+    public void BindToggle(Toggle toggle, BindableProperty<bool> prop);
+
+    /// <summary>绑定 float 属性到 Slider.value。</summary>
+    public void BindSlider(Slider slider, BindableProperty<float> prop);
+
+    /// <summary>绑定 int 属性到 Slider.value（int→float 自动转换）。</summary>
+    public void BindSlider(Slider slider, BindableProperty<int> prop);
+
+    /// <summary>
+    /// 绑定 string 资源路径属性到 Image.sprite。
+    /// 通过 SetSprite 异步加载，UI 销毁时自动取消（CancellationTokenOnDestroy）。
+    /// </summary>
+    public void BindSprite(Image image, BindableProperty<string> prop);
 }
+```
+
+---
+
+### 5.8 Phase 2 便捷方法设计原则
+
+```
+设计原则:
+  - 每个便捷方法内部就是 Bind(prop, val => component.xxx = val) 的薄包装
+  - UIBase 和 UIWidget 共享（都继承 UIBase）
+  - 组件为 null 时静默跳过（防御性编程）
+  - BindSprite 内部调用 SetSpriteExtensions.SetSprite（异步加载/释放由引擎管理）
+
+Widget 自治模式:
+  Widget 拥有相同的 BindText/BindInteractable 等方法，
+  鼓励 Widget 内部自己管理绑定，父级只传数据：
+
+  // 父级
+  var btn = CreateWidget<LoginButton>("m_btnLogin");
+  btn.BindLabel(dc.ButtonLabel);
+  btn.OnClick(() => service.RandomLogin());
+
+  // Widget 内部
+  public class LoginButton : UIWidget
+  {
+      private Text _label;
+      public void BindLabel(BindableProperty<string> prop) => BindText(_label, prop);
+  }
 ```
 
 ---
@@ -1816,28 +1924,59 @@ Bind(ctx.GoldText, gold => txtGold.text = gold);
 
 ---
 
-## 10. 文件结构规划
+## 10. 文件结构
+
+### 10.1 核心模块
 
 ```
 Assets/GameScripts/HotFix/GameLogic/Module/DataBinding/
-├── BindableProperty.cs            (~80 行)   响应式属性
-├── ObservableList.cs              (~200 行)  响应式列表
-├── ListChangedEventArgs.cs        (~30 行)   列表变更事件参数
-├── ListChangeType.cs              (~15 行)   列表变更类型枚举
-├── BatchScheduler.cs              (~80 行)   帧级批次合并
-├── DataContext.cs                  (~150 行)  DataContext 基类
-├── DataContextAttribute.cs        (~25 行)   DataContext 声明特性
-├── UIExtension.cs                  (~60 行)   UIBase 绑定扩展
-├── Binding.cs                     (~20 行)   绑定记录结构
-└── DataBinding.meta                           Unity 文件夹元数据
+├── BindableProperty.cs            (~106 行)  响应式属性
+├── ObservableList.cs              (~235 行)  响应式列表
+├── ListChangedEventArgs.cs        (~28 行)   列表变更事件参数（C# 9 兼容）
+├── ListChangeType.cs              (~18 行)   列表变更类型枚举
+├── BatchScheduler.cs              (~90 行)   帧级批次合并（SafeMarkDirty + 两轮 Flush）
+├── DataContext.cs                  (~135 行)  DataContext 基类（含 _ownedProperties）
+├── DataContextAttribute.cs        (~33 行)   DataContext 声明特性
+├── DataContextFactory.cs          (~37 行)   DataContext 工厂（反射 + 缓存）
+├── IBatchDirtyTarget.cs           (~12 行)   脏标记统一接口
+├── Binding.cs                     (~16 行)   绑定记录结构
+```
 
-预估代码量: ~660 行基础设施代码
-测试代码: Assets/TEngine/Tests/EditMode/DataBinding/
-├── BindablePropertyTests.cs
-├── ObservableListTests.cs
-├── BatchSchedulerTests.cs
-├── DataContextTests.cs
-└── UIExtensionTests.cs
+### 10.2 UI 集成（修改现有文件）
+
+```
+UIBase.cs    — 数据绑定扩展 + Phase 2 便捷方法（BindText/BindInteractable 等）
+UIWindow.cs  — InternalCreate 添加 SetupBindings，InternalDestroy 添加 DataContext 清理
+UIWidget.cs  — OnDestroyWidget 添加 _dataContext 清理
+UIModule.cs  — OnWindowPrepare 添加 DataContextFactory.CreateFor
+```
+
+### 10.3 示例代码（按业务单位组织）
+
+```
+Assets/GameScripts/HotFix/GameLogic/UI/LoginUI/
+├── LoginModel.cs          ← 纯数据层（BindableProperty）
+├── LoginService.cs        ← 业务操作层（修改 Model）
+├── LoginDataContext.cs    ← 数据映射层（MapProperty + converter）
+└── LoginUI.cs             ← 视图层（BindText/BindInteractable）
+```
+
+### 10.4 测试代码
+
+```
+Assets/TEngine/Tests/EditMode/DataBinding/          （56 个测试）
+├── BindablePropertyTests.cs    (15 tests)
+├── ObservableListTests.cs      (16 tests)
+├── BatchSchedulerTests.cs      (4 tests)
+├── DataContextTests.cs         (6 tests)
+├── DataContextFactoryTests.cs  (3 tests)
+├── UIBaseBindingTests.cs      (6 tests)
+├── EndToEndTests.cs            (3 tests)
+└── DataBindingTestBase.cs
+
+Assets/TEngine/Tests/PlayMode/DataBinding/           （8 个测试）
+├── BatchSchedulerPlayModeTests.cs              (4 tests) — 帧级合并
+└── ObservableListPlayModeTests.cs              (4 tests) — ReplaceAll 合并
 ```
 
 ---
@@ -1903,11 +2042,72 @@ BatchScheduler 首次通过 Instance 访问时自动初始化（懒加载）。
 
 ---
 
-## 12. Phase 2 展望
+## 12. Phase 2 实现记录
 
-以下内容不在 Phase 1 范围内，作为后续规划参考。
+以下功能已在 Phase 2 中实现。
 
-### 12.1 UIListWidget（虚拟化列表）
+### 12.1 组件感知便捷绑定（已实现）
+
+```
+UIBase 上新增 8 个便捷方法：
+  BindText(Text, prop)              // Text.text 自动刷新
+  BindText(TMP, prop)               // TextMeshProUGUI.text
+  BindText(InputField, prop)        // InputField.text
+  BindInteractable(Selectable, prop)// 按钮等交互状态
+  BindToggle(Toggle, prop)          // Toggle.isOn
+  BindSlider(Slider, float prop)    // Slider.value
+  BindSlider(Slider, int prop)      // int→float 自动转换
+  BindSprite(Image, prop)           // 异步图片加载（SetSprite）
+
+效果：4 行 lambda 绑定 → 1 行搞定
+  之前: Bind(dc.DisplayAccount, text => { if (m_text != null) m_text.text = text; });
+  之后: BindText(m_text, dc.DisplayAccount);
+```
+
+### 12.2 DataContext Converter 模式（已实现）
+
+```
+MapProperty converter 支持业务语义转换：
+  Model: Gold = -500 (long)
+    → MapProperty converter
+  DisplayGold = "破产" (string)
+    → BindText
+  View: m_text.text = "破产"
+
+分层原则：
+  Model 保证数据合法性，DataContext 负责类型转换与显示语义，View 只负责渲染
+```
+
+### 12.3 MVE 四层架构标杆（已实现）
+
+```
+按业务单位组织文件（UI/LoginUI/）：
+  LoginModel.cs          ← 纯数据层
+  LoginService.cs        ← 业务操作层
+  LoginDataContext.cs    ← 数据映射层（含 converter）
+  LoginUI.cs             ← 视图层
+
+Widget 自治：Widget 拥有相同 Bind API，内部管理自己的绑定
+```
+
+### 12.4 深度审计修复（已实现）
+
+```
+C3: SafeMarkDirty 反射缓存到 static readonly FieldInfo
+C1: DataContext._ownedProperties 修复，MapProperty 注册 target
+C2: UIWidget.OnDestroyWidget 添加 _dataContext?.Dispose()
+I2: ObservableList.AddRange 双重 ToList 优化
+I4: BindSprite 添加 CancellationTokenOnDestroy
+I7: LoginModel.OnRelease 释放 BindableProperty
+```
+
+---
+
+## 13. Phase 3 展望
+
+以下内容尚未实现，作为后续规划参考。
+
+### 13.1 UIListWidget（虚拟化列表）
 
 ```
 UIListWidget<TData, TItem>
