@@ -194,3 +194,11 @@ protected override void ScriptGenerator()
 | 事件系统（AddUIEvent / GameEvent） | [event-system.md](event-system.md) |
 | 节点前缀命名规范 | [naming-rules.md](naming-rules.md#ui-节点命名规范) |
 | 资源加载/卸载 API | [resource-api.md](resource-api.md) |
+
+## FancyScrollView 虚拟化列表
+
+- 普通少量列表继续使用 `AdjustIconNum<T>()` / `AsyncAdjustIconNum<T>()`。
+- 大量数据、需要复用 Cell、滚动动画或 Grid 虚拟化时使用 `FancyScrollViewWidget` 系列。
+- Cell 继承 `FancyCellWidget<TItemData,TContext>`，通过 `BindData(TItemData data)` 接收数据。
+- ScrollRect 容器节点命名 `m_fscroll_List` 并挂 `FancyScrollRectProxy`，滚动控制节点命名 `m_scroller_List` 并挂 `Scroller`。
+- Cell 内部点击用 `NotifyItemClicked()` / `NotifyButtonClicked()` 冒泡到 ScrollViewWidget，UIWindow 再按需调用 Service 或发送 GameEvent。

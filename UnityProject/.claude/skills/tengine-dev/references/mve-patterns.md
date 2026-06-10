@@ -464,15 +464,10 @@ UIModule.ShowUI(typeof(LoginUI))
 
 ---
 
-## 七、待实现功能（FancyScrollView CellWidget）
+## 七、FancyScrollView CellWidget MVE 模式
 
-以下功能已设计但尚未实现（详见 `openspec/changes/fancy-scrollview-integration/`）：
-
-| 功能 | 设计方向 | 状态 |
-|------|---------|------|
-| **CellWidget MVE 模式** | Cell 内部 ViewModel（BindableProperty 中间属性）+ `SetupBindings` + `BindData` 推值 | 设计中 |
-| **FancyScrollView 适配** | 基于 FancyScrollView 的虚拟化列表，三种变体 | 设计中 |
-| **渐进式加载** | Cell 三级加载（占位→框架→完整） | 设计中 |
-| **ScriptGenerator 扩展** | `m_fscroll_` 前缀自动映射 ScrollView 组件 | 规划中 |
-
-当前列表管理使用 `AdjustIconNum<T>()` / `AsyncAdjustIconNum<T>()` 命令式模式（详见 [ui-patterns.md](ui-patterns.md)）。
+- Window/DataContext 负责把 Model 数据映射成列表展示数据。
+- Window 在 `OnRefresh()` 或绑定回调中调用 `_scrollView.UpdateContents(items)`。
+- `FancyCellWidget.BindData(TItemData data)` 是 Cell 接收数据的唯一入口。
+- Cell 内部可用 `CreateProperty<T>()` 创建生命周期随 Cell 的 BindableProperty，并在 `OnDestroy()` 自动 Dispose。
+- Cell 被复用时必须在 `BindData` 中重置瞬态状态，例如选中态、按钮可用态、加载状态。

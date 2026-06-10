@@ -51,6 +51,8 @@ Prefab 节点前缀决定 `UIScriptGenerator` 自动生成的绑定类型（基�
 | `m_btn_` | `Button` | `m_btn_Start` |
 | `m_img_` | `Image` | `m_img_Icon` |
 | `m_rimg_` | `RawImage` | `m_rimg_Avatar` |
+| `m_fscroll_` | `FancyScrollRectProxy` | `m_fscroll_List` |
+| `m_scroller_` | `Scroller` | `m_scroller_List` |
 | `m_scroll_` | `ScrollRect` | `m_scroll_List` |
 | `m_scrollBar_` | `Scrollbar` | `m_scrollBar_Vert` |
 | `m_input_` | `InputField` | `m_input_Name` |
@@ -72,6 +74,7 @@ Prefab 节点前缀决定 `UIScriptGenerator` 自动生成的绑定类型（基�
 - 前缀匹配规则来自 `ScriptGeneratorSetting.asset` 中的 `uiElementRegex` 字段，匹配时不带尾部下划线（如 regex 是 `m_tmpInput`，节点名 `m_tmpInput_XXX` 可匹配）
 - `m_scrollBar_` 必须写在 `m_scroll_` 之前，否则 `m_scrollBar_X` 会被 `m_scroll` 先匹配（setting 中确实 scrollBar 在 scroll 之前）
 - `m_tmpInput_` 和 `m_tmpDropdown_` 必须写在 `m_tmp_` 之前，同理（setting 中 tmpInput/tmpDropdown 在 tmp 之前）
+- `m_fscroll_` / `m_scroller_` 必须写在 `m_scroll_` 之前，否则 FancyScrollView 节点可能被普通 ScrollRect 规则先匹配。
 - `m_richText_` 必须写在 `m_text_` 之前（setting 中 richText 在 text 之前）
 - 不需要绑定的节点无需加前缀，生成器会忽略
 
