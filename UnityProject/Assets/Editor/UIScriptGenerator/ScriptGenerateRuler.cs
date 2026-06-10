@@ -80,6 +80,8 @@ namespace TEngine.Editor.UI
         Button,
         Image,
         RawImage,
+        FancyScrollRectProxy,
+        FancyScroller,
         ScrollRect,
         Scrollbar,
         InputField,

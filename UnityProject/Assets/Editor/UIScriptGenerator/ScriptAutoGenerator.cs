@@ -151,6 +151,7 @@ namespace TEngine.Editor.UI
                 strFile.AppendLine("using UnityEngine;");
                 strFile.AppendLine("using UnityEngine.UI;");
                 strFile.AppendLine("using TEngine;");
+                strFile.AppendLine("using GameLogic.UI.FancyScrollView;");
                 strFile.AppendLine();
                 strFile.AppendLine($"namespace {ScriptGeneratorSetting.GetUINameSpace()}");
                 strFile.AppendLine("{");
@@ -285,7 +286,7 @@ namespace TEngine.Editor.UI
                 return;
             }
 
-            var componentName = rule.componentName.ToString();
+            var componentName = ScriptGeneratorSetting.GetComponentTypeName(rule.componentName);
 
             if (string.IsNullOrEmpty(componentName))
             {
@@ -388,6 +389,7 @@ namespace TEngine.Editor.UI
             strFile.AppendLine("using UnityEngine;");
             strFile.AppendLine("using UnityEngine.UI;");
             strFile.AppendLine("using TEngine;");
+            strFile.AppendLine("using GameLogic.UI.FancyScrollView;");
             strFile.AppendLine();
             strFile.AppendLine($"namespace {ScriptGeneratorSetting.GetUINameSpace()}");
             strFile.AppendLine("{");
@@ -463,7 +465,7 @@ namespace TEngine.Editor.UI
                 return;
             }
 
-            var componentName = rule.componentName.ToString();
+            var componentName = ScriptGeneratorSetting.GetComponentTypeName(rule.componentName);
 
             if (string.IsNullOrEmpty(componentName))
             {
@@ -589,10 +591,9 @@ namespace TEngine.Editor.UI
                 return;
             }
 
-            var componentName = rule.componentName.ToString();
+            var componentName = ScriptGeneratorSetting.GetComponentTypeName(rule.componentName);
 
             if (string.IsNullOrEmpty(componentName))
-            {
                 return;
             }
 
@@ -643,6 +644,9 @@ namespace TEngine.Editor.UI
             type = Type.GetType($"GameLogic.{enumName}, GameLogic");
             if (type != null) return type;
 
+            type = Type.GetType($"GameLogic.UI.FancyScrollView.{enumName}, GameLogic");
+            if (type != null) return type;
+
             type = Type.GetType($"TMPro.{enumName}, TMPro");
             if (type != null) return type;
 
@@ -661,6 +665,9 @@ namespace TEngine.Editor.UI
                 if (type != null) return type;
 
                 type = assembly.GetType($"GameLogic.{enumName}");
+                if (type != null) return type;
+
+                type = assembly.GetType($"GameLogic.UI.FancyScrollView.{enumName}");
                 if (type != null) return type;
             }
 

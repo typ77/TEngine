@@ -76,6 +76,8 @@ namespace TEngine.Editor.UI
             new ScriptGenerateRuler("m_btn", UIComponentName.Button),
             new ScriptGenerateRuler("m_img", UIComponentName.Image),
             new ScriptGenerateRuler("m_rimg", UIComponentName.RawImage),
+            new ScriptGenerateRuler("m_fscroll", UIComponentName.FancyScrollRectProxy),
+            new ScriptGenerateRuler("m_scroller", UIComponentName.FancyScroller),
             new ScriptGenerateRuler("m_scrollBar", UIComponentName.Scrollbar),
             new ScriptGenerateRuler("m_scroll", UIComponentName.ScrollRect),
             new ScriptGenerateRuler("m_input", UIComponentName.InputField),
@@ -163,6 +165,56 @@ namespace TEngine.Editor.UI
                 UIFieldCodeStyle.UnderscorePrefix => "_",
                 UIFieldCodeStyle.MPrefix => "m_",
                 _ => "m_"
+            };
+        }
+
+        /// <summary>
+        /// 将 UIComponentName 枚举值映射到实际类型名。
+        /// 大多数枚举值的 ToString() 就是类型名，但少数需要映射。
+        /// </summary>
+        public static string GetComponentTypeName(UIComponentName componentName)
+        {
+            return componentName switch
+            {
+                UIComponentName.FancyScroller => "Scroller",
+                _ => componentName.ToString(),
+            };
+        }
+
+        /// <summary>
+        /// 返回完整的默认规则列表，供测试使用。
+        /// </summary>
+        internal static List<ScriptGenerateRuler> GetDefaultScriptGenerateRulesForTest()
+        {
+            return new List<ScriptGenerateRuler>
+            {
+                new ScriptGenerateRuler("m_go", UIComponentName.GameObject),
+                new ScriptGenerateRuler("m_item", UIComponentName.GameObject, true),
+                new ScriptGenerateRuler("m_tf", UIComponentName.Transform),
+                new ScriptGenerateRuler("m_rect", UIComponentName.RectTransform),
+                new ScriptGenerateRuler("m_text", UIComponentName.Text),
+                new ScriptGenerateRuler("m_richText", UIComponentName.RichTextItem),
+                new ScriptGenerateRuler("m_btn", UIComponentName.Button),
+                new ScriptGenerateRuler("m_img", UIComponentName.Image),
+                new ScriptGenerateRuler("m_rimg", UIComponentName.RawImage),
+                new ScriptGenerateRuler("m_fscroll", UIComponentName.FancyScrollRectProxy),
+                new ScriptGenerateRuler("m_scroller", UIComponentName.FancyScroller),
+                new ScriptGenerateRuler("m_scrollBar", UIComponentName.Scrollbar),
+                new ScriptGenerateRuler("m_scroll", UIComponentName.ScrollRect),
+                new ScriptGenerateRuler("m_input", UIComponentName.InputField),
+                new ScriptGenerateRuler("m_grid", UIComponentName.GridLayoutGroup),
+                new ScriptGenerateRuler("m_hlay", UIComponentName.HorizontalLayoutGroup),
+                new ScriptGenerateRuler("m_vlay", UIComponentName.VerticalLayoutGroup),
+                new ScriptGenerateRuler("m_slider", UIComponentName.Slider),
+                new ScriptGenerateRuler("m_group", UIComponentName.ToggleGroup),
+                new ScriptGenerateRuler("m_curve", UIComponentName.AnimationCurve),
+                new ScriptGenerateRuler("m_canvasGroup", UIComponentName.CanvasGroup),
+                new ScriptGenerateRuler("m_toggle", UIComponentName.Toggle),
+                new ScriptGenerateRuler("m_tmpInput", UIComponentName.TMP_InputField),
+                new ScriptGenerateRuler("m_tmpDropdown", UIComponentName.TMP_Dropdown),
+                new ScriptGenerateRuler("m_tmp", UIComponentName.TextMeshProUGUI),
+                new ScriptGenerateRuler("m_canvas", UIComponentName.Canvas),
+                new ScriptGenerateRuler("m_dropdown", UIComponentName.Dropdown),
             };
         }
 

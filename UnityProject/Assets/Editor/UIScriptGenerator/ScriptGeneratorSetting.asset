@@ -52,45 +52,51 @@ MonoBehaviour:
   - uiElementRegex: m_rimg
     componentName: 7
     isUIWidget: 0
-  - uiElementRegex: m_scrollBar
-    componentName: 9
-    isUIWidget: 0
-  - uiElementRegex: m_scroll
+  - uiElementRegex: m_fscroll
     componentName: 8
     isUIWidget: 0
-  - uiElementRegex: m_input
-    componentName: 10
+  - uiElementRegex: m_scroller
+    componentName: 9
     isUIWidget: 0
-  - uiElementRegex: m_grid
+  - uiElementRegex: m_scrollBar
     componentName: 11
     isUIWidget: 0
-  - uiElementRegex: m_hlay
+  - uiElementRegex: m_scroll
+    componentName: 10
+    isUIWidget: 0
+  - uiElementRegex: m_input
     componentName: 12
     isUIWidget: 0
-  - uiElementRegex: m_vlay
+  - uiElementRegex: m_grid
     componentName: 13
     isUIWidget: 0
-  - uiElementRegex: m_slider
+  - uiElementRegex: m_hlay
     componentName: 14
     isUIWidget: 0
-  - uiElementRegex: m_group
-    componentName: 16
-    isUIWidget: 0
-  - uiElementRegex: m_curve
-    componentName: 17
-    isUIWidget: 0
-  - uiElementRegex: m_canvasGroup
-    componentName: 18
-    isUIWidget: 0
-  - uiElementRegex: m_toggle
+  - uiElementRegex: m_vlay
     componentName: 15
     isUIWidget: 0
+  - uiElementRegex: m_slider
+    componentName: 16
+    isUIWidget: 0
+  - uiElementRegex: m_group
+    componentName: 18
+    isUIWidget: 0
+  - uiElementRegex: m_curve
+    componentName: 19
+    isUIWidget: 0
+  - uiElementRegex: m_canvasGroup
+    componentName: 20
+    isUIWidget: 0
+  - uiElementRegex: m_toggle
+    componentName: 17
+    isUIWidget: 0
   - uiElementRegex: m_tmpInput
-    componentName: 22
+    componentName: 24
     isUIWidget: 0
   - uiElementRegex: m_tmpDropdown
-    componentName: 23
+    componentName: 25
     isUIWidget: 0
   - uiElementRegex: m_tmp
-    componentName: 19
+    componentName: 21
     isUIWidget: 0

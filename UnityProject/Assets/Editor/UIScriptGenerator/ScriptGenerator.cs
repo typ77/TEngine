@@ -81,7 +81,8 @@ namespace TEngine.Editor.UI
 
                     strFile.Append("using UnityEngine;\n");
                     strFile.Append("using UnityEngine.UI;\n");
-                    strFile.Append("using TEngine;\n\n");
+                    strFile.Append("using TEngine;\n");
+                    strFile.Append("using GameLogic.UI.FancyScrollView;\n\n");
                     strFile.Append($"namespace {ScriptGeneratorSetting.GetUINameSpace()}\n");
                     strFile.Append("{\n");
 
@@ -227,7 +228,7 @@ namespace TEngine.Editor.UI
 
             if (rule != null)
             {
-                componentName = rule.componentName.ToString();
+                componentName = ScriptGeneratorSetting.GetComponentTypeName(rule.componentName);
             }
 
             bool isUIWidget = rule is { isUIWidget: true };
