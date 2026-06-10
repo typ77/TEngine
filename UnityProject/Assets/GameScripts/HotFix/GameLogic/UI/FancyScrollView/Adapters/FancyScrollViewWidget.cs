@@ -1,4 +1,5 @@
 using System;
+using System.Threading;
 using Cysharp.Threading.Tasks;
 using TEngine;
 using UnityEngine;
@@ -122,14 +123,14 @@ namespace GameLogic.UI.FancyScrollView
         private void HandleCellButtonClicked(int index)
         {
             RaiseCellButtonClicked(index);
-            OnCellButtonClicked(index);
+            OnCellButtonItemClicked(index);
         }
 
         /// <summary>Cell 被点击时的虚方法，子类可重写。</summary>
         protected virtual void OnCellClicked(int index) { }
 
         /// <summary>Cell 内按钮被点击时的虚方法，子类可重写。</summary>
-        protected virtual void OnCellButtonClicked(int index) { }
+        protected virtual void OnCellButtonItemClicked(int index) { }
 
         private void ReleaseCellPrefabHandle()
         {

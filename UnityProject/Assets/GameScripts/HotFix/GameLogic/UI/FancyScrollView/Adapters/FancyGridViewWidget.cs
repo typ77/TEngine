@@ -45,17 +45,7 @@ namespace GameLogic.UI.FancyScrollView
 
         protected override void OnCreate()
         {
-            base.OnCreate();
             CreateInternalGridView();
-        }
-
-        /// <summary>
-        /// 跳过 FancyScrollRectWidget 创建 InternalScrollRect，
-        /// 因为 GridView 使用 InternalGridView 替代。
-        /// </summary>
-        protected override void CreateInternalScrollRect()
-        {
-            // No-op: GridView uses InternalGridView, not InternalScrollRect.
         }
 
         private void CreateInternalGridView()
@@ -125,7 +115,7 @@ namespace GameLogic.UI.FancyScrollView
         private void HandleGroupCellButtonClicked(int index)
         {
             RaiseCellButtonClicked(index);
-            OnCellButtonClicked(index);
+            OnCellButtonItemClicked(index);
         }
 
         protected override void OnDestroy()
