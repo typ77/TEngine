@@ -455,10 +455,21 @@ namespace GameLogic.UI.FancyScrollView
         protected Scroller _scroller;
         private GameObject _cellPrefab;
 
+        // 内部具体 FancyScrollRect 子类（桥接 Proxy 配置和 FancyScrollRect 抽象方法）
+        // ScrollViewWidget 在 OnCreate 中动态创建此实例并注入 Proxy 参数
+        private InternalScrollRect<TItemData, TContext> _scrollRect;
+
         protected override void ScriptGenerator()
         {
             _proxy = FindChildComponent<FancyScrollRectProxy>("m_fscroll_List");
             _scroller = FindChildComponent<Scroller>("m_scroller_Scroll");
+        }
+
+        protected override void OnCreate()
+        {
+            // 从 Proxy 配置创建内部 FancyScrollRect 实例
+            _scrollRect = _proxy.gameObject.AddComponent<InternalScrollRect<TItemData, TContext>>();
+            _scrollRect.Configure(_proxy);
         }
 
         // ── 初始化：异步加载 Cell Prefab ──
@@ -486,10 +497,13 @@ namespace GameLogic.UI.FancyScrollView
         }
 
         // ── 数据接口 ──
-        public void UpdateContents(IList<TItemData> items) { /* 转发给内部 ScrollRect */ }
-        public void ScrollTo(int index, float duration, float alignment = 0.5f) { }
-        public void JumpTo(int index, float alignment = 0.5f) { }
-        public int DataCount { get; }
+        public void UpdateContents(IList<TItemData> items)
+            => _scrollRect.UpdateContents(items);
+        public void ScrollTo(int index, float duration, float alignment = 0.5f)
+            => _scrollRect.ScrollTo(index, duration, alignment);
+        public void JumpTo(int index, float alignment = 0.5f)
+            => _scrollRect.JumpTo(index, alignment);
+        public int DataCount => _scrollRect.ItemsSource?.Count ?? 0;
 
         // ── 渐进式加载配置 ──
         public ContentLoadMode ContentLoadMode { get; set; } = ContentLoadMode.AutoTrigger;
@@ -499,6 +513,23 @@ namespace GameLogic.UI.FancyScrollView
         // ── 事件中转（汇总 Cell 回调）──
         public event Action<int> OnCellClicked;
         public event Action<int> OnCellButtonClicked;
+
+        // ── 内部桥接类：将 Proxy Inspector 配置注入 FancyScrollRect ──
+        private class InternalScrollRect<D, C> : FancyScrollRect<D, C>
+            where C : class, IFancyScrollRectContext, new()
+        {
+            private FancyScrollRectProxy _proxyRef;
+
+            public void Configure(FancyScrollRectProxy proxy)
+            {
+                _proxyRef = proxy;
+                // 将 Proxy Inspector 参数同步到 FancyScrollRect 字段
+                // cellSize = _proxyRef.cellSize; spacing = _proxyRef.spacing; ...
+            }
+
+            protected override float CellSize => _proxyRef?.cellSize ?? 100f;
+            protected override GameObject CellPrefab => _proxyRef?.CellPrefab;
+        }
     }
 }
 ```
@@ -521,9 +552,14 @@ namespace GameLogic.UI.FancyScrollView
     /// - AutoTrigger：Cell 变为可见时自动触发加载
     /// - Manual：外部显式调用
     /// </summary>
-    public class ContentLoadScheduler : IDisposable
+    /// <summary>
+    /// 渐进式加载调度器。泛型化以匹配具体的 TItemData/TContext。
+    /// 由 ScrollViewWidget 在 OnCreate 时创建，持有同一泛型参数的 CellWidget 列表。
+    /// </summary>
+    public class ContentLoadScheduler<TItemData, TContext> : IDisposable
+        where TContext : class, new()
     {
-        private readonly List<IFancyCell<object, object>> _visibleCells = new();
+        private readonly List<FancyCellWidget<TItemData, TContext>> _visibleCells = new();
         private CancellationTokenSource _schedulerCts;
         private bool _isInitialized;
 
@@ -544,7 +580,15 @@ namespace GameLogic.UI.FancyScrollView
             for (int i = 0; i < _visibleCells.Count; i++)
             {
                 ct.ThrowIfCancellationRequested();
-                // 并行启动加载（不 await），间隔 staggerDelay
+
+                var cell = _visibleCells[i];
+                if (cell.LoadState == ContentLoadState.Skeleton
+                    && cell.ContentAssetLocation != null)
+                {
+                    // 并行启动加载（不 await），间隔 staggerDelay
+                    cell.LoadContentAsync(ct: ct).Forget();
+                }
+
                 if (i < _visibleCells.Count - 1)
                 {
                     await UniTask.Delay(
@@ -557,10 +601,11 @@ namespace GameLogic.UI.FancyScrollView
         /// <summary>
         /// AutoTrigger 模式：Cell 可见时自动触发加载。
         /// </summary>
-        public void OnCellBecameVisible<TItemData, TContext>(
-            FancyCellWidget<TItemData, TContext> cell)
-            where TContext : class, new()
+        public void OnCellBecameVisible(FancyCellWidget<TItemData, TContext> cell)
         {
+            if (!_visibleCells.Contains(cell))
+                _visibleCells.Add(cell);
+
             if (Mode != ContentLoadMode.AutoTrigger) return;
             if (cell.LoadState == ContentLoadState.Skeleton
                 && cell.ContentAssetLocation != null)
@@ -569,10 +614,9 @@ namespace GameLogic.UI.FancyScrollView
             }
         }
 
-        public void OnCellBecameInvisible<TItemData, TContext>(
-            FancyCellWidget<TItemData, TContext> cell)
-            where TContext : class, new()
+        public void OnCellBecameInvisible(FancyCellWidget<TItemData, TContext> cell)
         {
+            _visibleCells.Remove(cell);
             // 不取消已发起的加载，让其自然完成
         }
 
