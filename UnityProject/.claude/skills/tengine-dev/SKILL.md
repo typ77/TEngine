@@ -1,6 +1,6 @@
 ---
 name: tengine-dev
-description: TEngine Unity 游戏框架开发指导。触发词：TEngine, UIWindow, UIWidget, GameEvent, AddUIEvent, LoadAssetAsync, SetSprite, HybridCLR, YooAsset, Luban, GameModule, 热更, 资源加载, UI开发, 事件系统, 配置表
+description: TEngine Unity 游戏框架开发指导。触发词：TEngine, UIWindow, UIWidget, GameEvent, AddUIEvent, LoadAssetAsync, SetSprite, HybridCLR, YooAsset, Luban, GameModule, 热更, 资源加载, UI开发, 事件系统, 配置表, BindableProperty, DataContext, MapProperty, 数据绑定, MVE
 ---
 
 # TEngine 开发指导
@@ -24,6 +24,7 @@ TEngine 是基于 HybridCLR + YooAsset + UniTask + Luban 的 Unity 游戏框架�
 |---------|---------|---------|--------|
 | UI 开发 | [ui-lifecycle.md](references/ui-lifecycle.md) | [ui-patterns.md](references/ui-patterns.md) | P0 |
 | 事件系统 | [event-system.md](references/event-system.md) | [event-antipatterns.md](references/event-antipatterns.md) | P0 |
+| MVE 数据绑定 | [mve-patterns.md](references/mve-patterns.md) | [mve-antipatterns.md](references/mve-antipatterns.md) | P0 |
 | 资源加载 | [resource-api.md](references/resource-api.md) | [resource-patterns.md](references/resource-patterns.md) | P0 |
 | 模块使用 | [modules.md](references/modules.md) | — | P0 |
 | 热更代码 | [hotfix-workflow.md](references/hotfix-workflow.md) | — | P1 |
