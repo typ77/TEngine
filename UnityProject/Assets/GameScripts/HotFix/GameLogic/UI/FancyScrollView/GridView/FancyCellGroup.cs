@@ -12,13 +12,13 @@ namespace GameLogic.UI.FancyScrollView
     public abstract class FancyCellGroup<TItemData, TContext> : FancyCell<TItemData[], TContext>
         where TContext : class, IFancyCellGroupContext, new()
     {
-        protected virtual FancyCell<TItemData, TContext>[] Cells { get; private set; }
+        protected virtual IFancyCell<TItemData, TContext>[] Cells { get; private set; }
 
-        protected virtual FancyCell<TItemData, TContext>[] InstantiateCells()
+        protected virtual IFancyCell<TItemData, TContext>[] InstantiateCells()
         {
             return Enumerable.Range(0, Context.GetGroupCount())
                 .Select(_ => Instantiate(Context.CellTemplate, transform))
-                .Select(x => x.GetComponent<FancyCell<TItemData, TContext>>())
+                .Select(x => x.GetComponent<IFancyCell<TItemData, TContext>>())
                 .ToArray();
         }
 

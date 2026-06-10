@@ -595,7 +595,6 @@ namespace TEngine.Editor.UI
 
             if (string.IsNullOrEmpty(componentName))
                 return;
-            }
 
             if (rule.componentName == UIComponentName.GameObject || rule.isUIWidget)
             {

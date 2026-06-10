@@ -70,19 +70,19 @@ namespace GameLogic.UI.FancyScrollView
         /// <summary>跳转到指定索引位置。</summary>
         public void JumpTo(int itemIndex, float alignment = 0.5f)
         {
-            _gridView?.JumpTo(itemIndex, alignment);
+            _gridView?.PublicJumpTo(itemIndex, alignment);
         }
 
         /// <summary>平滑滚动到指定索引位置。</summary>
         public void ScrollTo(int index, float duration, float alignment = 0.5f, Action onComplete = null)
         {
-            _gridView?.ScrollTo(index, duration, alignment, onComplete);
+            _gridView?.PublicScrollTo(index, duration, alignment, onComplete);
         }
 
         /// <summary>平滑滚动到指定索引位置（带缓动）。</summary>
         public void ScrollTo(int index, float duration, Ease easing, float alignment = 0.5f, Action onComplete = null)
         {
-            _gridView?.ScrollTo(index, duration, easing, alignment, onComplete);
+            _gridView?.PublicScrollTo(index, duration, easing, alignment, onComplete);
         }
 
         /// <summary>
@@ -211,6 +211,17 @@ namespace GameLogic.UI.FancyScrollView
 
                 Setup<CellGroupWrapper<TItemData, TContext>>(tempCell);
             }
+
+            /// <summary>公开桥接：跳转到指定索引。</summary>
+            public void PublicJumpTo(int index, float alignment) => JumpTo(index, alignment);
+
+            /// <summary>公开桥接：平滑滚动（无缓动）。</summary>
+            public void PublicScrollTo(int index, float duration, float alignment, Action onComplete) =>
+                ScrollTo(index, duration, alignment, onComplete);
+
+            /// <summary>公开桥接：平滑滚动（带缓动）。</summary>
+            public void PublicScrollTo(int index, float duration, Ease easing, float alignment, Action onComplete) =>
+                ScrollTo(index, duration, easing, alignment, onComplete);
         }
     }
 }

@@ -59,25 +59,25 @@ namespace GameLogic.UI.FancyScrollView
         /// <summary>更新列表内容，代理到 InternalScrollRect。</summary>
         public void UpdateContents(IList<TItemData> items)
         {
-            _scrollRect?.UpdateContents(items);
+            _scrollRect?.PublicUpdateContents(items);
         }
 
         /// <summary>跳转到指定索引位置。</summary>
         public void JumpTo(int itemIndex, float alignment = 0.5f)
         {
-            _scrollRect?.JumpTo(itemIndex, alignment);
+            _scrollRect?.PublicJumpTo(itemIndex, alignment);
         }
 
         /// <summary>平滑滚动到指定索引位置。</summary>
         public void ScrollTo(int index, float duration, float alignment = 0.5f, Action onComplete = null)
         {
-            _scrollRect?.ScrollTo(index, duration, alignment, onComplete);
+            _scrollRect?.PublicScrollTo(index, duration, alignment, onComplete);
         }
 
         /// <summary>平滑滚动到指定索引位置（带缓动）。</summary>
         public void ScrollTo(int index, float duration, Ease easing, float alignment = 0.5f, Action onComplete = null)
         {
-            _scrollRect?.ScrollTo(index, duration, easing, alignment, onComplete);
+            _scrollRect?.PublicScrollTo(index, duration, easing, alignment, onComplete);
         }
 
         protected override void OnDestroy()
@@ -129,6 +129,20 @@ namespace GameLogic.UI.FancyScrollView
             {
                 return _owner.CreateCellForInternal(prefab, container);
             }
+
+            /// <summary>公开桥接：更新列表内容。</summary>
+            public void PublicUpdateContents(IList<TItemData> items) => UpdateContents(items);
+
+            /// <summary>公开桥接：跳转到指定索引。</summary>
+            public void PublicJumpTo(int index, float alignment) => JumpTo(index, alignment);
+
+            /// <summary>公开桥接：平滑滚动（无缓动）。</summary>
+            public void PublicScrollTo(int index, float duration, float alignment, Action onComplete) =>
+                ScrollTo(index, duration, alignment, onComplete);
+
+            /// <summary>公开桥接：平滑滚动（带缓动）。</summary>
+            public void PublicScrollTo(int index, float duration, Ease easing, float alignment, Action onComplete) =>
+                ScrollTo(index, duration, easing, alignment, onComplete);
         }
     }
 }

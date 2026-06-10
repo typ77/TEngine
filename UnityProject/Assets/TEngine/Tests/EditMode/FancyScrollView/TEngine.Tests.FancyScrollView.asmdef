@@ -2,7 +2,8 @@
     "name": "TEngine.Tests.FancyScrollView",
     "rootNamespace": "TEngine.Tests",
     "references": [
-        "GameLogic"
+        "GameLogic",
+        "UniTask"
     ],
     "includePlatforms": ["Editor"],
     "excludePlatforms": [],

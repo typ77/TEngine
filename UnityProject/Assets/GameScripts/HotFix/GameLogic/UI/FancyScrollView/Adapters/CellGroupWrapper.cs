@@ -35,9 +35,9 @@ namespace GameLogic.UI.FancyScrollView
         /// 通过 FancyCellWidget.InitializeWidget 管理 UIWidget 生命周期，
         /// 并订阅子 Cell 的 OnItemClicked/OnButtonClicked 事件。
         /// </remarks>
-        protected override FancyCell<TItemData, TContext>[] InstantiateCells()
+        protected override IFancyCell<TItemData, TContext>[] InstantiateCells()
         {
-            var cells = new FancyCell<TItemData, TContext>[Context.GetGroupCount()];
+            var cells = new IFancyCell<TItemData, TContext>[Context.GetGroupCount()];
             for (var i = 0; i < cells.Length; i++)
             {
                 var go = Instantiate(Context.CellTemplate, transform);
@@ -51,7 +51,7 @@ namespace GameLogic.UI.FancyScrollView
                     continue;
                 }
 
-                widget.InitializeWidget(_parentUI ?? this, go);
+                widget.InitializeWidget(_parentUI, go);
                 widget.OnItemClicked += OnChildItemClicked;
                 widget.OnButtonClicked += OnChildButtonClicked;
                 cells[i] = widget;

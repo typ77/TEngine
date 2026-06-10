@@ -1,3 +1,4 @@
+using GameLogic;
 using GameLogic.UI.FancyScrollView;
 using NUnit.Framework;
 using UnityEngine;
@@ -129,19 +130,25 @@ namespace TEngine.Tests
 
         #region Task 5: FancyCellGroup exposes Cells to derived adapters
 
-        private sealed class TestGridContext : FancyGridViewContext
+        private sealed class TestGridContext : IFancyGridViewContext
         {
+            public ScrollDirection ScrollDirection { get; set; }
+            public System.Func<(float ScrollSize, float ReuseMargin)> CalculateScrollSize { get; set; }
+            public GameObject CellTemplate { get; set; }
+            public System.Func<int> GetGroupCount { get; set; }
+            public System.Func<float> GetStartAxisSpacing { get; set; }
+            public System.Func<float> GetCellSize { get; set; }
         }
 
         private sealed class TestCellGroup : FancyCellGroup<string, TestGridContext>
         {
-            public FancyCell<string, TestGridContext>[] ExposedCells => Cells;
+            public IFancyCell<string, TestGridContext>[] ExposedCells => Cells;
             public int InstantiateCount { get; private set; }
 
-            protected override FancyCell<string, TestGridContext>[] InstantiateCells()
+            protected override IFancyCell<string, TestGridContext>[] InstantiateCells()
             {
                 InstantiateCount++;
-                return new FancyCell<string, TestGridContext>[Context.GetGroupCount()];
+                return new IFancyCell<string, TestGridContext>[Context.GetGroupCount()];
             }
 
             public override void UpdatePosition(float position)

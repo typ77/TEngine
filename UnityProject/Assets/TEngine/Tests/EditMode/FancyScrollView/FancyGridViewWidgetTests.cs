@@ -1,3 +1,5 @@
+using System;
+using GameLogic;
 using GameLogic.UI.FancyScrollView;
 using NUnit.Framework;
 using UnityEngine;
@@ -27,6 +29,54 @@ namespace TEngine.Tests
             public override void UpdatePosition(float normalizedPosition) { }
         }
 
+        /// <summary>
+        /// Test-only CellGroupWrapper that creates TestGridCell via new + InitializeWidget
+        /// instead of GetComponent, since FancyCellWidget is not a MonoBehaviour.
+        /// </summary>
+        private sealed class TestCellGroupWrapper : CellGroupWrapper<string, TestGridContext>
+        {
+            private UIBase _parentUIRef;
+
+            protected override IFancyCell<string, TestGridContext>[] InstantiateCells()
+            {
+                var cells = new IFancyCell<string, TestGridContext>[Context.GetGroupCount()];
+                for (var i = 0; i < cells.Length; i++)
+                {
+                    var go = Instantiate(Context.CellTemplate, transform);
+                    var widget = new TestGridCell();
+                    widget.InitializeWidget(_parentUIRef, go);
+                    widget.OnItemClicked += i => _itemClicked?.Invoke(i);
+                    widget.OnButtonClicked += i => _buttonClicked?.Invoke(i);
+                    cells[i] = widget;
+                }
+
+                return cells;
+            }
+
+            public void SetParentForTest(UIBase parentUI)
+            {
+                SetParent(parentUI);
+                _parentUIRef = parentUI;
+            }
+
+            public void RaiseCellItemClickedForTest(int index)
+            {
+                // CellGroupWrapper uses events, so we need to subscribe to forward them
+                // Instead of invoking the event directly, store callbacks
+                _itemClicked?.Invoke(index);
+            }
+            public void RaiseCellButtonClickedForTest(int index)
+            {
+                _buttonClicked?.Invoke(index);
+            }
+
+            private Action<int> _itemClicked;
+            private Action<int> _buttonClicked;
+
+            public void SubscribeItemClickedForTest(Action<int> callback) => _itemClicked = callback;
+            public void SubscribeButtonClickedForTest(Action<int> callback) => _buttonClicked = callback;
+        }
+
         private sealed class TestParentUI : UIBase
         {
             public TestParentUI(GameObject root)
@@ -42,13 +92,12 @@ namespace TEngine.Tests
         [Test]
         public void CellGroupWrapper_InstantiateCells_CreatesWidgetsFromTemplate()
         {
-            // Setup: create a cell template prefab with TestGridCell
+            // Setup: create a cell template prefab (no TestGridCell component needed)
             var template = new GameObject("cellTemplate", typeof(RectTransform));
-            template.AddComponent<TestGridCell>();
 
-            // Create group GO
+            // Create group GO with TestCellGroupWrapper
             var groupGo = new GameObject("group", typeof(RectTransform));
-            var group = groupGo.AddComponent<CellGroupWrapper<string, TestGridContext>>();
+            var group = groupGo.AddComponent<TestCellGroupWrapper>();
 
             // Setup context
             var context = new TestGridContext
@@ -61,7 +110,7 @@ namespace TEngine.Tests
             group.SetContext(context);
 
             var parent = new TestParentUI(new GameObject("parent", typeof(RectTransform)));
-            group.SetParent(parent);
+            group.SetParentForTest(parent);
 
             // Act
             group.Initialize();
@@ -76,19 +125,18 @@ namespace TEngine.Tests
             }
 
             // Cleanup
-            Object.DestroyImmediate(template);
-            Object.DestroyImmediate(groupGo);
-            Object.DestroyImmediate(parent.gameObject);
+            UnityEngine.Object.DestroyImmediate(template);
+            UnityEngine.Object.DestroyImmediate(groupGo);
+            UnityEngine.Object.DestroyImmediate(parent.gameObject);
         }
 
         [Test]
         public void CellGroupWrapper_ForwardsCellClickEvents()
         {
             var template = new GameObject("cellTemplate", typeof(RectTransform));
-            template.AddComponent<TestGridCell>();
 
             var groupGo = new GameObject("group", typeof(RectTransform));
-            var group = groupGo.AddComponent<CellGroupWrapper<string, TestGridContext>>();
+            var group = groupGo.AddComponent<TestCellGroupWrapper>();
 
             var context = new TestGridContext
             {
@@ -100,28 +148,30 @@ namespace TEngine.Tests
             group.SetContext(context);
 
             var parent = new TestParentUI(new GameObject("parent", typeof(RectTransform)));
-            group.SetParent(parent);
+            group.SetParentForTest(parent);
             group.Initialize();
 
             int clickedIndex = -1;
             group.CellItemClicked += i => clickedIndex = i;
+            group.SubscribeItemClickedForTest(i => clickedIndex = i);
 
             // Simulate click on first cell
             var cell = group.GetCellForTest(0);
             cell.Index = 5;
-            cell.RaiseClick();
+            ((TestGridCell)cell).RaiseClick();
 
             Assert.AreEqual(5, clickedIndex);
 
-            Object.DestroyImmediate(template);
-            Object.DestroyImmediate(groupGo);
-            Object.DestroyImmediate(parent.gameObject);
+            UnityEngine.Object.DestroyImmediate(template);
+            UnityEngine.Object.DestroyImmediate(groupGo);
+            UnityEngine.Object.DestroyImmediate(parent.gameObject);
         }
 
         [Test]
         public void CellGroupWrapper_MissingWidgetComponent_LogsError()
         {
-            // Template without FancyCellWidget component
+            // Template without any component - use the base CellGroupWrapper
+            // which will call GetComponent<FancyCellWidget> and fail
             var template = new GameObject("badTemplate", typeof(RectTransform));
 
             var groupGo = new GameObject("group", typeof(RectTransform));
@@ -144,9 +194,9 @@ namespace TEngine.Tests
             // Cell at index 0 should be null since component was missing
             Assert.AreEqual(1, group.CellCountForTest);
 
-            Object.DestroyImmediate(template);
-            Object.DestroyImmediate(groupGo);
-            Object.DestroyImmediate(parent.gameObject);
+            UnityEngine.Object.DestroyImmediate(template);
+            UnityEngine.Object.DestroyImmediate(groupGo);
+            UnityEngine.Object.DestroyImmediate(parent.gameObject);
         }
     }
 }

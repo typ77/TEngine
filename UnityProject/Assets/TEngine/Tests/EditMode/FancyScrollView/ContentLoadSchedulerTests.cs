@@ -1,5 +1,6 @@
 using System.Threading;
 using Cysharp.Threading.Tasks;
+using GameLogic;
 using GameLogic.UI.FancyScrollView;
 using NUnit.Framework;
 using UnityEngine;

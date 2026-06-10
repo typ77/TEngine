@@ -1,3 +1,4 @@
+using GameLogic;
 using GameLogic.UI.FancyScrollView;
 using NUnit.Framework;
 using UnityEngine;
@@ -34,6 +35,12 @@ namespace TEngine.Tests
 
             public void RaiseClick() => NotifyItemClicked();
             public void RaiseButton() => NotifyButtonClicked();
+
+            /// <summary>
+            /// Expose CreateProperty for testing (base method is protected).
+            /// </summary>
+            public GameLogic.DataBinding.BindableProperty<T> CreatePropertyForTest<T>(T initial = default)
+                => CreateProperty(initial);
 
             protected override void BindData(string data)
             {
@@ -112,8 +119,8 @@ namespace TEngine.Tests
             var cell = new TestCellWidget();
             cell.Create(parent, cellGo);
 
-            // Create a BindableProperty via helper
-            var prop = cell.CreateProperty(42);
+            // Create a BindableProperty via test helper
+            var prop = cell.CreatePropertyForTest(42);
             Assert.IsNotNull(prop);
             Assert.AreEqual(42, prop.Value);
 

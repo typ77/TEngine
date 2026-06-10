@@ -19,7 +19,20 @@
       "Bash(echo \"EXIT: $?\")",
       "mcp__plugin_context-mode_context-mode__ctx_execute",
       "mcp__UnityMCP__read_console",
-      "mcp__UnityMCP__refresh_unity"
+      "mcp__UnityMCP__refresh_unity",
+      "mcp__plugin_claude-mem_mcp-search__observation_search",
+      "mcp__plugin_claude-mem_mcp-search__search",
+      "Bash(git checkout *)",
+      "Bash(git merge feature/ui-data-binding-phase1 --no-ff -m 'merge: UI 数据绑定 Phase 1 + Phase 2 完整合并 *)",
+      "mcp__zread__read_file",
+      "mcp__zread__get_repo_structure",
+      "mcp__codegraph__codegraph_search",
+      "mcp__codegraph__codegraph_node",
+      "Bash(rtk read *)",
+      "mcp__zread__search_doc",
+      "Bash(rtk grep *)",
+      "Bash(rtk find *)",
+      "mcp__UnityMCP__run_tests"
     ]
   }
 }

@@ -250,7 +250,7 @@ namespace GameLogic.UI.FancyScrollView
             var targetY = rect.anchoredPosition.y;
             canvasGroup.alpha = 0f;
 
-            var easingFunc = Easing.Get(Ease.OutCubic);
+            var easingFunc = Easing.Get(EasingCore.Ease.OutCubic);
 
             var elapsed = 0f;
             while (elapsed < duration)
@@ -278,7 +278,7 @@ namespace GameLogic.UI.FancyScrollView
             var rect = rectTransform;
             const float startScale = 0.8f;
 
-            var easingFunc = Easing.Get(Ease.OutBack);
+            var easingFunc = Easing.Get(EasingCore.Ease.OutBack);
 
             var elapsed = 0f;
             while (elapsed < duration)
