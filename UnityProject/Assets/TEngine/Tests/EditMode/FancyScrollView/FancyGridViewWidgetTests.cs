@@ -3,6 +3,7 @@ using GameLogic;
 using GameLogic.UI.FancyScrollView;
 using NUnit.Framework;
 using UnityEngine;
+using UnityEngine.TestTools;
 
 namespace TEngine.Tests
 {
@@ -167,20 +168,41 @@ namespace TEngine.Tests
             UnityEngine.Object.DestroyImmediate(parent.gameObject);
         }
 
+        /// <summary>
+        /// Test-only wrapper that verifies base InstantiateCells handles
+        /// missing FancyCellWidget gracefully (logs error, leaves null entry).
+        /// </summary>
+        private sealed class TestErrorCellGroupWrapper : CellGroupWrapper<string, TestGridContext>
+        {
+            public bool InstantiateCellsCalled { get; private set; }
+            public int NullCellCount { get; private set; }
+
+            public void CallInstantiateAndCountNulls()
+            {
+                InstantiateCellsCalled = true;
+                var result = InstantiateCells();
+                foreach (var cell in result)
+                {
+                    if (cell == null) NullCellCount++;
+                }
+            }
+        }
+
         [Test]
         public void CellGroupWrapper_MissingWidgetComponent_LogsError()
         {
-            // Template without any component - use the base CellGroupWrapper
-            // which will call GetComponent<FancyCellWidget> and fail
+            // Template without any FancyCellWidget - base CellGroupWrapper's
+            // InstantiateCells catches ArgumentException (FancyCellWidget not MonoBehaviour),
+            // logs error, and leaves cells as null entries.
             var template = new GameObject("badTemplate", typeof(RectTransform));
 
             var groupGo = new GameObject("group", typeof(RectTransform));
-            var group = groupGo.AddComponent<CellGroupWrapper<string, TestGridContext>>();
+            var group = groupGo.AddComponent<TestErrorCellGroupWrapper>();
 
             var context = new TestGridContext
             {
                 CellTemplate = template,
-                GetGroupCount = () => 1,
+                GetGroupCount = () => 2,
                 GetStartAxisSpacing = () => 0f,
                 GetCellSize = () => 100f,
             };
@@ -189,10 +211,17 @@ namespace TEngine.Tests
             var parent = new TestParentUI(new GameObject("parent", typeof(RectTransform)));
             group.SetParent(parent);
 
-            // Should not throw, but cells will be null (logged error)
-            group.Initialize();
-            // Cell at index 0 should be null since component was missing
-            Assert.AreEqual(1, group.CellCountForTest);
+            // Expect error logs from InstantiateCells for each missing component
+            LogAssert.Expect(LogType.Error, new System.Text.RegularExpressions.Regex(".*CellGroupWrapper.*"));
+            LogAssert.Expect(LogType.Error, new System.Text.RegularExpressions.Regex(".*CellGroupWrapper.*"));
+
+            // Only call InstantiateCells (not full Initialize) to avoid
+            // side effects from base class lifecycle methods
+            group.CallInstantiateAndCountNulls();
+
+            Assert.IsTrue(group.InstantiateCellsCalled);
+            // Both cells should be null since template has no FancyCellWidget
+            Assert.AreEqual(2, group.NullCellCount);
 
             UnityEngine.Object.DestroyImmediate(template);
             UnityEngine.Object.DestroyImmediate(groupGo);

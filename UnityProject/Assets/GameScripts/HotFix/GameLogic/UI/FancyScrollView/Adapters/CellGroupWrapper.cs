@@ -41,13 +41,24 @@ namespace GameLogic.UI.FancyScrollView
             for (var i = 0; i < cells.Length; i++)
             {
                 var go = Instantiate(Context.CellTemplate, transform);
-                var widget = go.GetComponent<FancyCellWidget<TItemData, TContext>>();
+                FancyCellWidget<TItemData, TContext> widget = null;
+                try
+                {
+                    widget = go.GetComponent<FancyCellWidget<TItemData, TContext>>();
+                }
+                catch (ArgumentException)
+                {
+                    // FancyCellWidget 不是 MonoBehaviour/Component，GetComponent 无法使用。
+                    // 子类应重写 InstantiateCells 用 new + InitializeWidget 创建 Cell。
+                }
+
                 if (widget == null)
                 {
                     Debug.LogError(
                         $"[CellGroupWrapper] FancyCellWidget<{typeof(TItemData).Name}, {typeof(TContext).Name}> " +
-                        $"component not found in {Context.CellTemplate.name}.");
-                    Destroy(go);
+                        $"component not found in {Context.CellTemplate.name}. " +
+                        $"Override InstantiateCells to use new + InitializeWidget for UIWidget-based cells.");
+                    DestroyImmediate(go);
                     continue;
                 }
 

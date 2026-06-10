@@ -87,16 +87,31 @@ namespace GameLogic.UI.FancyScrollView
         /// <param name="prefab">Cell 预制体。</param>
         /// <param name="container">Cell 的父容器。</param>
         /// <returns>创建的 IFancyCell 实例。</returns>
+        /// <remarks>
+        /// 基类实现尝试通过 GetComponent 查找 FancyCellWidget，但 FancyCellWidget 不是 MonoBehaviour，
+        /// 因此 GetComponent 会抛 ArgumentException。子类必须重写此方法，使用 new + InitializeWidget 创建 Cell。
+        /// </remarks>
         protected virtual IFancyCell<TItemData, TContext> CreateCell(GameObject prefab, Transform container)
         {
             var go = UnityEngine.Object.Instantiate(prefab, container);
-            var cell = go.GetComponent<FancyCellWidget<TItemData, TContext>>();
+            FancyCellWidget<TItemData, TContext> cell = null;
+            try
+            {
+                cell = go.GetComponent<FancyCellWidget<TItemData, TContext>>();
+            }
+            catch (ArgumentException)
+            {
+                // FancyCellWidget 不是 MonoBehaviour/Component，GetComponent 无法使用。
+                // 子类应重写 CreateCell 用 new + InitializeWidget 创建 Cell。
+            }
+
             if (cell == null)
             {
-                UnityEngine.Object.Destroy(go);
+                UnityEngine.Object.DestroyImmediate(go);
                 throw new MissingComponentException(
                     $"FancyCellWidget<{typeof(TItemData).FullName}, {typeof(TContext).FullName}> " +
-                    $"component not found in {prefab.name}.");
+                    $"component not found in {prefab.name}. " +
+                    $"Override CreateCell to use new + InitializeWidget for UIWidget-based cells.");
             }
 
             cell.InitializeWidget(this, go);

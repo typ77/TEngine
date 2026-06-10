@@ -139,6 +139,8 @@ namespace TEngine.Tests
             widget.Create(parent, root);
             widget.SetCellPrefabForTest(prefab);
 
+            // GetComponent<FancyCellWidget> catches ArgumentException (not a MonoBehaviour)
+            // and throws MissingComponentException with guidance to override CreateCell.
             Assert.Throws<MissingComponentException>(() =>
                 widget.CreateCellForTest(prefab, container));
 

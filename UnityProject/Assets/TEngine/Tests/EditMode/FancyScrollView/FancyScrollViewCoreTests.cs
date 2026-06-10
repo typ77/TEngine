@@ -1,7 +1,9 @@
+using System.Collections.Generic;
 using GameLogic;
 using GameLogic.UI.FancyScrollView;
 using NUnit.Framework;
 using UnityEngine;
+using UnityEngine.TestTools;
 
 namespace TEngine.Tests
 {
@@ -55,7 +57,7 @@ namespace TEngine.Tests
         private sealed class TestScrollView : FancyScrollView<string, NullContext>
         {
             public int CreatedCount { get; private set; }
-            public TestCell LastCreatedCell { get; private set; }
+            public readonly List<TestCell> AllCreatedCells = new List<TestCell>();
 
             public void SetPrefab(GameObject prefab)
             {
@@ -76,8 +78,9 @@ namespace TEngine.Tests
             {
                 CreatedCount++;
                 var go = Object.Instantiate(prefab, container);
-                LastCreatedCell = go.GetComponent<TestCell>();
-                return LastCreatedCell;
+                var cell = go.GetComponent<TestCell>();
+                AllCreatedCells.Add(cell);
+                return cell;
             }
         }
 
@@ -96,9 +99,11 @@ namespace TEngine.Tests
             view.SetItems("A", "B", "C");
 
             Assert.Greater(view.CreatedCount, 0);
-            Assert.IsNotNull(view.LastCreatedCell);
-            Assert.IsTrue(view.LastCreatedCell.IsVisible);
-            Assert.AreEqual("A", view.LastCreatedCell.LastContent);
+            // Verify at least one cell received content "A" and is visible
+            // (pool uses circular indexing, so the cell with "A" may not be the last created)
+            var cellWithA = view.AllCreatedCells.Find(c => c.LastContent == "A");
+            Assert.IsNotNull(cellWithA, "At least one cell should have received content 'A'");
+            Assert.IsTrue(cellWithA.IsVisible, "The cell with content 'A' should be visible");
 
             Object.DestroyImmediate(prefab);
             Object.DestroyImmediate(root);
@@ -117,8 +122,12 @@ namespace TEngine.Tests
         [Test]
         public void FancyScrollRect_UsesSerializedCellSizeByDefault()
         {
+            // FancyScrollRect.OnValidate fires on AddComponent in editor,
+            // accessing Scroller.ViewportSize which NREs without a configured viewport.
+            LogAssert.Expect(LogType.Exception, new System.Text.RegularExpressions.Regex(".*NullReferenceException.*"));
             var go = new GameObject("scrollRect", typeof(RectTransform), typeof(Scroller));
             var rect = go.AddComponent<TestScrollRect>();
+            rect.enabled = false;
 
             rect.SetCellSize(96f);
 

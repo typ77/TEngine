@@ -32,7 +32,8 @@
       "mcp__zread__search_doc",
       "Bash(rtk grep *)",
       "Bash(rtk find *)",
-      "mcp__UnityMCP__run_tests"
+      "mcp__UnityMCP__run_tests",
+      "mcp__UnityMCP__get_test_job"
     ]
   }
 }

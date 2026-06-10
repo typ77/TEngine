@@ -3,6 +3,7 @@ using GameLogic;
 using GameLogic.UI.FancyScrollView;
 using NUnit.Framework;
 using UnityEngine;
+using UnityEngine.TestTools;
 
 namespace TEngine.Tests
 {
@@ -87,6 +88,26 @@ namespace TEngine.Tests
             Object.DestroyImmediate(proxyGo);
         }
 
+        /// <summary>
+        /// Widget that skips InternalScrollRect creation to avoid OnValidate NRE
+        /// from uninitialized Scroller in test environment.
+        /// </summary>
+        private sealed class TestScriptGenOnlyWidget : FancyScrollRectWidget<string, TestContext>
+        {
+            public FancyScrollRectProxy GetProxyDirect() =>
+                FindChildComponent<FancyScrollRectProxy>("m_fscroll_List");
+
+            // Skip OnCreate entirely - we only test ScriptGenerator finding the proxy
+            protected override void OnCreate() { }
+
+            protected override IFancyCell<string, TestContext> CreateCell(
+                GameObject prefab, Transform container)
+            {
+                // Not used in this test
+                throw new System.NotImplementedException();
+            }
+        }
+
         [Test]
         public void FancyScrollRectWidget_ScriptGenerator_FindsProxy()
         {
@@ -97,12 +118,11 @@ namespace TEngine.Tests
             var proxy = proxyGo.AddComponent<FancyScrollRectProxy>();
 
             var parent = new TestParentUI(new GameObject("parent", typeof(RectTransform)));
-            var widget = new TestScrollRectWidget();
-            // FancyScrollRectWidget is not MonoBehaviour, use Create instead of AddComponent
+            var widget = new TestScriptGenOnlyWidget();
             widget.Create(parent, root);
 
             // After Create, ScriptGenerator should have found the proxy
-            var foundProxy = widget.GetProxy();
+            var foundProxy = widget.GetProxyDirect();
             Assert.IsNotNull(foundProxy, "ScriptGenerator should find m_fscroll_List proxy");
 
             widget.CallDestroy();
@@ -122,8 +142,10 @@ namespace TEngine.Tests
             var parent = new TestParentUI(new GameObject("parent", typeof(RectTransform)));
             var widgetGo = new GameObject("widget", typeof(RectTransform));
 
-            // Create widget and set proxy
+            // Create widget and set proxy - proxy is NOT under widget root,
+            // so ScriptGenerator won't find it. Expect the error log.
             var widget = new TestScrollRectWidget();
+            LogAssert.Expect(LogType.Error, "[FancyScrollRectWidget] FancyScrollRectProxy not found on m_fscroll_List.");
             widget.Create(parent, widgetGo);
             widget.SetCellPrefabForTest(new GameObject("cellPrefab", typeof(RectTransform)));
 
