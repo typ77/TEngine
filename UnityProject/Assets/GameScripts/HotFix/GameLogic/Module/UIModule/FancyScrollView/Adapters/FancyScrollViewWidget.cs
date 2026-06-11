@@ -82,36 +82,33 @@ namespace GameLogic.UI.FancyScrollView
         }
 
         /// <summary>
-        /// 创建一个 FancyCellWidget 实例，订阅其事件并返回 IFancyCell 接口。
+        /// 子类重写以创建具体类型的 Cell Widget 实例。
+        /// <para>只需 <c>return new ExampleXX_XXXCell();</c>，基类负责 Instantiate + InitializeWidget + 事件订阅。</para>
         /// </summary>
-        /// <param name="prefab">Cell 预制体。</param>
-        /// <param name="container">Cell 的父容器。</param>
-        /// <returns>创建的 IFancyCell 实例。</returns>
-        /// <remarks>
-        /// 基类实现尝试通过 GetComponent 查找 FancyCellWidget，但 FancyCellWidget 不是 MonoBehaviour，
-        /// 因此 GetComponent 会抛 ArgumentException。子类必须重写此方法，使用 new + InitializeWidget 创建 Cell。
-        /// </remarks>
+        protected virtual FancyCellWidget<TItemData, TContext> CreateCellWidget() => null;
+
+        /// <summary>
+        /// 创建一个 FancyCellWidget 实例，订阅其事件并返回 IFancyCell 接口。
+        /// <para>优先使用 <see cref="CreateCellWidget"/> 创建 Cell；返回 null 时回退到 GetComponent。</para>
+        /// </summary>
         protected virtual IFancyCell<TItemData, TContext> CreateCell(GameObject prefab, Transform container)
         {
             var go = UnityEngine.Object.Instantiate(prefab, container);
-            FancyCellWidget<TItemData, TContext> cell = null;
-            try
+            FancyCellWidget<TItemData, TContext> cell = CreateCellWidget();
+
+            if (cell == null)
             {
-                cell = go.GetComponent<FancyCellWidget<TItemData, TContext>>();
-            }
-            catch (ArgumentException)
-            {
-                // FancyCellWidget 不是 MonoBehaviour/Component，GetComponent 无法使用。
-                // 子类应重写 CreateCell 用 new + InitializeWidget 创建 Cell。
+                // 回退：尝试 GetComponent（仅 MonoBehaviour Cell 可用）
+                try { cell = go.GetComponent<FancyCellWidget<TItemData, TContext>>(); }
+                catch (ArgumentException) { }
             }
 
             if (cell == null)
             {
                 UnityEngine.Object.DestroyImmediate(go);
                 throw new MissingComponentException(
-                    $"FancyCellWidget<{typeof(TItemData).FullName}, {typeof(TContext).FullName}> " +
-                    $"component not found in {prefab.name}. " +
-                    $"Override CreateCell to use new + InitializeWidget for UIWidget-based cells.");
+                    $"{GetType().Name}: CreateCellWidget() returned null and GetComponent failed. " +
+                    $"Override CreateCellWidget() to return a new cell instance.");
             }
 
             cell.InitializeWidget(this, go);

@@ -37,6 +37,14 @@ namespace GameLogic.UI.FancyScrollView
         protected Transform CellContainerTransform => m_cellContainer;
 
         /// <summary>
+        /// 获取与所有 Cell 共享的 Context 对象。
+        /// <para>仅限 <typeparamref name="TContext"/> 非 <see cref="NullContext"/> 时有意义。</para>
+        /// </summary>
+        public TContext SharedContext => _internalScrollView != null
+            ? _internalScrollView.GetSharedContext()
+            : null;
+
+        /// <summary>
         /// 设置 Scroller 和 CellContainer 引用。
         /// 子类在 ScriptGenerator 中调用此方法。
         /// </summary>
@@ -170,6 +178,7 @@ namespace GameLogic.UI.FancyScrollView
             public void TriggerUpdateContents(IList<TItemData> items) => UpdateContents(items);
             public void TriggerRefresh() => Refresh();
             public void TriggerRelayout() => Relayout();
+            public TContext GetSharedContext() => Context;
         }
 
         // ── 清理 ──────────────────────────────────────────

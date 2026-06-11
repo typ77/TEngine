@@ -105,10 +105,8 @@ namespace GameLogic
 
             _currentExampleTypeName = typeName;
 
-            // 通过反射调用 GameModule.UI.ShowUIAsync<T>()
-            var method = typeof(UIModule).GetMethod("ShowUIAsync", System.Type.EmptyTypes);
-            var generic = method.MakeGenericMethod(type);
-            generic.Invoke(GameModule.UI, new object[] { new object[0] });
+            // 直接调用非泛型重载 ShowUIAsync(Type, params object[])
+            GameModule.UI.ShowUIAsync(type);
 
             Log.Info($"[FancyTestHomeUI] Opened: {displayName}");
         }
@@ -123,10 +121,8 @@ namespace GameLogic
             var type = System.Type.GetType(_currentExampleTypeName);
             if (type != null)
             {
-                // 通过反射调用 GameModule.UI.CloseUI<T>()
-                var method = typeof(UIModule).GetMethod("CloseUI", System.Type.EmptyTypes);
-                var generic = method.MakeGenericMethod(type);
-                generic.Invoke(GameModule.UI, null);
+                // 直接调用非泛型重载 CloseUI(Type)
+                GameModule.UI.CloseUI(type);
             }
             _currentExampleTypeName = null;
         }
