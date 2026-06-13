@@ -464,10 +464,34 @@ UIModule.ShowUI(typeof(LoginUI))
 
 ---
 
-## 七、FancyScrollView CellWidget MVE 模式
+## 七、FancyScrollView Cell 的 MVE 模式
 
-- Window/DataContext 负责把 Model 数据映射成列表展示数据。
-- Window 在 `OnRefresh()` 或绑定回调中调用 `_scrollView.UpdateContents(items)`。
-- `FancyCellWidget.BindData(TItemData data)` 是 Cell 接收数据的唯一入口。
-- Cell 内部可用 `CreateProperty<T>()` 创建生命周期随 Cell 的 BindableProperty，并在 `OnDestroy()` 自动 Dispose。
-- Cell 被复用时必须在 `BindData` 中重置瞬态状态，例如选中态、按钮可用态、加载状态。
+Cell（`FancyCellWidget<TItemData,TContext>`）继承 `UIWidget`，MVE 用法与 UIWindow 一致，但绑定位置不同：
+
+| 项 | UIWindow | Cell |
+|----|---------|------|
+| 响应式属性创建 | `SetupBindings()` 中 `Bind()` | `BindMemberProperty()` 中 `CreateProperty<T>()` |
+| 数据写入触发刷新 | Service 改 Model → Bind 回调 | `BindData(data)` 写 `property.Value` |
+| 列表数据来源 | DataContext MapProperty | UIWindow 调 `m_scrollerController.UpdateData(items)` |
+
+**关键**：Cell 的 MVE 绑定放在 `BindMemberProperty()`（钩子顺序在 `ScriptGenerator` 之后，节点字段已就绪），**不放 `ScriptGenerator()`**（已由 `_Gen.g.cs` 占用）：
+```csharp
+private BindableProperty<string> _displayText;
+
+protected override void BindMemberProperty()
+{
+    _displayText = CreateProperty<string>("");     // 生命周期随 Cell，OnDestroy 自动 Dispose
+    BindText(m_textMessage, _displayText);         // m_textMessage 来自 _Gen.g.cs
+}
+
+protected override void BindData(Example01_BasicItemData data)
+{
+    _displayText.Value = data.DisplayText;         // 写入触发 UI 刷新
+}
+```
+
+要点：
+- `CreateProperty<T>()` 返回的 `BindableProperty` 随 Cell 生命周期自动 Dispose（无需手动）。
+- Cell 复用时 `BindData` 必须重置瞬态状态（选中态、按钮可用态、加载状态等）。
+- 列表数据更新：UIWindow 调 `m_scrollerController.UpdateData(itemList)`（是 `UpdateData`，非旧 `UpdateContents`）。
+- Cell 自动生成与根节点组件处理见 [ui-patterns.md](ui-patterns.md) FancyScrollView 章节。

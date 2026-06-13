@@ -51,8 +51,7 @@ Prefab 节点前缀决定 `UIScriptGenerator` 自动生成的绑定类型（基�
 | `m_btn_` | `Button` | `m_btn_Start` |
 | `m_img_` | `Image` | `m_img_Icon` |
 | `m_rimg_` | `RawImage` | `m_rimg_Avatar` |
-| `m_fscroll_` | `FancyScrollRectProxy` | `m_fscroll_List` |
-| `m_scroller_` | `Scroller` | `m_scroller_List` |
+| `m_scroller_` | `Scroller` + 配对生成 `FancyScrollerController`（new+Initialize+OnDestroy Dispose） | `m_scroller_List` |
 | `m_scroll_` | `ScrollRect` | `m_scroll_List` |
 | `m_scrollBar_` | `Scrollbar` | `m_scrollBar_Vert` |
 | `m_input_` | `InputField` | `m_input_Name` |
@@ -77,6 +76,21 @@ Prefab 节点前缀决定 `UIScriptGenerator` 自动生成的绑定类型（基�
 - `m_fscroll_` / `m_scroller_` 必须写在 `m_scroll_` 之前，否则 FancyScrollView 节点可能被普通 ScrollRect 规则先匹配。
 - `m_richText_` 必须写在 `m_text_` 之前（setting 中 richText 在 text 之前）
 - 不需要绑定的节点无需加前缀，生成器会忽略
+
+### 节点命名 → 生成标识符（重要）
+
+ScriptGenerator 把节点名转为字段名/方法名。它**只去首个 `m_` 前缀**，不识别 `m_btn_`/`m_text_` 等复合前缀。因此描述部分必须用 PascalCase、**不加下划线**：
+
+| 节点名 | 生成字段名 | 按钮方法名 | 评价 |
+|--------|-----------|-----------|------|
+| `m_btnClose` | `m_btnClose` | `OnClickCloseBtn` | ✅ 规范 |
+| `m_btn_Close` | `m_btn_Close` | `OnClick_CloseBtn` | ❌ 下划线残留 |
+| `m_textMessage` | `m_textMessage` | — | ✅ |
+| `m_btnRandom` | `m_btnRandom` | `OnClickRandomBtn` | ✅ |
+
+**规则**：节点名 = `m_` + 前缀类型(btn/text/img/tf/scroller...) + PascalCase 描述，**描述段无下划线**。
+
+各类节点生成的方法名：Button→`OnClickXxxBtn`、Toggle→`OnXxxToggle`、Slider→`OnXxxSlider`、TMP_Dropdown→`OnXxxDropdown`（均在 `_Gen.g.cs` 声明 `partial void`，业务文件实现）。
 
 ---
 

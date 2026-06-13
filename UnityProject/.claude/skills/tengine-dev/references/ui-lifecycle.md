@@ -42,7 +42,7 @@ Inject()               ← 首次：依赖注入扩展点（UIBase.Injector 静�
 ScriptGenerator()     ← 首次：绑定 UI 节点引用（仅一次）
     │
     ▼
-BindMemberProperty()  ← 首次：框架预留扩展点，通常跳过
+BindMemberProperty()  ← 首次：业务成员绑定钩子（UIWindow 通常跳过；FancyScrollView Cell 在此绑根节点组件 + MVE，因 ScriptGenerator 已被 _Gen.g.cs 占用）
     │
     ▼
 RegisterEvent()       ← 首次：注册 UI 事件（随窗口销毁自动清理）

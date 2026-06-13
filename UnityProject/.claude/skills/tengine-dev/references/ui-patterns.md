@@ -197,8 +197,60 @@ protected override void ScriptGenerator()
 
 ## FancyScrollView 虚拟化列表
 
-- 普通少量列表继续使用 `AdjustIconNum<T>()` / `AsyncAdjustIconNum<T>()`。
-- 大量数据、需要复用 Cell、滚动动画或 Grid 虚拟化时使用 `FancyScrollViewWidget` 系列。
-- Cell 继承 `FancyCellWidget<TItemData,TContext>`，通过 `BindData(TItemData data)` 接收数据。
-- ScrollRect 容器节点命名 `m_fscroll_List` 并挂 `FancyScrollRectProxy`，滚动控制节点命名 `m_scroller_List` 并挂 `Scroller`。
-- Cell 内部点击用 `NotifyItemClicked()` / `NotifyButtonClicked()` 冒泡到 ScrollViewWidget，UIWindow 再按需调用 Service 或发送 GameEvent。
+普通少量列表用 `AdjustIconNum<T>()` / `AsyncAdjustIconNum<T>()`；**大量数据、Cell 复用、滚动动画或虚拟化**用 FancyScrollView。核心组件在 `Module/UIModule/FancyScrollView/`。
+
+### 组件职责
+
+| 组件 | 职责 |
+|------|------|
+| `FancyScrollerView` | 继承 `Scroller`，额外持有 `CellContainer` 字段；挂 `m_scroller` 节点 |
+| `FancyScrollerController` | 纯 C# 控制器，管 Cell 池/位置/数据；ScriptGenerator 自动 `new` + `Initialize` + `OnDestroy Dispose` |
+| `FancyCellWidget<TItemData,TContext>` | Cell 基类，继承 `UIWidget`，复用 UIBindComponent 绑定 |
+
+### 创建 Scroller
+
+右键 `GameObject/UI/Scroller`（`FancyScrollerMenu`）自动生成标准结构：
+```
+m_scroller  [Image, Mask, FancyScrollerView]   ← viewport 指向自身
+  └─ CellContainer  [RectTransform]             ← cellContainer 字段自动赋值
+```
+- `CellContainer` **无需 m_ 前缀**（不作独立绑定字段，由 `FancyScrollerView` 持有）。
+- ⚠️ `m_scroller` 必须挂 `FancyScrollerView`（不是基类 `Scroller`）。否则 `FancyScrollerController.Initialize` 抛 `InvalidOperationException`。旧 prefab 需补挂并赋 `CellContainer`。
+
+### Cell 走 UIBindComponent 自动生成（无基类 partial 模式）
+
+`FancyCellWidget` 继承 `UIWidget`，Cell 可像 UI 一样用 UIBindComponent 生成 `_Gen.g.cs`。但 Cell 基类是双泛型 `FancyCellWidget<TData,TContext>`，生成器表达不了，故用「无基类 partial」：
+
+| 文件 | 基类 | 内容 |
+|------|------|------|
+| `XxxCell_Gen.g.cs`（生成）| 无（`public partial class XxxCell`）| 节点绑定字段 + `ScriptGenerator()` + 事件 partial |
+| `XxxCell.cs`（业务）| `: FancyCellWidget<TData,TContext>` | 泛型基类 + `BindMemberProperty`（根节点/MVE）+ `BindData`/`UpdatePosition` |
+
+partial 合并后基类为 `FancyCellWidget<TData,TContext>`，`override ScriptGenerator` 合法。
+
+**启用**：`ScriptGeneratorSetting.asset` 的 `UIGenTypes` 配 `FancyCellWidget`(noBaseClass=true) → Cell prefab 的 UIBindComponent 选 UI 类型 `FancyCellWidget` → 生成脚本。
+
+### 根节点组件：生成器不遍历根节点
+
+`AutoErgodic` 只遍历子节点。Cell 根节点的 `Animator`/`CanvasGroup` 等无法自动绑定，业务在 **`BindMemberProperty()`** 手写（它在 `ScriptGenerator` 之后，子节点字段已就绪）：
+```csharp
+protected override void BindMemberProperty()
+{
+    m_animator = gameObject.GetComponent<Animator>();     // 根节点手动绑定
+    _displayText = CreateProperty<string>("");             // MVE 响应式属性
+    BindText(m_textMessage, _displayText);                 // m_textMessage 来自 _Gen
+}
+```
+
+### 改 prefab → 重新生成 _Gen 工作流
+
+1. 改 prefab 节点（增删/改名/改组件）
+2. UIBindComponent Inspector「重新绑定组件」(`GenerateUIComponentScript`，重遍历子节点填充 `m_components`)
+3. 同 Inspector「生成脚本」(`GenerateCSharpScript`，isAutoGenerate=true 写 `_Gen.g.cs`)
+4. 业务文件实现新增的 `partial void OnClickXxxBtn()` 等
+
+> **MCP**：上述两函数依赖 `Selection.activeTransform`。`execute_code` 中 `PrefabUtility.LoadPrefabContents` → `Selection.activeTransform = contents.transform` → 调用 → `SaveAsPrefabAsset`（持久化 `GenerateUIComponentScript` 对实例的修改）→ `UnloadPrefabContents`。注意 `GenerateCSharpScript` 末尾 `AssetDatabase.Refresh` 会触发 Domain reload，可能短暂断开 MCP。
+
+### Cell 点击冒泡
+
+Cell 内 `NotifyItemClicked()` / `NotifyButtonClicked()` 冒泡到 `FancyScrollerController.OnCellItemClicked`，UIWindow 订阅后调 Service 或发 GameEvent。Cell 的 MVE 绑定细节见 [mve-patterns.md](mve-patterns.md) 第七章。
