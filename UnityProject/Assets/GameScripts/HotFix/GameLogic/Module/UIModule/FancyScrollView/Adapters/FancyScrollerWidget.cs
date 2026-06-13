@@ -57,7 +57,7 @@ namespace GameLogic.UI.FancyScrollView
         {
             base.OnCreate();
 
-            var scroller = GetComponentInChildren<Scroller>();
+            var scroller = gameObject.GetComponentInChildren<Scroller>();
             if (scroller == null)
             {
                 Log.Error("[FancyScrollerWidget] Scroller component not found in children.");
