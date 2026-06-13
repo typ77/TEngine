@@ -20,7 +20,7 @@ namespace GameLogic
 
         private partial void OnClickRandomBtn()
         {
-            int centerIndex = m_scroller.GetCenterIndex();
+            int centerIndex = m_scrollerController.GetCenterIndex();
             Singleton<Example01_BasicService>.Instance.RandomizeNeighborIds(centerIndex);
         }
 
@@ -38,17 +38,17 @@ namespace GameLogic
 
         protected override async void OnCreate()
         {
-            m_scroller.SetCellFactory(() => new Example01_BasicCell());
-            await m_scroller.LoadCellPrefabAsync("Example01_BasicCell");
+            m_scrollerController.SetCellFactory(() => new Example01_BasicCell());
+            await m_scrollerController.LoadCellPrefabAsync("Example01_BasicCell");
             _items = Singleton<Example01_BasicService>.Instance.BuildItems();
-            m_scroller.UpdateData(_items);
+            m_scrollerController.UpdateData(_items);
         }
 
         private void RefreshList()
         {
-            if (m_scroller == null) return;
+            if (m_scrollerController == null) return;
             _items = Singleton<Example01_BasicService>.Instance.BuildItems();
-            m_scroller.UpdateData(_items);
+            m_scrollerController.UpdateData(_items);
         }
     }
 }

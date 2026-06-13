@@ -64,15 +64,9 @@ namespace GameLogic.UI.FancyScrollView
                 return;
             }
 
-            var cellContainer = scroller.transform.Find("m_cellContainer");
-            if (cellContainer == null)
-            {
-                Log.Error("[FancyScrollerWidget] m_cellContainer not found under Scroller.");
-                return;
-            }
-
+            // cellContainer 由 Controller 内部从 Scroller 子节点查找（命名含 "CellContainer"）。
             _controller = new FancyScrollerController();
-            _controller.Initialize(this, scroller, cellContainer, CreateCell);
+            _controller.Initialize(this, scroller, CreateCell);
 
             _controller.CellInterval = CellInterval;
             _controller.ScrollOffset = ScrollOffset;

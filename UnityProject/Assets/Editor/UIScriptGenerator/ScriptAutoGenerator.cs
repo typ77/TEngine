@@ -321,33 +321,27 @@ namespace TEngine.Editor.UI
                 return;
             }
 
-            // ── Scroller → FancyScrollerController 特殊处理 ──
-            // 字段类型为非泛型 FancyScrollerController，绑定走 new + Initialize（而非 GetComponent），
-            // 同时登记到 OnDestroy 的 Dispose 列表。
+            // ── Scroller → Scroller 组件 + FancyScrollerController 配对生成 ──
+            // UIBindComponent 绑定 Scroller 组件；见到 Scroller 即配对生成 FancyScrollerController
+            // （new + Initialize，cellContainer 由 Controller 内部从 Scroller 子节点获取，无需 FindChild）。
+            // 控制器登记到 OnDestroy 的 Dispose 列表。
             if (rule.componentName == UIComponentName.FancyScroller)
             {
-                // 动态发现 m_scroller 下的 CellContainer 子节点（命名前缀不固定，可能为 m_tf/m_cell 等）
-                string cellContainerName = null;
-                for (int j = 0; j < child.childCount; j++)
-                {
-                    var sub = child.GetChild(j);
-                    if (sub.name.IndexOf("CellContainer", StringComparison.OrdinalIgnoreCase) >= 0)
-                    {
-                        cellContainerName = sub.name;
-                        break;
-                    }
-                }
-                cellContainerName ??= "m_cellContainer"; // 未找到则兜底约定名
+                var controllerVar = varName + "Controller"; // m_scroller -> m_scrollerController
+                var nullableSuffix = ScriptGeneratorSetting.Instance.NullableEnable ? " = null!;" : ";";
 
-                strVar.AppendLine($"\t\tprivate FancyScrollerController {varName}{(ScriptGeneratorSetting.Instance.NullableEnable ? " = null!;" : ";")}");
+                // 字段1：Scroller 组件（已在 UIBindComponent 注册）
+                strVar.AppendLine($"\t\tprivate Scroller {varName}{nullableSuffix}");
+                // 字段2：配对的 FancyScrollerController 控制器
+                strVar.AppendLine($"\t\tprivate FancyScrollerController {controllerVar}{nullableSuffix}");
 
-                strBind.AppendLine($"\t\t\t{varName} = new FancyScrollerController();");
-                strBind.AppendLine($"\t\t\t{varName}.Initialize(this, ");
-                strBind.AppendLine($"\t\t\t    m_bindComponent.GetComponent<Scroller>({m_bindIndex}), ");
-                strBind.AppendLine($"\t\t\t    FindChild(\"{child.name}/{cellContainerName}\"), ");
-                strBind.AppendLine($"\t\t\t    null);");
+                // 绑定1：Scroller = GetComponent
+                strBind.AppendLine($"\t\t\t{varName} = m_bindComponent.GetComponent<Scroller>({m_bindIndex});");
+                // 绑定2：Controller = new + Initialize（cellContainer 由 Controller 内部从 Scroller 获取）
+                strBind.AppendLine($"\t\t\t{controllerVar} = new FancyScrollerController();");
+                strBind.AppendLine($"\t\t\t{controllerVar}.Initialize(this, {varName}, null);");
 
-                m_scrollerFields.Add(varName);
+                m_scrollerFields.Add(controllerVar);
                 m_bindIndex++;
                 return;
             }
