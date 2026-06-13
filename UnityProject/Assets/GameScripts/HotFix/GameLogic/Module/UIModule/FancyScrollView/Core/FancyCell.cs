@@ -22,6 +22,14 @@ namespace GameLogic.UI.FancyScrollView
         public virtual void SetVisible(bool visible) => gameObject.SetActive(visible);
         public abstract void UpdateContent(TItemData itemData);
         public abstract void UpdatePosition(float position);
+
+        // ── IFancyCell 非泛型基接口的显式实现 ─────────────────
+
+        /// <summary>显式接口实现：将非泛型 object 数据转为泛型类型。</summary>
+        void IFancyCell.UpdateContent(object itemData) => UpdateContent((TItemData)itemData);
+
+        /// <summary>显式接口实现：将非泛型 object 上下文转为泛型类型。</summary>
+        void IFancyCell.SetContext(object context) => SetContext((TContext)context);
     }
 
     /// <summary>
