@@ -94,13 +94,15 @@ namespace GameLogic.UI.FancyScrollView
             UIBase owner,
             Scroller scroller,
             Transform cellContainer,
-            Func<IFancyCell> cellFactory,
+            Func<IFancyCell> cellFactory = null,
             object context = null)
         {
             _owner = owner ?? throw new ArgumentNullException(nameof(owner));
             _scroller = scroller ?? throw new ArgumentNullException(nameof(scroller));
             _cellContainer = cellContainer ?? throw new ArgumentNullException(nameof(cellContainer));
-            _cellFactory = cellFactory ?? throw new ArgumentNullException(nameof(cellFactory));
+            // cellFactory 允许为 null：ScriptGenerator 在 ScriptGenerator() 阶段生成 Initialize 时还不持有 Cell 工厂，
+            // 由使用方在 OnCreate() 中调用 SetCellFactory() 延后注入。实际创建 Cell 时做空检查。
+            _cellFactory = cellFactory;
             _sharedContext = context;
 
             _scroller.OnValueChanged(OnScrollerPositionChanged);
@@ -256,6 +258,12 @@ namespace GameLogic.UI.FancyScrollView
         /// </summary>
         private IFancyCell CreateCell()
         {
+            if (_cellFactory == null)
+            {
+                throw new InvalidOperationException(
+                    "Cell factory not set. Call SetCellFactory() before binding data (e.g. in OnCreate).");
+            }
+
             var go = UnityEngine.Object.Instantiate(_cellPrefab, _cellContainer);
             var cell = _cellFactory();
 
