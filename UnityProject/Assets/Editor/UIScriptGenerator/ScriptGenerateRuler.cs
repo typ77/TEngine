@@ -29,11 +29,19 @@ namespace TEngine.Editor.UI
         [SerializeField] public UIComponentName componentName;
         [SerializeField] public bool isUIWidget = false;
 
-        public ScriptGenerateRuler(string uiElementRegex, UIComponentName componentName, bool isUIWidget = false)
+        /// <summary>
+        /// 是否需要自定义初始化。
+        /// <para>标记为 true 的规则不走标准 GetComponent 绑定，而走特殊路径生成
+        /// （如 Scroller 生成 <c>FancyScrollerController</c> + <c>new</c> + <c>Initialize</c>）。</para>
+        /// </summary>
+        [SerializeField] public bool isCustomInit = false;
+
+        public ScriptGenerateRuler(string uiElementRegex, UIComponentName componentName, bool isUIWidget = false, bool isCustomInit = false)
         {
             this.uiElementRegex = uiElementRegex;
             this.componentName = componentName;
             this.isUIWidget = isUIWidget;
+            this.isCustomInit = isCustomInit;
         }
     }
 
@@ -62,9 +70,11 @@ namespace TEngine.Editor.UI
             var uiElementRegexRect = new Rect(position.x, position.y, 120, position.height);
             var componentNameRect = new Rect(position.x + 125, position.y, 150, position.height);
             var isUIWidgetRect = new Rect(position.x + 325, position.y, 150, position.height);
+            var isCustomInitRect = new Rect(position.x + 480, position.y, 100, position.height);
             EditorGUI.PropertyField(uiElementRegexRect, property.FindPropertyRelative("uiElementRegex"), GUIContent.none);
             EditorGUI.PropertyField(componentNameRect, property.FindPropertyRelative("componentName"), GUIContent.none);
             EditorGUI.PropertyField(isUIWidgetRect, property.FindPropertyRelative("isUIWidget"), GUIContent.none);
+            EditorGUI.PropertyField(isCustomInitRect, property.FindPropertyRelative("isCustomInit"), GUIContent.none);
             EditorGUI.indentLevel = indent;
             EditorGUI.EndProperty();
         }
@@ -96,6 +106,7 @@ namespace TEngine.Editor.UI
         TextMeshProUGUI,
         Canvas,
         Dropdown,
+        Animator,
         TMP_InputField,
         TMP_Dropdown,
     }

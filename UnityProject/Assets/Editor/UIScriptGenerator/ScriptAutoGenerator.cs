@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -128,6 +129,7 @@ namespace TEngine.Editor.UI
             strBind.AppendLine($"\t\t\t\treturn;");
             strBind.AppendLine($"\t\t\t}}");
             m_bindIndex = 0;
+            m_scrollerFields.Clear();
             AutoErgodic(root, root, ref strVar, ref strBind, ref strOnCreate, ref strCallback, isUniTask);
             StringBuilder strFile = new StringBuilder();
 
@@ -194,6 +196,22 @@ namespace TEngine.Editor.UI
             }
             strFile.AppendLine("\t\t}");
             strFile.AppendLine();
+
+            // 生成 OnDestroy（仅当存在需要 Dispose 的字段，如 FancyScrollerController）
+            if (m_scrollerFields.Count > 0)
+            {
+                strFile.AppendLine("\t\tprotected override void OnDestroy()");
+                strFile.AppendLine("\t\t{");
+                foreach (var disposeField in m_scrollerFields)
+                {
+                    strFile.AppendLine($"\t\t\t{disposeField}?.Dispose();");
+                    strFile.AppendLine($"\t\t\t{disposeField} = null;");
+                }
+                strFile.AppendLine("\t\t\tbase.OnDestroy();");
+                strFile.AppendLine("\t\t}");
+                strFile.AppendLine();
+            }
+
             strFile.Append($"\t\t#endregion");
             strFile.AppendLine();
 
@@ -256,6 +274,9 @@ namespace TEngine.Editor.UI
 
         private static int m_bindIndex = 0;
 
+        // 收集需要 Dispose 的 Scroller 字段（FancyScrollerController），用于生成 OnDestroy。
+        private static readonly List<string> m_scrollerFields = new List<string>();
+
         public static void AutoErgodic(Transform root, Transform transform, ref StringBuilder strVar,
             ref StringBuilder strBind, ref StringBuilder strOnCreate, ref StringBuilder strCallback, bool isUniTask)
         {
@@ -297,6 +318,24 @@ namespace TEngine.Editor.UI
 
             if (string.IsNullOrEmpty(varName))
             {
+                return;
+            }
+
+            // ── Scroller → FancyScrollerController 特殊处理 ──
+            // 字段类型为非泛型 FancyScrollerController，绑定走 new + Initialize（而非 GetComponent），
+            // 同时登记到 OnDestroy 的 Dispose 列表。
+            if (rule.componentName == UIComponentName.FancyScroller)
+            {
+                strVar.AppendLine($"\t\tprivate FancyScrollerController {varName}{(ScriptGeneratorSetting.Instance.NullableEnable ? " = null!;" : ";")}");
+
+                strBind.AppendLine($"\t\t\t{varName} = new FancyScrollerController();");
+                strBind.AppendLine($"\t\t\t{varName}.Initialize(this, ");
+                strBind.AppendLine($"\t\t\t    m_bindComponent.GetComponent<Scroller>({m_bindIndex}), ");
+                strBind.AppendLine($"\t\t\t    FindChild(\"{child.name}/m_cellContainer\"), ");
+                strBind.AppendLine($"\t\t\t    null);");
+
+                m_scrollerFields.Add(varName);
+                m_bindIndex++;
                 return;
             }
 
@@ -690,6 +729,7 @@ namespace TEngine.Editor.UI
                 UIComponentName.Scrollbar => typeof(Scrollbar),
                 UIComponentName.ScrollRect => typeof(ScrollRect),
                 UIComponentName.CanvasGroup => typeof(CanvasGroup),
+                UIComponentName.Animator => typeof(Animator),
                 UIComponentName.InputField => typeof(InputField),
                 UIComponentName.ToggleGroup => typeof(ToggleGroup),
                 UIComponentName.RawImage => typeof(RawImage),
