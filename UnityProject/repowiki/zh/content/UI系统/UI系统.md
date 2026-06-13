@@ -97,6 +97,7 @@ Const --> UIModule
 - HtmlToUGUIConfig：配置ScriptableObject，统一管理分辨率预设与DSL模板。
 - GameEventMgr：事件系统封装，便于UI订阅与派发事件。
 - Constant：常量设置，包含UI相关设置键名（如UI音效开关与音量）。
+- FancyScrollView 列表系统：高性能虚拟化列表方案（`FancyScrollerView` / `FancyScrollerController` / `FancyCellWidget`），支持 Cell 复用、滚动动画、Grid 虚拟化；Cell 复用 UIBindComponent 自动生成（无基类 partial 模式）。详见 [FancyScrollView列表系统](FancyScrollView列表系统.md)。
 
 **章节来源**
 - [UIBase.cs:1-94](file://Assets/Launcher/Scripts/UIBase.cs#L1-L94)

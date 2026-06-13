@@ -160,6 +160,9 @@ end
   - Widget组件通过规则标记isUIWidget，生成CreateWidget调用。
 - UI类型推断
   - 根据根节点名称前缀推断UI类型（UIWindow/UIWidget），并动态生成类继承关系。
+  - `UIGenType.noBaseClass=true` 时生成「无基类 partial」（`public partial class X`），用于 FancyScrollView Cell 自动生成——双泛型基类 `FancyCellWidget<TData,TContext>` 由业务文件声明，`_Gen.g.cs` 不带基类，partial 合并后基类生效。详见 [FancyScrollView列表系统](FancyScrollView列表系统.md)。
+- 命名 → 生成标识符
+  - 节点名只去首个 `m_` 前缀：`m_btnClose`→字段 `m_btnClose` + `OnClickCloseBtn`；勿用 `m_btn_Close`（会生成带多余下划线的 `OnClick_CloseBtn`）。Button→`OnClickXxxBtn`、Toggle→`OnXxxToggle`、Slider→`OnXxxSlider`、TMP_Dropdown→`OnXxxDropdown`。
 - 自动实现类生成
   - 生成Imp文件时，仅输出事件回调实现体，便于后续扩展。
 
@@ -229,6 +232,7 @@ class ScriptGenerateRuler {
 class UIGenType {
 +string uiTypeName
 +bool isGeneric
++bool noBaseClass
 }
 ScriptGeneratorSetting --> ScriptGenerateRuler : "包含"
 ScriptGeneratorSetting --> UIGenType : "包含"
