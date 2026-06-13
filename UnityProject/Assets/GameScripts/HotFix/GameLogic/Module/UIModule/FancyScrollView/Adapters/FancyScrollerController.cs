@@ -191,7 +191,8 @@ namespace GameLogic.UI.FancyScrollView
         #region 公开 API
 
         /// <summary>
-        /// 更新列表数据并刷新显示（非泛型版本）。
+        /// 更新列表数据并刷新显示。
+        /// <para>接受任意 IList（List&lt;T&gt;、T[] 等均可），类型安全由 Cell 端保证。</para>
         /// </summary>
         /// <param name="items">数据列表。</param>
         public void UpdateData(IList items)
@@ -199,16 +200,6 @@ namespace GameLogic.UI.FancyScrollView
             _itemsSource = items ?? new List<object>();
             if (_scroller != null) _scroller.SetTotalCount(_itemsSource.Count);
             Refresh();
-        }
-
-        /// <summary>
-        /// 更新列表数据并刷新显示（泛型便捷方法）。
-        /// </summary>
-        /// <param name="items">数据列表。</param>
-        /// <typeparam name="T">列表项数据类型。</typeparam>
-        public void UpdateData<T>(IList<T> items)
-        {
-            UpdateData((IList)items);
         }
 
         /// <summary>
