@@ -62,6 +62,9 @@ namespace GameLogic.UI.FancyScrollView
         /// <summary>Cell 内按钮被点击时触发，参数为 Cell 索引。</summary>
         public event Action<int> OnCellButtonClicked;
 
+        /// <summary>滚动位置变化时触发，参数为 Scroller 原始位置值（可用于跟随选中）。</summary>
+        public event Action<float> OnPositionChanged;
+
         // ── 配置属性（取代旧版虚方法）────────────────────────────
 
         /// <summary>Cell 间隔（0.01 ~ 1），默认 0.2。</summary>
@@ -121,6 +124,16 @@ namespace GameLogic.UI.FancyScrollView
         public void SetCellFactory(Func<IFancyCell> cellFactory)
         {
             _cellFactory = cellFactory ?? throw new ArgumentNullException(nameof(cellFactory));
+        }
+
+        /// <summary>
+        /// 设置共享上下文，须在 <see cref="UpdateData"/>（Cell 创建）前调用。
+        /// <para>因 <see cref="Initialize"/> 不能重复调用（会重复订阅 Scroller 事件），
+        /// 而 _Gen 生成的 Initialize 传入 context=null，故提供本方法延后注入。</para>
+        /// </summary>
+        public void SetContext(object context)
+        {
+            _sharedContext = context;
         }
 
         /// <summary>
@@ -351,6 +364,7 @@ namespace GameLogic.UI.FancyScrollView
 
         private void OnScrollerPositionChanged(float position)
         {
+            OnPositionChanged?.Invoke(position);
             UpdatePosition(position, false);
         }
 
