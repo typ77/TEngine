@@ -7,17 +7,27 @@
 namespace GameLogic.UI.FancyScrollView
 {
     /// <summary>
-    /// FancyScrollView Cell 的统一接口。
-    /// 原始 FancyCell 与 TEngine FancyCellWidget 都实现此接口，使 Cell 创建管线可被 UIWidget 接管。
+    /// FancyScrollView Cell 的非泛型统一接口。
+    /// Controller/Widget 层只依赖此接口，不感知具体数据类型。
     /// </summary>
-    public interface IFancyCell<TItemData, TContext> where TContext : class, new()
+    public interface IFancyCell
     {
         int Index { get; set; }
         bool IsVisible { get; }
         void SetVisible(bool visible);
-        void UpdateContent(TItemData itemData);
+        void UpdateContent(object itemData);
         void UpdatePosition(float position);
-        void SetContext(TContext context);
+        void SetContext(object context);
         void Initialize();
+    }
+
+    /// <summary>
+    /// FancyScrollView Cell 的泛型接口（类型安全层）。
+    /// 继承自 <see cref="IFancyCell"/>，Controller 通过非泛型接口调用，
+    /// Cell 端通过显式接口实现将 object 转型为具体类型。
+    /// </summary>
+    public interface IFancyCell<TItemData, TContext> : IFancyCell
+        where TContext : class, new()
+    {
     }
 }
