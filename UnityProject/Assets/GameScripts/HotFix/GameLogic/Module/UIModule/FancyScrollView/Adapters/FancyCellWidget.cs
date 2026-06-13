@@ -56,6 +56,24 @@ namespace GameLogic.UI.FancyScrollView
             Context = context;
         }
 
+        // ── IFancyCell 非泛型接口的显式实现 ─────────────────
+
+        /// <summary>
+        /// 显式接口实现：将非泛型 object 数据转为泛型类型后调用 BindData。
+        /// </summary>
+        void IFancyCell.UpdateContent(object itemData)
+        {
+            BindData((TItemData)itemData);
+        }
+
+        /// <summary>
+        /// 显式接口实现：将非泛型 object 上下文转为泛型类型后调用 SetContext。
+        /// </summary>
+        void IFancyCell.SetContext(object context)
+        {
+            SetContext((TContext)context);
+        }
+
         /// <inheritdoc/>
         public virtual void Initialize()
         {
