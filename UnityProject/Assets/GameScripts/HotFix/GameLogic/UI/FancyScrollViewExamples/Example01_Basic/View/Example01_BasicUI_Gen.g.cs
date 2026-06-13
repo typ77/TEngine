@@ -24,6 +24,10 @@ namespace GameLogic
 		private Text m_textRandom = null!;
 		private Button m_btnClose = null!;
 		private Text m_textClose = null!;
+		private Button m_btnPrev = null!;
+		private Text m_textPrev = null!;
+		private Button m_btnNext = null!;
+		private Text m_textNext = null!;
 
 		protected override void ScriptGenerator()
 		{
@@ -40,10 +44,18 @@ namespace GameLogic
 			m_textRandom = m_bindComponent.GetComponent<Text>(2);
 			m_btnClose = m_bindComponent.GetComponent<Button>(3);
 			m_textClose = m_bindComponent.GetComponent<Text>(4);
+			m_btnPrev = m_bindComponent.GetComponent<Button>(5);
+			m_textPrev = m_bindComponent.GetComponent<Text>(6);
+			m_btnNext = m_bindComponent.GetComponent<Button>(7);
+			m_textNext = m_bindComponent.GetComponent<Text>(8);
 			m_btnRandom.onClick.RemoveAllListeners();
 			m_btnRandom.onClick.AddListener(OnClickRandomBtn);
 			m_btnClose.onClick.RemoveAllListeners();
 			m_btnClose.onClick.AddListener(OnClickCloseBtn);
+			m_btnPrev.onClick.RemoveAllListeners();
+			m_btnPrev.onClick.AddListener(OnClickPrevBtn);
+			m_btnNext.onClick.RemoveAllListeners();
+			m_btnNext.onClick.AddListener(OnClickNextBtn);
 		}
 
 		protected override void OnDestroy()
@@ -60,6 +72,10 @@ namespace GameLogic
 		private partial void OnClickRandomBtn();
 
 		private partial void OnClickCloseBtn();
+
+		private partial void OnClickPrevBtn();
+
+		private partial void OnClickNextBtn();
 
 		#endregion
 	}
