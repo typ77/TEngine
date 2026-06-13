@@ -114,7 +114,9 @@ namespace GameLogic.UI.FancyScrollView
         #region 公开 API
 
         public void UpdateData(IList items) => _controller?.UpdateData(items);
-        public void ScrollTo(int index, float duration = 0.3f) => _controller?.ScrollTo(index, duration);
+        public void ScrollTo(int index, float duration = 0.3f, Action onComplete = null) => _controller?.ScrollTo(index, duration, onComplete);
+        public void ScrollTo(int index, float duration, TEngine.Ease easing, Action onComplete = null) => _controller?.ScrollTo(index, duration, easing, onComplete);
+        public void ScrollTo(int index, float duration, EasingCore.EasingFunction easingFunction, Action onComplete = null) => _controller?.ScrollTo(index, duration, easingFunction, onComplete);
         public void JumpTo(int index) => _controller?.JumpTo(index);
         public void Refresh() => _controller?.Refresh();
         public void Relayout() => _controller?.Relayout();

@@ -5,44 +5,13 @@
  */
 
 using UnityEngine;
+using TEngine;
 
 namespace GameLogic.UI.FancyScrollView.EasingCore
 {
-    public enum Ease
-    {
-        Linear,
-        InBack,
-        InBounce,
-        InCirc,
-        InCubic,
-        InElastic,
-        InExpo,
-        InQuad,
-        InQuart,
-        InQuint,
-        InSine,
-        OutBack,
-        OutBounce,
-        OutCirc,
-        OutCubic,
-        OutElastic,
-        OutExpo,
-        OutQuad,
-        OutQuart,
-        OutQuint,
-        OutSine,
-        InOutBack,
-        InOutBounce,
-        InOutCirc,
-        InOutCubic,
-        InOutElastic,
-        InOutExpo,
-        InOutQuad,
-        InOutQuart,
-        InOutQuint,
-        InOutSine,
-    }
+    // 注：Ease 枚举已统一使用 TEngine.Ease，本命名空间仅保留 EasingFunction 委托与 Easing 缓动函数实现。
 
+    /// <summary>缓动函数委托：输入归一化时间 t∈[0,1]，返回缓动后的值。</summary>
     public delegate float EasingFunction(float t);
 
     public static class Easing
@@ -52,41 +21,42 @@ namespace GameLogic.UI.FancyScrollView.EasingCore
         /// </summary>
         /// <param name="type">Ease type</param>
         /// <returns>Easing function</returns>
-        public static EasingFunction Get(Ease type)
+        public static EasingFunction Get(TEngine.Ease type)
         {
             switch (type)
             {
-                case Ease.Linear: return linear;
-                case Ease.InBack: return inBack;
-                case Ease.InBounce: return inBounce;
-                case Ease.InCirc: return inCirc;
-                case Ease.InCubic: return inCubic;
-                case Ease.InElastic: return inElastic;
-                case Ease.InExpo: return inExpo;
-                case Ease.InQuad: return inQuad;
-                case Ease.InQuart: return inQuart;
-                case Ease.InQuint: return inQuint;
-                case Ease.InSine: return inSine;
-                case Ease.OutBack: return outBack;
-                case Ease.OutBounce: return outBounce;
-                case Ease.OutCirc: return outCirc;
-                case Ease.OutCubic: return outCubic;
-                case Ease.OutElastic: return outElastic;
-                case Ease.OutExpo: return outExpo;
-                case Ease.OutQuad: return outQuad;
-                case Ease.OutQuart: return outQuart;
-                case Ease.OutQuint: return outQuint;
-                case Ease.OutSine: return outSine;
-                case Ease.InOutBack: return inOutBack;
-                case Ease.InOutBounce: return inOutBounce;
-                case Ease.InOutCirc: return inOutCirc;
-                case Ease.InOutCubic: return inOutCubic;
-                case Ease.InOutElastic: return inOutElastic;
-                case Ease.InOutExpo: return inOutExpo;
-                case Ease.InOutQuad: return inOutQuad;
-                case Ease.InOutQuart: return inOutQuart;
-                case Ease.InOutQuint: return inOutQuint;
-                case Ease.InOutSine: return inOutSine;
+                case TEngine.Ease.Linear: return linear;
+                case TEngine.Ease.InBack: return inBack;
+                case TEngine.Ease.InBounce: return inBounce;
+                case TEngine.Ease.InCirc: return inCirc;
+                case TEngine.Ease.InCubic: return inCubic;
+                case TEngine.Ease.InElastic: return inElastic;
+                case TEngine.Ease.InExpo: return inExpo;
+                case TEngine.Ease.InQuad: return inQuad;
+                case TEngine.Ease.InQuart: return inQuart;
+                case TEngine.Ease.InQuint: return inQuint;
+                case TEngine.Ease.InSine: return inSine;
+                case TEngine.Ease.OutBack: return outBack;
+                case TEngine.Ease.OutBounce: return outBounce;
+                case TEngine.Ease.OutCirc: return outCirc;
+                case TEngine.Ease.OutCubic: return outCubic;
+                case TEngine.Ease.OutElastic: return outElastic;
+                case TEngine.Ease.OutExpo: return outExpo;
+                case TEngine.Ease.OutQuad: return outQuad;
+                case TEngine.Ease.OutQuart: return outQuart;
+                case TEngine.Ease.OutQuint: return outQuint;
+                case TEngine.Ease.OutSine: return outSine;
+                case TEngine.Ease.InOutBack: return inOutBack;
+                case TEngine.Ease.InOutBounce: return inOutBounce;
+                case TEngine.Ease.InOutCirc: return inOutCirc;
+                case TEngine.Ease.InOutCubic: return inOutCubic;
+                case TEngine.Ease.InOutElastic: return inOutElastic;
+                case TEngine.Ease.InOutExpo: return inOutExpo;
+                case TEngine.Ease.InOutQuad: return inOutQuad;
+                case TEngine.Ease.InOutQuart: return inOutQuart;
+                case TEngine.Ease.InOutQuint: return inOutQuint;
+                case TEngine.Ease.InOutSine: return inOutSine;
+                // Custom / Default 及未知值退化为线性
                 default: return linear;
             }
 

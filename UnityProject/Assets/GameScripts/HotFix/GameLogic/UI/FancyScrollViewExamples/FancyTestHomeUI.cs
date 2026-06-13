@@ -20,7 +20,7 @@ namespace GameLogic
         private static readonly string[] ExampleNames =
         {
             "01_Basic",
-            "02_FocusOn",
+            //"02_FocusOn",
             "03_InfiniteScroll",
             "04_Metaball",
             "05_Voronoi",
@@ -85,7 +85,8 @@ namespace GameLogic
 
             int exampleIndex = index - 1; // 扣除占位项偏移
             string exampleName = ExampleNames[exampleIndex];
-            string typeName = $"GameLogic.Example{exampleIndex + 1:D2}_{exampleName.Substring(3)}UI";
+            // 编号取自 exampleName 前缀（如 "03"），而非数组下标，避免已注释 Example 导致错位
+            string typeName = $"GameLogic.Example{exampleName.Substring(0, 2)}_{exampleName.Substring(3)}UI";
 
             // 尝试关闭当前 Example
             CloseCurrentExample();

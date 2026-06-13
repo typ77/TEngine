@@ -4,7 +4,6 @@ using System.Collections.Generic;
 using System.Reflection;
 using System.Threading;
 using Cysharp.Threading.Tasks;
-using TEngine;
 using UnityEngine;
 using YooAsset;
 
@@ -113,6 +112,15 @@ namespace GameLogic.UI.FancyScrollView
             // 由使用方在 OnCreate() 中调用 SetCellFactory() 延后注入。实际创建 Cell 时做空检查。
             _cellFactory = cellFactory;
             _sharedContext = context;
+
+            // 从 FancyScrollerView 读取布局参数（prefab Inspector 配置），实现可视化调试，无需改代码。
+            if (scroller is FancyScrollerView fsv)
+            {
+                CellInterval = fsv.CellInterval;
+                ScrollOffset = fsv.ScrollOffset;
+                Loop = fsv.Loop;
+                fsv.Controller = this; // 注入自身，供 Editor 运行时热调参数
+            }
 
             _scroller.OnValueChanged(OnScrollerPositionChanged);
         }
@@ -224,11 +232,38 @@ namespace GameLogic.UI.FancyScrollView
         }
 
         /// <summary>
-        /// 滚动到指定索引位置。
+        /// 滚动到指定索引位置（默认 OutCubic 缓动）。
         /// </summary>
-        public void ScrollTo(int index, float duration = 0.3f)
+        /// <param name="index">目标索引。</param>
+        /// <param name="duration">滚动时长（秒）。</param>
+        /// <param name="onComplete">滚动完成回调。</param>
+        public void ScrollTo(int index, float duration = 0.3f, Action onComplete = null)
         {
-            _scroller?.ScrollTo(index, duration);
+            _scroller?.ScrollTo(index, duration, onComplete);
+        }
+
+        /// <summary>
+        /// 滚动到指定索引位置，使用指定 <see cref="TEngine.Ease"/> 缓动。
+        /// </summary>
+        /// <param name="index">目标索引。</param>
+        /// <param name="duration">滚动时长（秒）。</param>
+        /// <param name="easing">缓动类型。</param>
+        /// <param name="onComplete">滚动完成回调。</param>
+        public void ScrollTo(int index, float duration, TEngine.Ease easing, Action onComplete = null)
+        {
+            _scroller?.ScrollTo(index, duration, easing, onComplete);
+        }
+
+        /// <summary>
+        /// 滚动到指定索引位置，使用自定义 <see cref="EasingCore.EasingFunction"/> 缓动。
+        /// </summary>
+        /// <param name="index">目标索引。</param>
+        /// <param name="duration">滚动时长（秒）。</param>
+        /// <param name="easingFunction">自定义缓动函数。</param>
+        /// <param name="onComplete">滚动完成回调。</param>
+        public void ScrollTo(int index, float duration, EasingCore.EasingFunction easingFunction, Action onComplete = null)
+        {
+            _scroller?.ScrollTo(index, duration, easingFunction, onComplete);
         }
 
         /// <summary>
