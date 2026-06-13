@@ -98,13 +98,13 @@ namespace GameLogic.UI.FancyScrollView
         {
             _owner = owner ?? throw new ArgumentNullException(nameof(owner));
             _scroller = scroller ?? throw new ArgumentNullException(nameof(scroller));
-            // cellContainer 由 Scroller 的子节点提供（约定命名含 "CellContainer"），无需外部传入路径。
-            _cellContainer = FindCellContainer(scroller);
+            // cellContainer 由 Scroller 组件（FancyScrollerView）持有，不再依赖子节点命名约定查找。
+            _cellContainer = (scroller as FancyScrollerView)?.CellContainer;
             if (_cellContainer == null)
             {
                 throw new InvalidOperationException(
-                    $"CellContainer not found under Scroller '{scroller.name}'. " +
-                    "Expected a child node whose name contains 'CellContainer' (e.g. m_tfCellContainer / m_cellContainer).");
+                    $"Scroller '{scroller.name}' is not a FancyScrollerView or its CellContainer is not assigned. " +
+                    "Use the 'GameObject/UI/Scroller' menu to create a properly configured Scroller.");
             }
             // cellFactory 允许为 null：ScriptGenerator 在 ScriptGenerator() 阶段生成 Initialize 时还不持有 Cell 工厂，
             // 由使用方在 OnCreate() 中调用 SetCellFactory() 延后注入。实际创建 Cell 时做空检查。
@@ -112,24 +112,6 @@ namespace GameLogic.UI.FancyScrollView
             _sharedContext = context;
 
             _scroller.OnValueChanged(OnScrollerPositionChanged);
-        }
-
-        /// <summary>
-        /// 从 Scroller 的子节点中查找 CellContainer（命名含 "CellContainer" 的直接子节点）。
-        /// <para>cellContainer 与 Scroller 配对，由 Scroller 提供，调用方无需关心其节点名或路径。</para>
-        /// </summary>
-        private static Transform FindCellContainer(Scroller scroller)
-        {
-            var t = scroller.transform;
-            for (int i = 0; i < t.childCount; i++)
-            {
-                var child = t.GetChild(i);
-                if (child.name.IndexOf("CellContainer", StringComparison.OrdinalIgnoreCase) >= 0)
-                {
-                    return child;
-                }
-            }
-            return null;
         }
 
         /// <summary>

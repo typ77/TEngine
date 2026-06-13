@@ -84,6 +84,12 @@ namespace TEngine.Editor.UI
             {
                 return "UIWindow";
             }
+            // 无基类 partial 模式（noBaseClass=true，如 FancyScrollView Cell）：
+            // 返回空字符串，由调用方生成不带 ": 基类" 的 partial，泛型基类交给业务文件声明。
+            if (uiGenType.noBaseClass)
+            {
+                return string.Empty;
+            }
             return !uiGenType.isGeneric ? uiGenType.uiTypeName : $"{uiGenType.uiTypeName}<{fileName}>";
         }
 
@@ -177,7 +183,17 @@ namespace TEngine.Editor.UI
                         //    strFile.AppendLine($"\t[Window(UILayer.UI, location : \"{fileName.Replace(".cs", "")}\")]");
                         //}
 
-                        strFile.AppendLine($"\tpublic partial class {fileName.Replace(".cs", "")} : {uiTypeName}");
+                        // 无基类 partial 模式（noBaseClass=true，如 FancyScrollView Cell）：
+                        // 不附加 ": 基类"，泛型基类由业务文件 partial 自行声明。
+                        var classNameOnly = fileName.Replace(".cs", "");
+                        if (string.IsNullOrEmpty(uiTypeName))
+                        {
+                            strFile.AppendLine($"\tpublic partial class {classNameOnly}");
+                        }
+                        else
+                        {
+                            strFile.AppendLine($"\tpublic partial class {classNameOnly} : {uiTypeName}");
+                        }
                     }
 
                     strFile.AppendLine("\t{");

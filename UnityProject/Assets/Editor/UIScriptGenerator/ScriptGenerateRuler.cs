@@ -48,14 +48,23 @@ namespace TEngine.Editor.UI
     [Serializable]
     public class UIGenType
     {
-        public UIGenType(string uiTypeName, bool isGeneric)
+        public UIGenType(string uiTypeName, bool isGeneric, bool noBaseClass = false)
         {
             this.uiTypeName = uiTypeName;
             this.isGeneric = isGeneric;
+            this.noBaseClass = noBaseClass;
         }
 
         public string uiTypeName;
         public bool isGeneric;
+
+        /// <summary>
+        /// 是否生成无基类 partial（如 FancyScrollView 的 Cell）。
+        /// <para>标记为 true 时，<c>_Gen.g.cs</c> 只输出 <c>public partial class X</c>，
+        /// 不附加 <c>: 基类</c> 与 <c>[Window]</c>；泛型基类由业务文件 partial 自行声明
+        /// （例如 <c>public partial class X : FancyCellWidget&lt;TData,TContext&gt;</c>）。</para>
+        /// </summary>
+        public bool noBaseClass;
     }
 
     [CustomPropertyDrawer(typeof(ScriptGenerateRuler))]

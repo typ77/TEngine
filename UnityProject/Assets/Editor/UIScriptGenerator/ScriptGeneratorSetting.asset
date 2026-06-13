@@ -21,82 +21,112 @@ MonoBehaviour:
   uiGenTypes:
   - uiTypeName: UIWindow
     isGeneric: 0
+    noBaseClass: 0
   - uiTypeName: UIWidget
     isGeneric: 0
+    noBaseClass: 0
+  - uiTypeName: FancyCellWidget
+    isGeneric: 0
+    noBaseClass: 1
   NullableEnable: 1
   scriptGenerateRule:
   - uiElementRegex: m_go
     componentName: 0
     isUIWidget: 0
+    isCustomInit: 0
   - uiElementRegex: m_item
     componentName: 0
     isUIWidget: 1
+    isCustomInit: 0
   - uiElementRegex: m_tf
     componentName: 1
     isUIWidget: 0
+    isCustomInit: 0
   - uiElementRegex: m_rect
     componentName: 2
     isUIWidget: 0
+    isCustomInit: 0
   - uiElementRegex: m_text
     componentName: 3
     isUIWidget: 0
+    isCustomInit: 0
   - uiElementRegex: m_richText
     componentName: 4
     isUIWidget: 0
+    isCustomInit: 0
   - uiElementRegex: m_btn
     componentName: 5
     isUIWidget: 0
+    isCustomInit: 0
   - uiElementRegex: m_img
     componentName: 6
     isUIWidget: 0
+    isCustomInit: 0
   - uiElementRegex: m_rimg
     componentName: 7
     isUIWidget: 0
+    isCustomInit: 0
   - uiElementRegex: m_fscroll
     componentName: 8
     isUIWidget: 0
+    isCustomInit: 0
   - uiElementRegex: m_scroller
     componentName: 9
     isUIWidget: 0
+    isCustomInit: 0
   - uiElementRegex: m_scrollBar
     componentName: 11
     isUIWidget: 0
+    isCustomInit: 0
   - uiElementRegex: m_scroll
     componentName: 10
     isUIWidget: 0
+    isCustomInit: 0
   - uiElementRegex: m_input
     componentName: 12
     isUIWidget: 0
+    isCustomInit: 0
   - uiElementRegex: m_grid
     componentName: 13
     isUIWidget: 0
+    isCustomInit: 0
   - uiElementRegex: m_hlay
     componentName: 14
     isUIWidget: 0
+    isCustomInit: 0
   - uiElementRegex: m_vlay
     componentName: 15
     isUIWidget: 0
+    isCustomInit: 0
   - uiElementRegex: m_slider
     componentName: 16
     isUIWidget: 0
+    isCustomInit: 0
   - uiElementRegex: m_group
     componentName: 18
     isUIWidget: 0
+    isCustomInit: 0
   - uiElementRegex: m_curve
     componentName: 19
     isUIWidget: 0
+    isCustomInit: 0
   - uiElementRegex: m_canvasGroup
     componentName: 20
     isUIWidget: 0
+    isCustomInit: 0
   - uiElementRegex: m_toggle
     componentName: 17
     isUIWidget: 0
+    isCustomInit: 0
   - uiElementRegex: m_tmpInput
     componentName: 24
     isUIWidget: 0
+    isCustomInit: 0
   - uiElementRegex: m_tmpDropdown
     componentName: 25
     isUIWidget: 0
+    isCustomInit: 0
   - uiElementRegex: m_tmp
     componentName: 21
     isUIWidget: 0
+    isCustomInit: 0
