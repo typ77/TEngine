@@ -299,6 +299,17 @@ namespace GameLogic.UI.FancyScrollView
             return Mathf.RoundToInt(_currentPosition);
         }
 
+        /// <summary>
+        /// 获取从 sourceIndex 滚动到 destIndex 的移动方向。
+        /// <para>转发到 <see cref="Scroller.GetMovementDirection"/>，供 Tab 切换等场景判断滑动方向。</para>
+        /// </summary>
+        public MovementDirection GetMovementDirection(int sourceIndex, int destIndex)
+        {
+            return _scroller != null
+                ? _scroller.GetMovementDirection(sourceIndex, destIndex)
+                : MovementDirection.Left;
+        }
+
         #endregion
 
         #region Cell 创建
