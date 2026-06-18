@@ -9,7 +9,7 @@ namespace GameLogic
     /// Example03 无限循环 Cell（原版结构：根 Animator + Image/Button + Text）。
     /// 原版 Cell 无 UIBindComponent，节点组件在 BindMemberProperty 中通过 GetComponentInChildren 获取。
     /// </summary>
-    public partial class Example03_InfiniteScrollCell : FancyCellWidget<Example03_InfiniteScrollItemData, Example03_InfiniteScrollContext>
+    public partial class Example03_InfiniteScrollCell : FancyCellWidget<Example03_InfiniteScrollItemData, FancySelectionContext>
     {
         private Animator m_animator;
         private Image m_imgBackground;

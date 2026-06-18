@@ -6,7 +6,7 @@ using UnityEngine.UI;
 namespace GameLogic
 {
     /// <summary>Example01 基础 Cell：节点绑定由 _Gen.g.cs 自动生成，本文件只保留业务逻辑。</summary>
-    public partial class Example01_BasicCell : FancyCellWidget<Example01_BasicItemData, Example01_BasicContext>
+    public partial class Example01_BasicCell : FancyCellWidget<Example01_BasicItemData, FancySelectionContext>
     {
         private Animator m_animator;
         private BindableProperty<string> _displayText;

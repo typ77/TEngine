@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using GameLogic.DataBinding;
+using GameLogic.UI.FancyScrollView;
 using TEngine;
 using UnityEngine;
 
@@ -10,7 +11,7 @@ namespace GameLogic
     [DataContext(typeof(Example03_InfiniteScrollDataContext))]
     public partial class Example03_InfiniteScrollUI
     {
-        private Example03_InfiniteScrollContext _context;
+        private FancySelectionContext _context;
         private List<Example03_InfiniteScrollItemData> _items;
 
         /// <summary>
@@ -39,7 +40,7 @@ namespace GameLogic
             m_scrollerController.Loop = true; // 03 核心：无限循环
             m_btnRandom.gameObject.SetActive(false); // 03 不使用随机化，隐藏 Random 按钮
 
-            _context = new Example03_InfiniteScrollContext { SelectedIndex = 0 };
+            _context = new FancySelectionContext { SelectedIndex = 0 };
             m_scrollerController.SetContext(_context);
             m_scrollerController.OnCellItemClicked += OnCellClicked;
             m_scrollerController.OnPositionChanged += OnScrollerPositionChanged;

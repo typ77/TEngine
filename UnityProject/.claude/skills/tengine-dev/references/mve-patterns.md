@@ -31,7 +31,7 @@ TEngine 采用 **MVE (Model-View-Event)** 四层分离架构，也称为 **MVES*
     → View BindText/Bind 回调 → UI 自动刷新
 ```
 
-**核心模块位置**：`Assets/GameScripts/HotFix/GameLogic/Module/DataBinding/`
+**核心模块位置**：`Assets/GameScripts/HotFix/GameLogic/Module/UIModule/DataBinding/`
 
 ---
 
@@ -39,7 +39,7 @@ TEngine 采用 **MVE (Model-View-Event)** 四层分离架构，也称为 **MVES*
 
 ### 2.1 BindableProperty\<T\> — 响应式属性
 
-**文件**：`Module/DataBinding/BindableProperty.cs`
+**文件**：`Module/UIModule/DataBinding/BindableProperty.cs`
 **命名空间**：`GameLogic.DataBinding`
 
 ```csharp
@@ -72,7 +72,7 @@ new BindableProperty<T>(T initialValue = default, IEqualityComparer<T> comparer 
 
 ### 2.2 ObservableList\<T\> — 响应式集合
 
-**文件**：`Module/DataBinding/ObservableList.cs`
+**文件**：`Module/UIModule/DataBinding/ObservableList.cs`
 **约束**：`where T : struct, IEquatable<T>`
 
 ```csharp
@@ -108,7 +108,7 @@ public event Action<ListChangedEventArgs<T>> OnChanged;
 
 ### 2.3 ListChangeType / ListChangedEventArgs\<T\>
 
-**文件**：`Module/DataBinding/ListChangeType.cs`、`Module/DataBinding/ListChangedEventArgs.cs`
+**文件**：`Module/UIModule/DataBinding/ListChangeType.cs`、`Module/UIModule/DataBinding/ListChangedEventArgs.cs`
 
 ```csharp
 public enum ListChangeType
@@ -131,7 +131,7 @@ public struct ListChangedEventArgs<T>
 
 ### 2.4 DataContext — 数据上下文基类
 
-**文件**：`Module/DataBinding/DataContext.cs`
+**文件**：`Module/UIModule/DataBinding/DataContext.cs`
 
 ```csharp
 public abstract class DataContext : IDisposable
@@ -155,11 +155,15 @@ public abstract class DataContext<TView> : DataContext where TView : UIBase
 
 **Dispose**：自动取消所有订阅并释放持有的属性资源。
 
+> ⚠️ **订阅托管约束**：`Dispose()` 非 virtual，`_unsubscribers`/`_ownedProperties` 为 private。**子类无法手动 `source.OnValueChanged +=` 后自动取消订阅**——必须通过 `MapProperty`/`MapList` 建立映射，框架才会在 Window/Widget OnDestroy 时 `_dataContext.Dispose()` 自动取消订阅并释放 target。手动 `+=` 会内存泄漏（详见第八章 carrier 模式的变通方案）。
+>
+> **DataContext 不可空壳**：挂 `[DataContext]` 特性的类必须真正承担 Model→View 转换（含 `MapProperty`/`MapList` 或对外输出 `BindableProperty`）。空壳 DataContext（无映射、无输出）会被 `DataContextFactory` 反射创建却无人消费，纯属浪费——若 UIWindow 无需 Model→View 转换（直接绑 Model 或纯交互），**删掉 `[DataContext]` 特性与 DataContext 类**，`DataContextFactory.CreateFor` 返回 null 即「非 MVE 窗口」，安全。
+
 ---
 
 ### 2.5 BatchScheduler — 帧级批次合并调度器
 
-**文件**：`Module/DataBinding/BatchScheduler.cs`
+**文件**：`Module/UIModule/DataBinding/BatchScheduler.cs`
 
 ```csharp
 public sealed class BatchScheduler : Singleton<BatchScheduler>, ILateUpdate
@@ -185,7 +189,7 @@ public sealed class BatchScheduler : Singleton<BatchScheduler>, ILateUpdate
 
 ### 2.6 DataContextAttribute — View-DataContext 关联
 
-**文件**：`Module/DataBinding/DataContextAttribute.cs`
+**文件**：`Module/UIModule/DataBinding/DataContextAttribute.cs`
 
 ```csharp
 [DataContext(typeof(LoginDataContext))]  // 标记在 DataContext 类上
@@ -198,7 +202,7 @@ public sealed class BatchScheduler : Singleton<BatchScheduler>, ILateUpdate
 
 ### 2.7 DataContextFactory — 反射工厂
 
-**文件**：`Module/DataBinding/DataContextFactory.cs`
+**文件**：`Module/UIModule/DataBinding/DataContextFactory.cs`
 
 ```csharp
 public static class DataContextFactory
@@ -495,3 +499,80 @@ protected override void BindData(Example01_BasicItemData data)
 - Cell 复用时 `BindData` 必须重置瞬态状态（选中态、按钮可用态、加载状态等）。
 - 列表数据更新：UIWindow 调 `m_scrollerController.UpdateData(itemList)`（是 `UpdateData`，非旧 `UpdateContents`）。
 - Cell 自动生成与根节点组件处理见 [ui-patterns.md](ui-patterns.md) FancyScrollView 章节。
+
+---
+
+## 八、FancyScrollView 列表的 UIWindow 侧 MVE（carrier-as-lifecycle）
+
+FancyScrollView 列表场景，UIWindow 需把 `Model.BindableProperty<T>[]`（数组）转成 `List<ItemData>` 喂给 `m_scrollerController.UpdateData()`。这是典型的 Model→View 集合转换，归 DataContext。但 DataContext 基类不支持「N 源→1 目标」映射（`MapProperty` 最多 3 源，`MapList` 要求 `ObservableList<struct>`），故用 **carrier-as-lifecycle** 模式托管订阅。
+
+**模式**：DataContext 遍历 Model 数组，每项借 `MapProperty(source, carrier, converter)` 把订阅生命周期托管给基类；`carrier` 是无业务意义的私有 `BindableProperty`（仅作生命周期载体，值无意义）；converter 内维护输出 `Items[idx]` 并推进单一 `ItemsRevision`（public `BindableProperty<int>`，版本号信号）。View 绑 `ItemsRevision` 刷新 scroller。
+
+```csharp
+[DataContext(typeof(XxxUI))]
+public class XxxDataContext : DataContext<XxxUI>
+{
+    public readonly List<XxxItemData> Items = new(XxxModel.Count);
+    public readonly BindableProperty<int> ItemsRevision = new(0);   // View 绑它刷新
+
+    public XxxDataContext()
+    {
+        var model = Singleton<XxxModel>.Instance;
+        for (int i = 0; i < XxxModel.Count; i++)
+        {
+            int idx = i;
+            Items.Add(BuildItem(idx, model.Ids[idx].Value));
+            var carrier = new BindableProperty<int>(model.Ids[idx].Value);  // 生命周期载体，值无意义
+            MapProperty(model.Ids[idx], carrier, newVal =>
+            {
+                Items[idx].Id = newVal;
+                Items[idx].DisplayText = Utility.Text.Format("Cell {0} id:{1}", idx, newVal);  // 高频拼接用 Utility.Text.Format 减少 GC（见 naming-rules.md）
+                ItemsRevision.Value++;            // 同帧多次 ++ 由 BatchScheduler 合并为一次刷新
+                return newVal;
+            });
+        }
+    }
+}
+```
+
+```csharp
+// View 侧
+protected override void SetupBindings()
+{
+    var dc = GetDataContext<XxxDataContext>();
+    Bind(dc.ItemsRevision, _ => RefreshList());   // 首次触发时 prefab 未就绪，UpdateData 内部早退
+}
+
+private void RefreshList()
+{
+    m_scrollerController.UpdateData(GetDataContext<XxxDataContext>().Items);
+}
+```
+
+**要点**：
+- `MapProperty` 订阅的是 source（Model.Ids），**不订阅 carrier**；carrier.Value 标脏无人监听，是空操作。真正驱动 View 的是 `ItemsRevision.Value++`。
+- 同帧多次改 ID → BatchScheduler 两轮 Flush 合并 → View 仅刷新一次（契合框架「两轮 Flush 处理 DataContext→View 链式更新」设计）。
+- 生命周期闭环：carrier 进 `_ownedProperties` + 订阅进 `_unsubscribers`（DataContext.Dispose 清理）；`ItemsRevision` 进 `UIBase._bindings`（RemoveAllBindings 清理）。零泄漏。
+- **时序**：`SetupBindings()` 在 `OnCreate()`（含 `await LoadCellPrefabAsync`）之前执行（`UIWindow.cs:354-358`）。`Bind` 首次触发的 RefreshList 会调 `UpdateData`，但 `FancyScrollerController.UpdatePosition` 有 `if (_cellPrefab == null) return;` 框架级早退 guard，安全。**首帧渲染由 `OnCreate` 在 `await` 后显式 `UpdateData` 触发**。
+- **`async void OnCreate` 必须 try-catch**：`await` 点（`LoadCellPrefabAsync` 等异步加载）的异常会冒泡到同步上下文难以追踪。聚焦包住 `await` 及其后续渲染逻辑（不包同步初始化——编程错误应暴露而非吞掉）：
+
+```csharp
+protected override async void OnCreate()
+{
+    /* 同步初始化：SetCellFactory / SetContext / += 事件（抛异常属编程错误，应暴露） */
+    try
+    {
+        await m_scrollerController.LoadCellPrefabAsync("XxxCell");
+        m_scrollerController.UpdateData(dc.Items);   // 依赖 prefab 成功
+        ScrollToIndex(...);
+    }
+    catch (Exception e)
+    {
+        Log.Error($"[Xxx] OnCreate 初始化失败: {e}");   // prefab 失败时优雅降级，窗口仍可关闭
+    }
+}
+```
+
+> **不要把 Service 当转换层**：`BuildItems()` 这类「Model→List<ItemData> + 格式化 DisplayText」是 Model→View 转换，归 DataContext，不归 Service。Service 只做纯业务（改 Model.Value）。
+>
+> 参考实现：`Example01_Basic/`（MVE 四层 + carrier 模式 + async try-catch）。选中态广播用 `FancySelectionContext` 基类，见 [ui-patterns.md](ui-patterns.md) FancyScrollView 章节。

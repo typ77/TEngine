@@ -254,3 +254,45 @@ protected override void BindMemberProperty()
 ### Cell 点击冒泡
 
 Cell 内 `NotifyItemClicked()` / `NotifyButtonClicked()` 冒泡到 `FancyScrollerController.OnCellItemClicked`，UIWindow 订阅后调 Service 或发 GameEvent。Cell 的 MVE 绑定细节见 [mve-patterns.md](mve-patterns.md) 第七章。
+
+### 选中态上下文：FancySelectionContext（不要自定义）
+
+FancyScrollView 的选中态（Cell 高亮广播）统一用框架基类 `FancySelectionContext`（`Core/FancySelectionContext.cs`，含 `public int SelectedIndex = -1`）。**不要每个列表自定义只含 `SelectedIndex` 的 Context 类**——这是常见冗余（曾出现在 Example01/03/06，三个一模一样的类）。
+
+| 场景 | 用法 |
+|------|------|
+| 纯选中态列表（推荐默认） | Cell 泛型直接用 `FancyCellWidget<TData, FancySelectionContext>`，UI `_context` 类型为 `FancySelectionContext` |
+| 需额外字段（布局接口/回调） | 继承扩展：`class XxxContext : FancySelectionContext, IFancyScrollRectContext`（复用 `SelectedIndex` + 实现接口） |
+
+```csharp
+// 纯选中态（Example01/03/06）
+private FancySelectionContext _context;
+_context = new FancySelectionContext { SelectedIndex = 0 };
+m_scrollerController.SetContext(_context);
+// Cell: FancyCellWidget<XxxItemData, FancySelectionContext>
+
+// 需接口 + 回调（Example07/08，用 ScrollRect/GridView Widget）
+public class XxxContext : FancySelectionContext, IFancyScrollRectContext
+{
+    public ScrollDirection ScrollDirection { get; set; }       // 接口成员
+    public Func<(float ScrollSize, float ReuseMargin)> CalculateScrollSize { get; set; }
+    public Action<int> OnCellClicked;                          // 业务字段
+    // SelectedIndex 继承自 FancySelectionContext，无需重复声明
+}
+```
+
+### 三种 Context 概念区分（勿混淆）
+
+FancyScrollView 列表里会出现多个「Context」，语义完全不同，命名要消歧：
+
+| 概念 | 是什么 | 归属 | 命名 |
+|------|--------|------|------|
+| **MVE DataContext** | Model→View 数据映射层（含 `MapProperty`/`BindableProperty` 输出） | MVE 第三层 | `XxxDataContext : DataContext<XxxUI>` |
+| **Cell Context** | FancyScrollView 的 UI↔Cell 共享广播态（选中索引等） | View 层（UI 创建，广播给 Cell） | `FancySelectionContext`（基类）或其子类 |
+| **业务传递对象** | POCO（如 ItemData），由 DataContext/Service 构建后传给 Cell | 数据层 | `XxxItemData` |
+
+- Cell Context 实例必须由 UIWindow 创建并 `m_scrollerController.SetContext(ctx)` 注入（FancyScrollView 契约）。
+- 选中态是 **UI 交互态**，不归 DataContext/Model（DataContext 只映射 Model 数据）；放 `FancySelectionContext` 是语义最正确的位置。
+- 无选中态的列表（如纯展示）Cell 泛型用 `NullContext`（见 Example09）。
+
+> UIWindow 侧的列表 MVE（DataContext 如何订阅 Model 数组、用 `ItemsRevision` 信号驱动 scroller 刷新、`OnCreate` 时序与 `async` try-catch）见 [mve-patterns.md](mve-patterns.md) 第八章 carrier-as-lifecycle 模式。

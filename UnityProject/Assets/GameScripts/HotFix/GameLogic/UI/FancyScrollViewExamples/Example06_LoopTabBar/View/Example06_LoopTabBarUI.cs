@@ -16,7 +16,7 @@ namespace GameLogic
     [DataContext(typeof(Example06_LoopTabBarDataContext))]
     public partial class Example06_LoopTabBarUI
     {
-        private Example06_LoopTabBarContext _context;
+        private FancySelectionContext _context;
         private List<Example06_LoopTabBarItemData> _items;
         private readonly List<Example06_SlideScreenTransition> _windows = new();
         private int _currentWindowIndex = -1;
@@ -43,7 +43,7 @@ namespace GameLogic
         {
             m_scrollerController.SetCellFactory(() => new Example06_LoopTabBarCell());
 
-            _context = new Example06_LoopTabBarContext { SelectedIndex = 0 };
+            _context = new FancySelectionContext { SelectedIndex = 0 };
             m_scrollerController.SetContext(_context);
             m_scrollerController.OnCellItemClicked += OnCellClicked;
             m_scrollerController.OnPositionChanged += OnScrollerPositionChanged;

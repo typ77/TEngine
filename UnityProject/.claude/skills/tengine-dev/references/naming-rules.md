@@ -111,6 +111,25 @@ protected override void OnDestroy() { _cts.Cancel(); _cts.Dispose(); }
 var (a, b, c) = await UniTask.WhenAll(LoadA(), LoadB(), LoadC());
 ```
 
+### 字符串拼接规范
+
+业务/高频拼接用 `Utility.Text.Format`（`TEngine.Utility.Text`，复用缓存 StringBuilder，减少 GC）；`$""` 插值与 `string.Format` 每次分配新字符串 + 装箱，热路径会产 GC。
+
+```csharp
+// ✅ 高频/业务拼接：Utility.Text.Format（using TEngine; 后可用）
+Items[idx].DisplayText = Utility.Text.Format("Cell {0} id:{1}", idx, id);
+
+// ✅ Log.Info/Debug/Warning 可用 $"..."：发布版本由宏屏蔽，无运行时分配
+Log.Info($"[Example01] 选中切换: #{old} → #{index}");
+
+// ❌ 高频业务路径用 $"..."：每次分配字符串
+Items[idx].DisplayText = $"Cell {idx} id:{id}";
+```
+
+- `Utility.Text.Format` 命名空间为 `TEngine`（`using TEngine;` 或 `using Utility = TEngine.Utility;`）。
+- **Log 例外**：`Log.Info/Debug/Warning` 可用 `$""`（发布版本宏屏蔽，无运行时分配）；但 `Log.Error/Assert/Fatal` 不屏蔽，高频或复杂拼接也应改 `Utility.Text.Format`。
+- 一次性/低频拼接（启动初始化、配置字符串）可用 `$""`，无需过度优化。
+
 ---
 
 ## 常见错误
@@ -143,6 +162,7 @@ var (a, b, c) = await UniTask.WhenAll(LoadA(), LoadB(), LoadC());
 // ❌ 外部访问 UI 私有组件 → 事件或公共方法
 // ❌ 静态持有 Asset 引用 → 内存泄漏
 // ❌ 忽略 async 返回值 → await 或 .Forget()
+// ❌ 高频业务拼接用 $"..." / string.Format → Utility.Text.Format（log.Info/Debug/Warning 例外）
 ```
 
 ---

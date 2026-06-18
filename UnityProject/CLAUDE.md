@@ -51,6 +51,7 @@ TEngine 基于 HybridCLR + YooAsset + UniTask + Luban 构建。
 |------|------------|
 | UI 开发 | ui-lifecycle.md — UIWindow 生命周期、UIWidget 规范 |
 | MVE 数据绑定 | mve-patterns.md — BindableProperty、DataContext、MapProperty、MVE 四层架构 |
+| FancyScrollView 列表 | ui-patterns.md（FancySelectionContext/Cell 生成）+ mve-patterns.md 第八章（carrier 列表模式） |
 | 资源加载 | resource-api.md — LoadAssetAsync API、释放时机 |
 | 热更代码 | hotfix-workflow.md — 程序集划分、GameApp 入口、热更边界 |
 | 事件系统 | event-system.md — GameEvent 用法、AddUIEvent 规范 |
@@ -95,8 +96,8 @@ TEngine 基于 HybridCLR + YooAsset + UniTask + Luban 构建。
 | hotfix-workflow.md | 热更代码（HybridCLR/程序集划分/热更包）| 核心 |
 | luban-config.md | 配置表 | 核心 |
 | naming-rules.md | 代码规范/命名约定/节点前缀 | 核心 |
-| ui-patterns.md | UI 进阶（Widget 模板/节点绑定）| 进阶 |
-| mve-patterns.md | MVE 数据绑定（四层架构/BindableProperty/DataContext/MapProperty）| 核心 |
+| ui-patterns.md | UI 进阶（Widget 模板/节点绑定/FancyScrollView 列表）| 进阶 |
+| mve-patterns.md | MVE 数据绑定（四层架构/BindableProperty/DataContext/MapProperty/carrier 列表模式）| 核心 |
 | mve-antipatterns.md | MVE 避坑（绑定泄漏/回调循环/时序问题/集合约束）| 进阶 |
 | event-antipatterns.md | 事件避坑（内存泄漏/接口无响应/风暴）| 进阶 |
 | resource-patterns.md | 资源管理模式/生命周期/泄漏根因 | 进阶 |

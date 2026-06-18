@@ -9,7 +9,7 @@ namespace GameLogic
     /// Example06 LoopTabBar 的 Tab Cell（原版结构：根 Animator + Text + Button）。
     /// 原版 Cell 无 UIBindComponent，节点组件在 BindMemberProperty 中通过 GetComponentInChildren 获取。
     /// </summary>
-    public partial class Example06_LoopTabBarCell : FancyCellWidget<Example06_LoopTabBarItemData, Example06_LoopTabBarContext>
+    public partial class Example06_LoopTabBarCell : FancyCellWidget<Example06_LoopTabBarItemData, FancySelectionContext>
     {
         private Animator m_animator;
         private Text m_textMessage;

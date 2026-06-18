@@ -1,6 +1,6 @@
 ---
 name: tengine-dev
-description: TEngine Unity 游戏框架开发指导。触发词：TEngine, UIWindow, UIWidget, GameEvent, AddUIEvent, LoadAssetAsync, SetSprite, HybridCLR, YooAsset, Luban, GameModule, 热更, 资源加载, UI开发, 事件系统, 配置表, BindableProperty, DataContext, MapProperty, 数据绑定, MVE
+description: TEngine Unity 游戏框架开发指导。触发词：TEngine, UIWindow, UIWidget, GameEvent, AddUIEvent, LoadAssetAsync, SetSprite, HybridCLR, YooAsset, Luban, GameModule, 热更, 资源加载, UI开发, 事件系统, 配置表, BindableProperty, DataContext, MapProperty, 数据绑定, MVE, FancyScrollView, FancySelectionContext, carrier
 ---
 
 # TEngine 开发指导
