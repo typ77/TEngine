@@ -25,6 +25,13 @@ namespace GameLogic.UI.FancyScrollView
         protected InternalScrollRect ScrollRectEngine => _scrollRect;
 
         /// <summary>
+        /// 引擎持有的共享上下文（可读写业务字段，如 SelectedIndex）。
+        /// <para>引擎在 <see cref="FancyScrollRect.Initialize"/> 时填充接口成员（ScrollDirection/CalculateScrollSize），
+        /// 业务字段（SelectedIndex/OnCellClicked 等）由 UIWindow 通过此属性设置。</para>
+        /// </summary>
+        protected TContext EngineContext => _scrollRect != null ? _scrollRect.GetContextInternal() : null;
+
+        /// <summary>
         /// ScriptGenerator 中应查找 m_fscroll_List 节点并缓存 Proxy。
         /// 子类重写时必须调用 base.ScriptGenerator()。
         /// </summary>
@@ -34,10 +41,37 @@ namespace GameLogic.UI.FancyScrollView
             base.ScriptGenerator();
         }
 
+        /// <summary>
+        /// 显式注入 Proxy 并立即创建引擎（供作为子组件挂载的子类调用）。
+        /// <para>
+        /// 当本 Widget 不是 UIWindow、而是作为子组件挂在 m_fscroll_List 节点上时，
+        /// 基类 <see cref="ScriptGenerator"/> 的 <c>FindChildComponent("m_fscroll_List")</c> 会失败
+        /// （因为根节点本身就是 m_fscroll_List）。此时子类应重写 ScriptGenerator，
+        /// 用 <c>GetComponent&lt;FancyScrollRectProxy&gt;()</c> 取根节点 Proxy 后调用本方法。
+        /// </para>
+        /// <para>本方法设置 _proxy 并立即调用 <see cref="CreateInternalScrollRect"/>；
+        /// 后续 OnCreate 会检测到引擎已创建而跳过。</para>
+        /// </summary>
+        protected void InitWithProxy(FancyScrollRectProxy proxy)
+        {
+            _proxy = proxy;
+            if (_proxy == null)
+            {
+                Debug.LogError($"[FancyScrollRectWidget] {gameObject.name} InitWithProxy: proxy 为 null。");
+                return;
+            }
+
+            CreateInternalScrollRect();
+        }
+
         protected override void OnCreate()
         {
             base.OnCreate();
-            CreateInternalScrollRect();
+            // 若 InitWithProxy 已创建引擎则跳过（子组件挂载路径）
+            if (_scrollRect == null)
+            {
+                CreateInternalScrollRect();
+            }
         }
 
         /// <summary>
@@ -103,6 +137,27 @@ namespace GameLogic.UI.FancyScrollView
                 _owner = owner;
                 ApplyProxy(proxy);
             }
+
+            /// <summary>暴露引擎持有的 Context（protected → internal 桥接，供 Widget 层访问）。</summary>
+            internal TContext GetContextInternal() => Context;
+
+            /// <summary>设置顶部内边距并触发 Relayout（供 Widget 层调参）。</summary>
+            internal void SetPaddingHead(float value) { paddingHead = value; }
+            /// <summary>设置底部内边距。</summary>
+            internal void SetPaddingTail(float value) { paddingTail = value; }
+            /// <summary>设置 Cell 间距。</summary>
+            internal void SetSpacing(float value) { spacing = value; }
+            /// <summary>获取顶部内边距。</summary>
+            internal float GetPaddingHead() => paddingHead;
+            /// <summary>获取底部内边距。</summary>
+            internal float GetPaddingTail() => paddingTail;
+            /// <summary>获取 Cell 间距。</summary>
+            internal float GetSpacing() => spacing;
+
+            /// <summary>刷新所有可见 Cell（供 Widget 层调用）。</summary>
+            internal void PublicRefresh() => Refresh();
+            /// <summary>重新布局（供 Widget 层调用）。</summary>
+            internal void PublicRelayout() => Relayout();
 
             /// <summary>将 Proxy Inspector 参数映射到 FancyScrollRect 的 protected 字段。</summary>
             private void ApplyProxy(FancyScrollRectProxy proxy)

@@ -241,6 +241,11 @@ public T GetDataContext<T>() where T : DataContext     // 获取强类型 DataCo
 
 > **注意**：只有 UIWindow 的 DataContext 会被 UIModule 自动注入。UIWidget 如需使用 DataContext，需要自行获取父窗口的 DataContext 或手动创建。
 
+> **UIWidget + MVE 的适用边界**：MVE 数据绑定（BindableProperty + Bind）的价值是「数据变化 → 自动刷新」。**只有数据会运行期变化的 UIWidget 才需要 MVE**——静态数据（创建时设置一次、不变）+ 动画/协程驱动的 Widget 不需要，强行套 BindableProperty 是过度设计。
+> - **需要 MVE 的 UIWidget**：数据变化的子 Widget（背包格子数量、技能冷却进度、动态数值面板）；Cell（`FancyCellWidget`）是典型范例（`BindMemberProperty` 创建响应式属性 + `BindData` 写入触发刷新，见第七章）。
+> - **不需要 MVE 的 UIWidget**：静态展示 + 动画/过渡的 Widget（如 `Example06_SlideScreenTransition`：标签创建时 `SetLabel` 一次、滑动由 UniTask 协程驱动，无数据变化，直接赋值即可）。
+> - **判断口诀**：问自己「这块 UI 的数据会在运行期变化吗？」——**会 → MVE，不会 → 直接赋值**。
+
 ### 3.2 核心绑定方法
 
 ```csharp

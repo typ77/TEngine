@@ -1,8 +1,7 @@
-using System.Collections.Generic;
+using System;
 using System.Linq;
 using GameLogic.DataBinding;
 using GameLogic.UI.FancyScrollView;
-using GameLogic.UI.FancyScrollView.EasingCore;
 using TEngine;
 using UnityEngine;
 using UnityEngine.UI;
@@ -10,10 +9,12 @@ using UnityEngine.UI;
 namespace GameLogic
 {
     /// <summary>
-    /// Example07 ScrollRect 示例（UIWindow 持有 <see cref="FancyScrollRectController"/>，同 06/09 范式）。
-    /// <para>保留原版全部调参 UI：Padding/Spacing/DataCount/SelectIndex/Alignment，实时调整布局。</para>
-    /// <para>重构说明：弃用泛型 MonoBehaviour 适配层（FancyScrollRectWidget），改用纯 C# Controller。</para>
+    /// Example07 ScrollRect 示例（UIWindow 持有 <see cref="FancyScrollRectController"/>）。
     /// </summary>
+    /// <remarks>
+    /// 数据流：UI 输入 dataCount → <see cref="Example07_ScrollRectDataContext.Rebuild"/> 构建 Items → View.UpdateData。
+    /// 保留原版全部调参 UI：Padding/Spacing/DataCount/SelectIndex/Alignment，实时调整布局。
+    /// </remarks>
     [Window(UILayer.UI)]
     [DataContext(typeof(Example07_ScrollRectDataContext))]
     public partial class Example07_ScrollRectUI
@@ -21,11 +22,10 @@ namespace GameLogic
         private Example07_ScrollRectContext _context;
         private Example07_Alignment _currentAlignment = Example07_Alignment.Middle;
 
-        private partial void OnClickCloseBtn()
-        {
-            GameModule.UI.CloseUI<Example07_ScrollRectUI>();
-        }
+        /// <summary>Close 按钮：关闭本窗口。</summary>
+        private partial void OnClickCloseBtn() => GameModule.UI.CloseUI<Example07_ScrollRectUI>();
 
+        /// <summary>初始化 scroller、Cell 上下文与事件、调参 InputField；加载 prefab 后首次生成数据并定位。</summary>
         protected override async void OnCreate()
         {
             _context = new Example07_ScrollRectContext();
@@ -33,16 +33,16 @@ namespace GameLogic
             m_scrollerController.SetContext(_context);
             m_scrollerController.OnCellItemClicked += OnCellClicked;
 
-            // 初始化 Alignment 下拉框
             InitAlignmentDropdown();
 
-            // 绑定调参 InputField
             BindInputField(m_inputPaddingTop, 0, 999, v => m_scrollerController.PaddingTop = v);
             m_inputPaddingTop.text = m_scrollerController.PaddingTop.ToString();
 
             BindInputField(m_inputPaddingBottom, 0, 999, v => m_scrollerController.PaddingBottom = v);
             m_inputPaddingBottom.text = m_scrollerController.PaddingBottom.ToString();
 
+            // Spacing 默认 10（Controller 原默认 0），让初始布局即有可见间距
+            m_scrollerController.Spacing = 10;
             BindInputField(m_inputSpacing, 0, 100, v => m_scrollerController.Spacing = v);
             m_inputSpacing.text = m_scrollerController.Spacing.ToString();
 
@@ -52,18 +52,30 @@ namespace GameLogic
             m_inputSelectIndex.onValueChanged.AddListener(_ => SelectCell());
             m_inputSelectIndex.text = Example07_ScrollRectModel.DefaultSelectIndex.ToString();
 
-            await m_scrollerController.LoadCellPrefabAsync("Example07_ScrollRectCell");
-            GenerateCells(Example07_ScrollRectModel.DefaultItemCount);
+            try
+            {
+                await m_scrollerController.LoadCellPrefabAsync("Example07_ScrollRectCell");
+                GenerateCells(Example07_ScrollRectModel.DefaultItemCount);
+            }
+            catch (Exception e)
+            {
+                // 捕获异步加载/首帧渲染异常：async void 的异常会冒泡到同步上下文难以追踪。
+                Log.Error($"[Example07] OnCreate 初始化失败: {e}");
+            }
         }
 
+        /// <summary>Cell 点击：同步选中索引到 SelectIndex 输入框。</summary>
         private void OnCellClicked(int index)
         {
             if (m_inputSelectIndex != null) m_inputSelectIndex.text = index.ToString();
         }
 
+        /// <summary>初始化 Alignment 下拉框（补 Dropdown Template 兜底 + 绑定枚举选项）。</summary>
         private void InitAlignmentDropdown()
         {
             if (m_dropdownAlignment == null) return;
+            // 兜底：prefab 漏配 Dropdown Template 时运行时展开报 "template is not assigned"，补一个标准 Template。
+            FancyExampleUIUtil.EnsureDropdownTemplate(m_dropdownAlignment);
             m_dropdownAlignment.options.Clear();
             m_dropdownAlignment.AddOptions(System.Enum.GetNames(typeof(Example07_Alignment)).ToList());
             m_dropdownAlignment.onValueChanged.AddListener(idx =>
@@ -74,12 +86,14 @@ namespace GameLogic
             m_dropdownAlignment.value = (int)Example07_Alignment.Middle;
         }
 
+        /// <summary>绑定 InputField 的整数值变更（带范围钳制）。</summary>
         private void BindInputField(InputField input, int min, int max, System.Action<int> onSuccess)
         {
             if (input == null) return;
             input.onValueChanged.AddListener(_ => TryParseValue(input, min, max, onSuccess));
         }
 
+        /// <summary>解析 InputField 整数值，超范围则钳制。</summary>
         private static void TryParseValue(InputField input, int min, int max, System.Action<int> success)
         {
             if (input == null || !int.TryParse(input.text, out int value)) return;
@@ -91,15 +105,18 @@ namespace GameLogic
             success?.Invoke(value);
         }
 
+        /// <summary>dataCount 变化时重建列表（DataContext 承担 count→Items 转换）并刷新 + 定位。</summary>
         private void GenerateCells(int dataCount)
         {
             if (m_scrollerController == null) return;
-            var items = Singleton<Example07_ScrollRectService>.Instance.BuildItems(dataCount);
-            m_scrollerController.UpdateData(items);
+            var dc = GetDataContext<Example07_ScrollRectDataContext>();
+            dc.Rebuild(dataCount);
+            m_scrollerController.UpdateData(dc.Items);
             m_scrollerController.JumpTo(Example07_ScrollRectModel.DefaultSelectIndex, GetAlignment(_currentAlignment));
             SelectCell();
         }
 
+        /// <summary>选中指定索引的 Cell（滚动居中 + 更新选中态）。</summary>
         private void SelectCell()
         {
             if (m_scrollerController == null || m_scrollerController.DataCount == 0) return;
@@ -116,6 +133,7 @@ namespace GameLogic
             _context.SelectedIndex = index;
         }
 
+        /// <summary>对齐方式 → ScrollTo/JumpTo 的 alignment 参数（0=上/左，1=下/右，0.5=居中）。</summary>
         private static float GetAlignment(Example07_Alignment alignment)
         {
             switch (alignment)

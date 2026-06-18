@@ -29,6 +29,12 @@ namespace GameLogic.UI.FancyScrollView
         /// <summary>内部的 GridView 引擎实例。</summary>
         protected InternalGridView GridViewEngine => _gridView;
 
+        /// <summary>
+        /// 引擎持有的共享上下文（可读写业务字段，如 SelectedIndex）。
+        /// <para>引擎在 <see cref="FancyGridView.Initialize"/> 时填充接口成员，业务字段由 UIWindow 通过此属性设置。</para>
+        /// </summary>
+        protected TContext EngineContext => _gridView != null ? _gridView.GetContextInternal() : null;
+
         /// <summary>每行/列的 Cell 数量（startAxisCellCount）。</summary>
         protected abstract int StartAxisCellCount { get; }
 
@@ -44,12 +50,33 @@ namespace GameLogic.UI.FancyScrollView
             base.ScriptGenerator();
         }
 
-        protected override void OnCreate()
+        /// <summary>
+        /// 显式注入 Proxy 并立即创建 GridView 引擎（供作为子组件挂载的子类调用）。
+        /// <para>语义同 <see cref="FancyScrollRectWidget{TItemData, TContext}.InitWithProxy"/>：
+        /// 子类重写 ScriptGenerator 时用 <c>GetComponent&lt;FancyScrollRectProxy&gt;()</c> 取根节点 Proxy 后调用。</para>
+        /// </summary>
+        protected void InitWithProxy(FancyScrollRectProxy proxy)
         {
+            _proxy = proxy;
+            if (_proxy == null)
+            {
+                Debug.LogError($"[FancyGridViewWidget] {gameObject.name} InitWithProxy: proxy 为 null。");
+                return;
+            }
+
             CreateInternalGridView();
         }
 
-        private void CreateInternalGridView()
+        protected override void OnCreate()
+        {
+            // 若 InitWithProxy 已创建引擎则跳过（子组件挂载路径）
+            if (_gridView == null)
+            {
+                CreateInternalGridView();
+            }
+        }
+
+        protected virtual void CreateInternalGridView()
         {
             if (_proxy == null)
             {
@@ -162,6 +189,27 @@ namespace GameLogic.UI.FancyScrollView
 
                 cellContainer = proxy.transform;
             }
+
+            /// <summary>暴露引擎持有的 Context（protected → internal 桥接，供 Widget 层访问）。</summary>
+            internal TContext GetContextInternal() => Context;
+
+            /// <summary>设置顶部内边距（GridView 继承 ScrollRect 字段）。</summary>
+            internal void SetPaddingHead(float value) { paddingHead = value; }
+            /// <summary>设置底部内边距。</summary>
+            internal void SetPaddingTail(float value) { paddingTail = value; }
+            /// <summary>设置主轴 Cell 间距。</summary>
+            internal void SetSpacing(float value) { spacing = value; }
+            /// <summary>获取顶部内边距。</summary>
+            internal float GetPaddingHead() => paddingHead;
+            /// <summary>获取底部内边距。</summary>
+            internal float GetPaddingTail() => paddingTail;
+            /// <summary>获取主轴 Cell 间距。</summary>
+            internal float GetSpacing() => spacing;
+
+            /// <summary>刷新所有可见 Cell。</summary>
+            internal void PublicRefresh() => Refresh();
+            /// <summary>重新布局。</summary>
+            internal void PublicRelayout() => Relayout();
 
             /// <summary>
             /// 重写 FancyScrollRect&lt;TItemData[], TContext&gt;.CreateCell。

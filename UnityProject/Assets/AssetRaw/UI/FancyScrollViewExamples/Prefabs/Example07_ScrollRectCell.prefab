@@ -12,7 +12,7 @@ GameObject:
   - component: {fileID: 3678610328138833062}
   - component: {fileID: 952501944019306144}
   m_Layer: 0
-  m_Name: m_img_Background
+  m_Name: m_imgBackground
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -87,6 +87,7 @@ GameObject:
   - component: {fileID: 1865951358068953829}
   - component: {fileID: 1865951358068953826}
   - component: {fileID: 352471458600884356}
+  - component: {fileID: 6783674505328349817}
   m_Layer: 5
   m_Name: Example07_ScrollRectCell
   m_TagString: Untagged
@@ -198,6 +199,27 @@ MonoBehaviour:
   m_OnClick:
     m_PersistentCalls:
       m_Calls: []
+--- !u!114 &6783674505328349817
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1865951358068953824}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: da5b4f8f74fed5b43b4b4c25dc3eac22, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  m_components:
+  - {fileID: 952501944019306144}
+  - {fileID: 8720386530366365077}
+  - {fileID: 6050294616780692944}
+  genCodePath: Assets/GameScripts/HotFix/GameLogic/UI/FancyScrollViewExamples/Example07_ScrollRect/View
+  className: Example07_ScrollRectCell
+  impCodePath: Assets/GameScripts/HotFix/GameLogic/UI/FancyScrollViewExamples/Example07_ScrollRect/View
+  isGenImpClass: 1
+  uiType: FancyCellWidget
 --- !u!1 &6700329325592271122
 GameObject:
   m_ObjectHideFlags: 0
@@ -210,7 +232,7 @@ GameObject:
   - component: {fileID: 3604067929733935156}
   - component: {fileID: 8720386530366365077}
   m_Layer: 5
-  m_Name: m_text_Message
+  m_Name: m_textMessage
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -290,7 +312,7 @@ GameObject:
   - component: {fileID: 4911293414797420567}
   - component: {fileID: 6050294616780692944}
   m_Layer: 0
-  m_Name: m_btn_Cell
+  m_Name: m_btnCell
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0

@@ -7,35 +7,27 @@ namespace GameLogic
 {
     /// <summary>
     /// Example07 Cell（继承 <see cref="FancyCellWidget{TItemData, TContext}"/>，走 ScrollRect 路径）。
-    /// <para>
-    /// <see cref="UpdatePosition"/> 移植自原版 <c>FancyScrollRectCell.UpdatePosition</c> 算法：
-    /// 用 Context.CalculateScrollSize 反归一化 position 为 localPosition，并叠加正弦波浪偏移。
-    /// </para>
+    /// <para>子节点组件由 _Gen.g.cs 通过 UIBindComponent 自动绑定（m_imgBackground/m_textMessage/m_btnCell）。</para>
+    /// <para><see cref="UpdatePosition"/> 移植自原版 <c>FancyScrollRectCell.UpdatePosition</c> 算法：
+    /// 用 Context.CalculateScrollSize 反归一化 position 为 localPosition，并叠加正弦波浪偏移。</para>
     /// </summary>
     public partial class Example07_ScrollRectCell : FancyCellWidget<Example07_ScrollRectItemData, Example07_ScrollRectContext>
     {
-        private Text m_textMessage;
-        private Image m_imgBackground;
-        private Button m_button;
         private BindableProperty<string> _displayText;
 
         private static readonly Color32 SelectedColor = new Color32(0, 255, 255, 100);
         private static readonly Color32 NormalColor = new Color32(255, 255, 255, 77);
 
+        // 子节点组件（m_imgBackground/m_textMessage/m_btnCell）来自 _Gen.g.cs（UIBindComponent 自动绑定）。
+        // m_btnCell 的点击由 _Gen 绑到 OnClickCellBtn（见下方 partial 实现），无需在此 AddListener。
         protected override void BindMemberProperty()
         {
-            m_textMessage = FindChildComponent<Text>("m_text_Message");
-            m_imgBackground = FindChildComponent<Image>("m_img_Background");
-            m_button = FindChildComponent<Button>("m_btn_Cell");
-
             _displayText = CreateProperty<string>("");
-            if (m_textMessage != null) BindText(m_textMessage, _displayText);
-
-            if (m_button != null)
-            {
-                m_button.onClick.AddListener(NotifyItemClicked);
-            }
+            BindText(m_textMessage, _displayText);
         }
+
+        /// <summary>m_btnCell 点击回调（_Gen 的 OnClickCellBtn partial 实现）：冒泡到 Controller.OnCellItemClicked。</summary>
+        private partial void OnClickCellBtn() => NotifyItemClicked();
 
         protected override void BindData(Example07_ScrollRectItemData data)
         {

@@ -1,5 +1,3 @@
-using GameLogic.DataBinding;
-
 namespace GameLogic
 {
     /// <summary>Example07 数据模型，持有默认数据数量与对齐方式。</summary>
@@ -10,11 +8,6 @@ namespace GameLogic
 
         /// <summary>默认跳转索引。</summary>
         public const int DefaultSelectIndex = 10;
-
-        protected override void OnRelease()
-        {
-            base.OnRelease();
-        }
     }
 
     /// <summary>对齐方式（对应原版 Alignment 枚举）。</summary>

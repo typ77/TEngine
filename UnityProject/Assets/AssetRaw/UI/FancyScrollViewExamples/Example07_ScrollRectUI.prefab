@@ -1568,11 +1568,11 @@ MonoBehaviour:
   - {fileID: 1969392470585326491}
   - {fileID: 4632623704531965787}
   - {fileID: 91712878948589110}
-  genCodePath: Assets/GameScripts/HotFix/GameLogic/UI/Gen
+  genCodePath: Assets/GameScripts/HotFix/GameLogic/UI/FancyScrollViewExamples/Example07_ScrollRect/View
   className: Example07_ScrollRectUI
-  impCodePath: Assets/GameScripts/HotFix/GameLogic/UI
-  isGenImpClass: 0
-  uiType: 
+  impCodePath: Assets/GameScripts/HotFix/GameLogic/UI/FancyScrollViewExamples/Example07_ScrollRect/View
+  isGenImpClass: 1
+  uiType: UIWindow
 --- !u!1 &7421103804595981215
 GameObject:
   m_ObjectHideFlags: 0

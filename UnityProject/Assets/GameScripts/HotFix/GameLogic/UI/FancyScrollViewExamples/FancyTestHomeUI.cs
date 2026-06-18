@@ -20,7 +20,7 @@ namespace GameLogic
         private static readonly string[] ExampleNames =
         {
             "01_Basic",
-            //"02_FocusOn",
+            //"02_FocusOn", 功能已经与01_Basic合并。无需单独制作
             "03_InfiniteScroll",
             "04_Metaball",
             "05_Voronoi",

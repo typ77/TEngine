@@ -258,7 +258,24 @@ namespace GameLogic.UI.FancyScrollView
         public void Refresh() => UpdatePosition(_currentPosition, true);
 
         /// <summary>重新布局（改 Padding/Spacing 后调用）。</summary>
-        public void Relayout() => UpdatePosition(_currentPosition, false);
+        /// <remarks>
+        /// padding/spacing 改变后，缓存的 <see cref="_currentPosition"/>（归一化 FancyScrollView 位置）已失效——
+        /// 它是基于旧 padding 由 <see cref="ToFancyScrollViewPosition"/> 换算而来。padding 的留白效果正是依赖
+        /// <see cref="ToFancyScrollViewPosition"/> 把 <see cref="PaddingHeadLength"/> 换算成负 position 偏移实现，
+        /// 故必须基于 Scroller 当前物理位置重新换算，cell 才会即时随 padding 下移/上移。
+        /// （对齐 Core 基类 Relayout → RefreshScroller → OnScrollerValueChanged → UpdatePosition(ToFancyScrollViewPosition(p)) 路径。）
+        /// </remarks>
+        public void Relayout()
+        {
+            if (_scroller != null)
+            {
+                UpdatePosition(ToFancyScrollViewPosition(Scrollable ? _scroller.Position : 0f), false);
+            }
+            else
+            {
+                UpdatePosition(_currentPosition, false);
+            }
+        }
 
         #endregion
 
