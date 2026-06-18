@@ -52,6 +52,7 @@ TEngine 基于 HybridCLR + YooAsset + UniTask + Luban 构建。
 | UI 开发 | ui-lifecycle.md — UIWindow 生命周期、UIWidget 规范 |
 | MVE 数据绑定 | mve-patterns.md — BindableProperty、DataContext、MapProperty、MVE 四层架构 |
 | FancyScrollView 列表 | ui-patterns.md（FancySelectionContext/Cell 生成）+ mve-patterns.md 第八章（carrier 列表模式） |
+| MCP 生成 UI 绑定脚本（_Gen） | mcp-tools.md「MCP 自动生成 UI 绑定脚本」（execute_code 反射 ScriptGenerator + 5 陷阱）|
 | 资源加载 | resource-api.md — LoadAssetAsync API、释放时机 |
 | 热更代码 | hotfix-workflow.md — 程序集划分、GameApp 入口、热更边界 |
 | 事件系统 | event-system.md — GameEvent 用法、AddUIEvent 规范 |

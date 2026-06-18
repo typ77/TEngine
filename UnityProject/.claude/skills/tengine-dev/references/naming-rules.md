@@ -163,6 +163,7 @@ Items[idx].DisplayText = $"Cell {idx} id:{id}";
 // ❌ 静态持有 Asset 引用 → 内存泄漏
 // ❌ 忽略 async 返回值 → await 或 .Forget()
 // ❌ 高频业务拼接用 $"..." / string.Format → Utility.Text.Format（log.Info/Debug/Warning 例外）
+// ❌ GetComponentInChildren/GetComponentsInChildren 取子节点组件 → UIBindComponent 生成 m_xxx（仅根节点可 GetComponent）
 ```
 
 ---

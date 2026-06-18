@@ -242,6 +242,8 @@ protected override void BindMemberProperty()
 }
 ```
 
+> ⚠️ **禁止用 `GetComponentInChildren` / `GetComponentsInChildren` 获取子节点组件**：子节点（Image/Text/Button 等）必须通过 UIBindComponent 生成 `m_xxx`（节点遵循命名前缀）。**只有根节点组件**（生成器不遍历根）才在 `BindMemberProperty` 用 `GetComponent`。手写 `GetComponentInChildren` 绕过绑定系统属于违规——移植原版时易遗留（如 `Example03_InfiniteScrollCell` 曾用 `GetComponentsInChildren<Text>[0]` 取子节点，且 prefab 缺 UIBindComponent、节点无 `m_` 前缀，需补齐后再重新生成 `_Gen`）。
+
 ### 改 prefab → 重新生成 _Gen 工作流
 
 1. 改 prefab 节点（增删/改名/改组件）

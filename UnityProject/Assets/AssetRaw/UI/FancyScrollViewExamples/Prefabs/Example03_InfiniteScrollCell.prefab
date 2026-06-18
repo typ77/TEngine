@@ -12,7 +12,7 @@ GameObject:
   - component: {fileID: 222985568554339304}
   - component: {fileID: 114088381846444308}
   m_Layer: 5
-  m_Name: Text
+  m_Name: m_textMessage
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -92,7 +92,7 @@ GameObject:
   - component: {fileID: 114838212754810210}
   - component: {fileID: 114221931273792762}
   m_Layer: 5
-  m_Name: Image
+  m_Name: m_imgBackground
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -212,6 +212,7 @@ GameObject:
   - component: {fileID: 222038127920238080}
   - component: {fileID: 95308934392137032}
   - component: {fileID: 225474622916379966}
+  - component: {fileID: 2081148419656091301}
   m_Layer: 5
   m_Name: Example03_InfiniteScrollCell
   m_TagString: Untagged
@@ -281,6 +282,26 @@ CanvasGroup:
   m_Interactable: 1
   m_BlocksRaycasts: 1
   m_IgnoreParentGroups: 0
+--- !u!114 &2081148419656091301
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1901728338085442}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: da5b4f8f74fed5b43b4b4c25dc3eac22, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  m_components:
+  - {fileID: 114838212754810210}
+  - {fileID: 114088381846444308}
+  genCodePath: Assets/GameScripts/HotFix/GameLogic/UI/FancyScrollViewExamples/Example03_InfiniteScroll/View
+  className: Example03_InfiniteScrollCell
+  impCodePath: Assets/GameScripts/HotFix/GameLogic/UI/FancyScrollViewExamples/Example03_InfiniteScroll/View
+  isGenImpClass: 1
+  uiType: FancyCellWidget
 --- !u!1 &2787167155526220012
 GameObject:
   m_ObjectHideFlags: 0

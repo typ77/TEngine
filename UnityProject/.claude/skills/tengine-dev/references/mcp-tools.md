@@ -220,6 +220,66 @@ XxxUI.prefab（根节点）
 
 查看层级：`manage_prefabs` action=`get_hierarchy`
 
+### MCP 自动生成 UI 绑定脚本（_Gen.g.cs）
+
+改完 prefab 节点后需重新生成 `_Gen.g.cs`（UIBindComponent 自动绑定的子节点字段 + `ScriptGenerator`）。Inspector 手动点「生成脚本」即可；**批量/自动化场景用 `execute_code` 反射调用 `TEngine.Editor.UI.ScriptGenerator`**（单次可选 `execute_menu_item("Tools/UIScriptGenerator/Generate Selected")`，但不可控参数、无法批量）。
+
+**核心 API**（`execute_code` action=execute 反射，均 static）：
+
+| 方法 | 签名 | 说明 |
+|------|------|------|
+| `GenerateUIComponentScript()` | `→ bool`，无参 | 遍历 `Selection.activeGameObject` 的 UIBindComponent 子节点，按命名前缀填充 `m_components`。**依赖 Selection**。 |
+| `GenerateCSharpScript(...)` | `(bool includeListener, bool isUniTask, bool isAutoGenerate, string savePath, string className, string uiGenTypeName, bool isGenImp, string impSavePath) → bool` | 生成 `_Gen.g.cs`（+可选 imp 业务骨架） |
+
+**UIBindComponent 关键字段**（private，反射需 `BindingFlags.NonPublic|Instance`）：`m_components`(List\<Component>)、`className`(string)、`uiType`(string 如 `"FancyCellWidget"`/`"UIWindow"`)、`genCodePath`(string _Gen 目录)、`impCodePath`(string 业务类目录)、`isGenImpClass`(bool)。
+
+**完整工作流**（一次 `execute_code` 闭环）：
+
+```csharp
+string prefabPath = "Assets/AssetRaw/UI/Prefabs/XxxCell.prefab";
+string viewDir   = "Assets/GameScripts/HotFix/GameLogic/UI/.../View";  // _Gen 输出目录
+string className = "XxxCell";
+var bf = System.Reflection.BindingFlags.Public|System.Reflection.BindingFlags.NonPublic|System.Reflection.BindingFlags.Instance|System.Reflection.BindingFlags.Static;
+var T = typeof(GameLogic.UIBindComponent);
+var SG = typeof(TEngine.Editor.UI.ScriptGenerator);
+
+var contents = PrefabUtility.LoadPrefabContents(prefabPath);
+try {
+    // 1. 子节点重命名为 m_ 前缀（UIBindComponent 按前缀识别）
+    contents.transform.Find("Image").name = "m_imgBackground";
+    // 2. 根节点加 UIBindComponent + 配置字段
+    var bind = contents.GetComponent<GameLogic.UIBindComponent>() ?? contents.AddComponent<GameLogic.UIBindComponent>();
+    T.GetField("className", bf).SetValue(bind, className);
+    T.GetField("uiType", bf).SetValue(bind, "FancyCellWidget");
+    T.GetField("genCodePath", bf).SetValue(bind, viewDir);
+    T.GetField("impCodePath", bf).SetValue(bind, viewDir);
+    T.GetField("isGenImpClass", bf).SetValue(bind, true);
+    // 3. 填充 m_components（依赖 Selection）→ 4. 存盘
+    UnityEditor.Selection.activeGameObject = contents;
+    SG.GetMethod("GenerateUIComponentScript", bf).Invoke(null, null);
+    PrefabUtility.SaveAsPrefabAsset(contents, prefabPath);
+} finally { PrefabUtility.UnloadPrefabContents(contents); }
+
+// 5. 生成 _Gen.g.cs（重新 Load + Selection + GenerateCSharpScript）
+var c = PrefabUtility.LoadPrefabContents(prefabPath);
+try {
+    UnityEditor.Selection.activeGameObject = c;
+    var m = SG.GetMethods(bf).First(x => x.Name == "GenerateCSharpScript");
+    m.Invoke(null, new object[] { true /*includeListener*/, false /*isUniTask*/, true /*isAutoGenerate*/, viewDir /*savePath=目录!*/, className, "FancyCellWidget", false /*isGenImp*/, viewDir });
+    PrefabUtility.SaveAsPrefabAsset(c, prefabPath);
+} finally { PrefabUtility.UnloadPrefabContents(c); }
+```
+
+**⚠️ 生成器陷阱（均实战踩过，必读）**：
+
+1. **`includeListener` 名不副实**——它实际控制「是否拼完整文件结构」。传 `false` 会**跳过整个 header（using/namespace/class 声明）和闭合 `}`**，只剩裸 body → `CS0116: namespace cannot directly contain members`。**生成 `_Gen` 必须传 `true`**（即使无 Button 监听，会生成空的 `#region 事件`，无副作用）。
+2. **`savePath` 是目录不是文件**——内部 `Directory.CreateDirectory(savePath)`，传 `*_Gen.g.cs` 文件路径会撞同名文件报 `IOException`。传 View 目录即可（内部拼 `className_Gen.g.cs`）。
+3. **`GenerateUIComponentScript` 依赖 `Selection.activeGameObject`**——调用前必须 `Selection.activeGameObject = contents`（LoadPrefabContents 实例）。
+4. **重写 `_Gen` 留孤儿 meta**——`GenerateCSharpScript` 用 File.Delete+Write 重写 _Gen + 设 ReadOnly，破坏 meta 关联，console 报 "meta exists but asset can't be found"。修复：清 _Gen 的 ReadOnly 属性 + `AssetDatabase.ImportAsset(path, ForceUpdate)` + `Refresh`。
+5. **业务类字段冲突**——生成后若业务类还声明同名 `m_imgBackground`/`m_textMessage` → `CS0102 already contains a definition`。业务类**不要重复声明** _Gen 生成的字段，只在 `BindMemberProperty` 使用。
+
+> 手动 Inspector 工作流（改 prefab → 重新绑定组件 → 生成脚本）见 [ui-patterns.md](ui-patterns.md)「改 prefab → 重新生成 _Gen 工作流」；UIBindComponent「根节点不遍历、子节点必须生成 m_xxx、禁 GetComponentInChildren」规范见同文 FancyScrollView 章节。
+
 ---
 
 ## 脚本与资源管理

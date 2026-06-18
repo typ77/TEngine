@@ -7,13 +7,12 @@ namespace GameLogic
 {
     /// <summary>
     /// Example03 无限循环 Cell（原版结构：根 Animator + Image/Button + Text）。
-    /// 原版 Cell 无 UIBindComponent，节点组件在 BindMemberProperty 中通过 GetComponentInChildren 获取。
+    /// 子节点组件由 _Gen.g.cs 通过 UIBindComponent 自动绑定（m_imgBackground/m_textMessage），
+    /// 本文件只保留根节点 Animator 手动获取（生成器不遍历根）+ 业务逻辑。
     /// </summary>
     public partial class Example03_InfiniteScrollCell : FancyCellWidget<Example03_InfiniteScrollItemData, FancySelectionContext>
     {
         private Animator m_animator;
-        private Image m_imgBackground;
-        private Text m_textMessage;
         private BindableProperty<string> _displayText;
         private float m_currentPosition;
 
@@ -25,23 +24,18 @@ namespace GameLogic
         private static readonly Color SelectedColor = new Color(0.0f, 0.8f, 0.8f, 0.8f);
         private static readonly Color NormalColor = new Color(1f, 1f, 1f, 0.8f);
 
-        // 根节点 Animator + MVE 绑定，在 ScriptGenerator 之后调用。
-        // 原版结构：Image(背景+Button) 与 Text 为根的子节点，故用 GetComponentInChildren。
+        // 根节点 Animator + MVE 绑定，在 ScriptGenerator 之后调用（m_imgBackground/m_textMessage 已由 _Gen 绑定就绪）。
         protected override void BindMemberProperty()
         {
+            // 根节点组件（生成器不遍历根）：Animator 手动获取
             m_animator = gameObject.GetComponent<Animator>();
-            m_imgBackground = gameObject.GetComponentInChildren<Image>();
-            var texts = gameObject.GetComponentsInChildren<Text>();
-            m_textMessage = texts != null && texts.Length > 0 ? texts[0] : null;
 
+            // 子节点组件（m_textMessage）来自 _Gen.g.cs
             _displayText = CreateProperty<string>("");
-            if (m_textMessage != null)
-            {
-                BindText(m_textMessage, _displayText);
-            }
+            BindText(m_textMessage, _displayText);
 
-            // Button 在 Image 子节点：点击冒泡到 Controller.OnCellItemClicked
-            var btn = gameObject.GetComponentInChildren<Button>();
+            // Button 与 Image 共节点（m_imgBackground 上挂 Button），同节点获取后冒泡点击
+            var btn = m_imgBackground.GetComponent<Button>();
             if (btn != null)
             {
                 btn.onClick.AddListener(NotifyItemClicked);

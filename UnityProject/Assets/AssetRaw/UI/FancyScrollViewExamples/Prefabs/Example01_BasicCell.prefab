@@ -179,7 +179,7 @@ MonoBehaviour:
   genCodePath: Assets/GameScripts/HotFix/GameLogic/UI/FancyScrollViewExamples/Example01_Basic/View
   className: Example01_BasicCell
   impCodePath: Assets/GameScripts/HotFix/GameLogic/UI/FancyScrollViewExamples/Example01_Basic/View
-  isGenImpClass: 0
+  isGenImpClass: 1
   uiType: FancyCellWidget
 --- !u!114 &552817099235410840
 MonoBehaviour:
