@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using Cysharp.Threading.Tasks;
@@ -29,6 +30,12 @@ namespace GameLogic
 
         // 当前绑定的 URL，回调校验防错位
         private string _currentUrl;
+
+        // Cell transform → 当前数据 Index 的静态映射。
+        // 用途：UpdateSiblingOrder 遍历兄弟时反查各 Cell 的 Index。移植版 Cell 是 UIWidget（非 MonoBehaviour），
+        // 无法像 setchi 原版那样 GetComponent<Cell>().Index 反查，故用此映射替代。
+        // 生命周期：BindData 写入；OnDestroy 移除，避免销毁后残留引用。以 Transform 为 key 天然隔离不同 UI 实例。
+        private static readonly Dictionary<Transform, int> s_visibleIndices = new();
 
         // pop/slide 动画参数（移植自原版）
         private const float PopAngle = -15f;
@@ -67,6 +74,9 @@ namespace GameLogic
                 LoadTextureAsync(data.Url).Forget();
             }
 
+            // 记录当前 Index 供兄弟 Cell 反查（UpdateSiblingOrder 依赖）
+            s_visibleIndices[transform] = Index;
+
             UpdateSiblingOrder();
         }
 
@@ -95,30 +105,34 @@ namespace GameLogic
             _loadCts = null;
         }
 
-        /// <summary>调整兄弟节点顺序：首项置顶、末项置底，保证边缘 Cell 层级正确。</summary>
+        /// <summary>
+        /// 调整兄弟节点顺序，还原 setchi 原版 carousel 层级：可见范围内 Index 最小的 Cell 渲染在最上层
+        ///（<see cref="Transform.SetAsLastSibling"/>），Index 最大的渲染在最下层
+        ///（<see cref="Transform.SetAsFirstSibling"/>），营造"前面的卡片压住后面"的纵深感。
+        /// <para>注意：默认对象池创建顺序下，sibling 与 Index 同向（pool[i] 绑定 firstIndex+i），
+        /// 即"Index 大的在上层"——与 carousel 需求相反，故必须按 Index 显式反转。</para>
+        /// <para>原版用 GetComponent&lt;Cell&gt;().Index 反查兄弟；移植版 Cell 是 UIWidget（非 MonoBehaviour），
+        /// 改用 <see cref="s_visibleIndices"/> 静态映射（transform→Index）反查。</para>
+        /// </summary>
         private void UpdateSiblingOrder()
         {
-            // Cell（UIWidget）不是 MonoBehaviour，无法用 GetComponent 反查兄弟 Cell 实例。
-            // 改为：基于自身 Index 和兄弟节点数量推断首尾。
-            // 首项（Index==0）置顶（最后渲染，覆盖其他），末项置底（最先渲染，被覆盖）。
-            var siblings = transform.parent.Cast<Transform>();
-            Transform firstActive = null;
-            Transform lastActive = null;
-            foreach (var t in siblings)
+            var parent = transform.parent;
+            if (parent == null) return;
+
+            // 统计当前可见 Cell 的 Index 范围（不可见的跳过）
+            int minIndex = int.MaxValue;
+            int maxIndex = int.MinValue;
+            foreach (Transform sibling in parent)
             {
-                if (!t.gameObject.activeSelf) continue;
-                if (firstActive == null) firstActive = t;
-                lastActive = t;
+                if (!sibling.gameObject.activeSelf) continue;
+                if (!s_visibleIndices.TryGetValue(sibling, out var idx)) continue;
+                if (idx < minIndex) minIndex = idx;
+                if (idx > maxIndex) maxIndex = idx;
             }
 
-            if (ReferenceEquals(transform, firstActive))
-            {
-                transform.SetAsLastSibling();
-            }
-            else if (ReferenceEquals(transform, lastActive))
-            {
-                transform.SetAsFirstSibling();
-            }
+            // Index 最小（最靠前）→ 最上层；Index 最大（最靠后）→ 最下层
+            if (Index == minIndex) transform.SetAsLastSibling();
+            if (Index == maxIndex) transform.SetAsFirstSibling();
         }
 
         public override void UpdatePosition(float t)
@@ -146,6 +160,7 @@ namespace GameLogic
 
         protected override void OnDestroy()
         {
+            s_visibleIndices.Remove(transform);
             CancelLoad();
             base.OnDestroy();
         }
