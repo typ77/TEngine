@@ -1,11 +1,9 @@
 using System.Collections.Generic;
-using System.Linq;
 using System.Threading;
 using Cysharp.Threading.Tasks;
 using GameLogic.DataBinding;
 using GameLogic.UI.FancyScrollView;
 using GameLogic.UI.FancyScrollView.EasingCore;
-using TEngine;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -148,7 +146,8 @@ namespace GameLogic
                     ? Quaternion.Euler(0, 0, PopAngle * (1f - pop))
                     : Quaternion.Euler(0, 0, SlideAngle * slide);
 
-                transform.localPosition = Vector3.left * 500f * slide;
+                // 标量先乘再乘向量（4 次乘法），优于 Vector3.left * 500f * slide（向量×标量×标量，6 次乘法）
+                transform.localPosition = 500f * slide * Vector3.left;
                 m_canvasGroup.alpha = AlphaEasing(1f - slide);
             }
 

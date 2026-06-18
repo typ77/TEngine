@@ -66,11 +66,11 @@ namespace GameLogic
                 return cached;
             }
 
-            // 2. 进行中：等待合并
-            if (_pending.ContainsKey(url))
+            // 2. 进行中：等待合并（TryGetValue 一次查询取值，避免 ContainsKey + 索引的双重 hash）
+            if (_pending.TryGetValue(url, out var pendingCallbacks))
             {
                 var tcs = new UniTaskCompletionSource<Texture>();
-                _pending[url].Add(tex => tcs.TrySetResult(tex));
+                pendingCallbacks.Add(tex => tcs.TrySetResult(tex));
                 try
                 {
                     return await tcs.Task.AttachExternalCancellation(ct);
@@ -137,28 +137,30 @@ namespace GameLogic
 
         private void PutCache(string url, Texture texture)
         {
-            if (_cache.ContainsKey(url))
+            // TryAdd：不存在则添加（一次 hash）返回 true；存在返回 false。
+            // 避免 ContainsKey + 索引赋值的双重 hash；新增是多数路径，故优先 TryAdd。
+            if (_cache.TryAdd(url, texture))
             {
-                _cache[url] = texture;
-                TouchLru(url);
+                // 新增成功：LRU 淘汰（此时 url 已入 _cache，故用 > 而非 >=）+ 注册 LRU 节点
+                while (_cache.Count > CacheCapacity && _lruOrder.Count > 0)
+                {
+                    var oldest = _lruOrder.First.Value;
+                    _lruOrder.RemoveFirst();
+                    _lruNodes.Remove(oldest);
+                    if (_cache.TryGetValue(oldest, out var t))
+                    {
+                        Destroy(t);
+                        _cache.Remove(oldest);
+                    }
+                }
+
+                _lruNodes[url] = _lruOrder.AddLast(url);
                 return;
             }
 
-            // LRU 淘汰
-            while (_cache.Count >= CacheCapacity && _lruOrder.Count > 0)
-            {
-                var oldest = _lruOrder.First.Value;
-                _lruOrder.RemoveFirst();
-                _lruNodes.Remove(oldest);
-                if (_cache.TryGetValue(oldest, out var t))
-                {
-                    Destroy(t);
-                    _cache.Remove(oldest);
-                }
-            }
-
+            // 已存在：更新值 + touch LRU
             _cache[url] = texture;
-            _lruNodes[url] = _lruOrder.AddLast(url);
+            TouchLru(url);
         }
 
         private void TouchLru(string url)

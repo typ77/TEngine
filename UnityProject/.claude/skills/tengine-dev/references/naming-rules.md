@@ -130,6 +130,62 @@ Items[idx].DisplayText = $"Cell {idx} id:{id}";
 - **Log 例外**：`Log.Info/Debug/Warning` 可用 `$""`（发布版本宏屏蔽，无运行时分配）；但 `Log.Error/Assert/Fatal` 不屏蔽，高频或复杂拼接也应改 `Utility.Text.Format`。
 - 一次性/低频拼接（启动初始化、配置字符串）可用 `$""`，无需过度优化。
 
+### 集合与向量运算性能规范
+
+#### Dictionary 访问：避免 `ContainsKey` + 索引的双重 hash
+
+`ContainsKey(key)` 与 `this[key]` 各做一次 hash 查询。需要"判断存在 + 取值"时用 `TryGetValue`（一次查询带取值）；需要"判断存在 + 写入"且新增是多数路径时用 `TryAdd`（新增一次查询）。
+
+```csharp
+// ❌ ContainsKey + 索引取值：两次 hash
+if (_pending.ContainsKey(url))
+{
+    _pending[url].Add(cb);        // 第二次 hash
+}
+
+// ✅ TryGetValue：一次 hash 带取值
+if (_pending.TryGetValue(url, out var list))
+{
+    list.Add(cb);
+}
+
+// ❌ ContainsKey + 索引赋值：两次 hash（新增是多数路径时尤甚）
+if (_cache.ContainsKey(url))
+{
+    _cache[url] = tex;            // 第二次 hash
+    TouchLru(url);
+    return;
+}
+_cache[url] = tex;                // 又一次 hash
+
+// ✅ TryAdd：不存在则添加（一次 hash）返回 true；存在返回 false
+if (_cache.TryAdd(url, tex))
+{
+    RegisterLru(url);             // 新增路径：只付一次 hash
+}
+else
+{
+    _cache[url] = tex;            // 已存在：更新（少数路径才付第二次 hash）
+    TouchLru(url);
+}
+```
+
+> 注意：改用 `TryAdd` 后 `_cache.Count` 在调用返回时已 +1，后续容量判断条件要从 `>= Capacity` 改为 `> Capacity`，否则会多淘汰一项。
+
+#### Vector 运算：标量先相乘，最后乘向量
+
+Unity 的 `Vector3` 运算符是显式重载，编译器**不会**把 `v * a * b` 重排为 `(a * b) * v`。`向量 × 标量 × 标量` 产生 6 次乘法；`标量 × 标量 × 向量` 只需 4 次。热路径（`Update` / `UpdatePosition` 每帧每 Cell 调用）务必用后者。
+
+```csharp
+// ❌ 向量 × 标量 × 标量：6 次乘法（向量三分量各乘两次）
+transform.localPosition = Vector3.left * 500f * slide;
+
+// ✅ 标量 × 标量 × 向量：4 次乘法（标量先合并）
+transform.localPosition = 500f * slide * Vector3.left;
+```
+
+推广：任何 `VectorN` 连乘表达式中，先把所有标量因子合并为单个标量，最后再乘向量；多向量混合运算同理优先合并同类因子。
+
 ---
 
 ## 常见错误
@@ -165,6 +221,8 @@ Items[idx].DisplayText = $"Cell {idx} id:{id}";
 // ❌ 高频业务拼接用 $"..." / string.Format → Utility.Text.Format（log.Info/Debug/Warning 例外）
 // ❌ GetComponentInChildren/GetComponentsInChildren/FindChildComponent 取子节点组件 → UIBindComponent 生成 m_xxx（仅根节点可 GetComponent）
 // ❌ 手动 override ScriptGenerator 取子节点 → _Gen.g.cs 自动绑定（UIWindow/UIWidget/Cell 通用；根节点组件放 BindMemberProperty）
+// ❌ ContainsKey + 索引双重 hash → 取值用 TryGetValue、写入用 TryAdd（见"集合与向量运算性能规范"）
+// ❌ 向量 × 标量 × 标量 运算顺序 → 标量先合并再乘向量（热路径必备）
 ```
 
 ---
