@@ -546,9 +546,10 @@ MonoBehaviour:
   - {fileID: 6912558439104264861}
   - {fileID: 5661215111420663405}
   - {fileID: 5163401797455958582}
-  genCodePath: Assets/GameScripts/HotFix/GameLogic/UI/FancyScrollViewExamples/Example01_Basic/View
-  className: Example01_BasicUI
-  impCodePath: Assets/GameScripts/HotFix/GameLogic/UI/FancyScrollViewExamples/Example01_Basic/View
+  - {fileID: 6475440215313820923}
+  genCodePath: Assets/GameScripts/HotFix/GameLogic/UI/FancyScrollViewExamples/Example06_LoopTabBar/View
+  className: Example06_LoopTabBarUI
+  impCodePath: Assets/GameScripts/HotFix/GameLogic/UI/FancyScrollViewExamples/Example06_LoopTabBar/View
   isGenImpClass: 1
   uiType: UIWindow
 --- !u!1 &4653853109987008101

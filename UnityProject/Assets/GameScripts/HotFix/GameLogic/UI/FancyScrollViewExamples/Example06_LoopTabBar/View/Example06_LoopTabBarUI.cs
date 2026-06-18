@@ -78,10 +78,9 @@ namespace GameLogic
         private async UniTask CollectContentWindowsAsync()
         {
             _windows.Clear();
-            var parent = FindChild("m_tf_Windows");
             for (int i = 0; i < Example06_LoopTabBarModel.TabCount; i++)
             {
-                var w = await CreateWidgetByPathAsync<Example06_SlideScreenTransition>(parent, "Example06_Window", false);
+                var w = await CreateWidgetByPathAsync<Example06_SlideScreenTransition>(m_tf_Windows, "Example06_Window", false);
                 w.SetLabel(Utility.Text.Format("Window {0}", i));
                 _windows.Add(w);
             }
