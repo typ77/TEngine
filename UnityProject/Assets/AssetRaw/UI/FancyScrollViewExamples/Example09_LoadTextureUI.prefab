@@ -854,23 +854,23 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   viewport: {fileID: 8583758284912228808}
-  scrollDirection: 0
+  scrollDirection: 1
   movementType: 1
   elasticity: 0.1
-  scrollSensitivity: 1
+  scrollSensitivity: 2
   inertia: 1
-  decelerationRate: 0.03
+  decelerationRate: 0.1
   snap:
     Enable: 1
-    VelocityThreshold: 0.5
-    Duration: 0.3
+    VelocityThreshold: 0.8
+    Duration: 0.2
     Easing: 30
   draggable: 1
   scrollbar: {fileID: 0}
   cellContainer: {fileID: 9192089554424803904}
-  cellInterval: 0.113
-  scrollOffset: 0.5
-  loop: 1
+  cellInterval: 0.25
+  scrollOffset: 0.25
+  loop: 0
 --- !u!1 &6680412643532198318
 GameObject:
   m_ObjectHideFlags: 0

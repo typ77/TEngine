@@ -1,7 +1,6 @@
 using System;
 using GameLogic.DataBinding;
 using TEngine;
-using UnityEngine;
 
 namespace GameLogic
 {
