@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using Cysharp.Threading.Tasks;
 using GameLogic.DataBinding;
 using GameLogic.UI.FancyScrollView;
 using TEngine;
@@ -54,27 +55,21 @@ namespace GameLogic
             _items = Singleton<Example06_LoopTabBarService>.Instance.BuildItems();
             m_scrollerController.UpdateData(_items);
 
-            CollectContentWindows();
+            await CollectContentWindowsAsync();
             ShowWindow(0, MovementDirection.Right);
             ScrollToIndex(_context.SelectedIndex);
         }
 
-        /// <summary>收集内容面板节点上的 SlideScreenTransition 组件。</summary>
-        private void CollectContentWindows()
+        /// <summary>异步加载内容面板 Window prefab 为 SlideScreenTransition Widget，挂到 m_tf_Windows 下。</summary>
+        private async UniTask CollectContentWindowsAsync()
         {
             _windows.Clear();
+            var parent = FindChild("m_tf_Windows");
             for (int i = 0; i < Example06_LoopTabBarModel.TabCount; i++)
             {
-                var w = FindChildComponent<Example06_SlideScreenTransition>($"m_tf_Windows/Window_{i}");
-                if (w != null)
-                {
-                    _windows.Add(w);
-                    w.gameObject.SetActive(false);
-                }
-                else
-                {
-                    Log.Warning($"[Example06] 内容面板 Window_{i} 未找到，SlideScreenTransition 缺失。");
-                }
+                var w = await CreateWidgetByPathAsync<Example06_SlideScreenTransition>(parent, "Example06_Window", false);
+                w.SetLabel($"Window {i}");
+                _windows.Add(w);
             }
         }
 
