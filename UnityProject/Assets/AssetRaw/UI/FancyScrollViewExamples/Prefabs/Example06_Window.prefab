@@ -11,6 +11,7 @@ GameObject:
   - component: {fileID: 926232911572414551}
   - component: {fileID: 4036618342575600674}
   - component: {fileID: 4185935791593451377}
+  - component: {fileID: 6611957548307516645}
   m_Layer: 0
   m_Name: Example06_Window
   m_TagString: Untagged
@@ -78,6 +79,26 @@ MonoBehaviour:
   m_BlockingMask:
     serializedVersion: 2
     m_Bits: 4294967295
+--- !u!114 &6611957548307516645
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3093256664174304649}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: da5b4f8f74fed5b43b4b4c25dc3eac22, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  m_components:
+  - {fileID: 71593029127721202}
+  - {fileID: 104160461120911389}
+  genCodePath: Assets/GameScripts/HotFix/GameLogic/UI/FancyScrollViewExamples/Example06_LoopTabBar/View
+  className: Example06_SlideScreenTransition
+  impCodePath: Assets/GameScripts/HotFix/GameLogic/UI/FancyScrollViewExamples/Example06_LoopTabBar/View
+  isGenImpClass: 1
+  uiType: UIWidget
 --- !u!1 &4110073820123706170
 GameObject:
   m_ObjectHideFlags: 0
@@ -90,7 +111,7 @@ GameObject:
   - component: {fileID: 8872100182867211937}
   - component: {fileID: 5854053018203325985}
   m_Layer: 0
-  m_Name: m_target_Transform
+  m_Name: m_rectTarget
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -166,7 +187,7 @@ GameObject:
   - component: {fileID: 2705202190491960367}
   - component: {fileID: 104160461120911389}
   m_Layer: 0
-  m_Name: m_text_Label
+  m_Name: m_textLabel
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0

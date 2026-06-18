@@ -242,7 +242,7 @@ protected override void BindMemberProperty()
 }
 ```
 
-> ⚠️ **禁止用 `GetComponentInChildren` / `GetComponentsInChildren` 获取子节点组件**：子节点（Image/Text/Button 等）必须通过 UIBindComponent 生成 `m_xxx`（节点遵循命名前缀）。**只有根节点组件**（生成器不遍历根）才在 `BindMemberProperty` 用 `GetComponent`。手写 `GetComponentInChildren` 绕过绑定系统属于违规——移植原版时易遗留（如 `Example03_InfiniteScrollCell` 曾用 `GetComponentsInChildren<Text>[0]` 取子节点，且 prefab 缺 UIBindComponent、节点无 `m_` 前缀，需补齐后再重新生成 `_Gen`）。
+> ⚠️ **所有 UIBase（UIWindow/UIWidget/Cell）子节点组件必须通过 UIBindComponent 生成 `m_xxx`**（节点遵循命名前缀，`_Gen.g.cs` 自动绑定）。**禁止**手写 `GetComponentInChildren` / `GetComponentsInChildren` / `FindChildComponent("路径")` / 手动 `override ScriptGenerator` 取子节点——都是绕过绑定系统的违规做法。**只有根节点组件**（生成器不遍历根，如 Animator/CanvasGroup/GraphicRaycaster）才在 `BindMemberProperty` 用 `GetComponent` 手动获取。移植原版时易遗留（`Example03_InfiniteScrollCell` 曾用 `GetComponentsInChildren<Text>[0]`；`Example06_SlideScreenTransition`（UIWidget）曾用 `FindChildComponent` + 手动 `override ScriptGenerator`——均需补 UIBindComponent + 节点改 `m_` 前缀 + 重新生成 `_Gen` 改正，详见 [mcp-tools.md](mcp-tools.md)「MCP 自动生成 _Gen」）。
 
 ### 改 prefab → 重新生成 _Gen 工作流
 

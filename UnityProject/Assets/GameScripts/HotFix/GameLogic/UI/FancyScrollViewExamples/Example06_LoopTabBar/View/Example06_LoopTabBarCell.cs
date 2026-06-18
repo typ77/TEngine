@@ -6,14 +6,13 @@ using UnityEngine.UI;
 namespace GameLogic
 {
     /// <summary>
-    /// Example06 LoopTabBar 的 Tab Cell（原版结构：根 Animator + Text + Button）。
-    /// 原版 Cell 无 UIBindComponent，节点组件在 BindMemberProperty 中通过 GetComponentInChildren 获取。
+    /// Example06 LoopTabBar 的 Tab Cell（原版结构：根 Animator + Image/Button + Text）。
+    /// 子节点组件由 _Gen.g.cs 通过 UIBindComponent 自动绑定（m_imgBackground/m_textMessage），
+    /// 本文件只保留根节点 Animator 手动获取（生成器不遍历根）+ 业务逻辑。
     /// </summary>
     public partial class Example06_LoopTabBarCell : FancyCellWidget<Example06_LoopTabBarItemData, FancySelectionContext>
     {
         private Animator m_animator;
-        private Text m_textMessage;
-        private Button m_button;
         private BindableProperty<string> _displayText;
         private float m_currentPosition;
 
@@ -22,23 +21,21 @@ namespace GameLogic
             public static readonly int Scroll = Animator.StringToHash("scroll");
         }
 
-        // 根节点 Animator/Button + MVE 绑定，在 ScriptGenerator 之后调用。
+        // 根节点 Animator + MVE 绑定，在 ScriptGenerator 之后调用（m_imgBackground/m_textMessage 已由 _Gen 绑定就绪）。
         protected override void BindMemberProperty()
         {
+            // 根节点组件（生成器不遍历根）：Animator 手动获取
             m_animator = gameObject.GetComponent<Animator>();
-            m_textMessage = gameObject.GetComponentInChildren<Text>();
-            m_button = gameObject.GetComponentInChildren<Button>();
 
+            // 子节点组件（m_textMessage）来自 _Gen.g.cs
             _displayText = CreateProperty<string>("");
-            if (m_textMessage != null)
-            {
-                BindText(m_textMessage, _displayText);
-            }
+            BindText(m_textMessage, _displayText);
 
-            // 点击冒泡到 Controller.OnCellItemClicked
-            if (m_button != null)
+            // Button 与 Image 共节点（m_imgBackground 上挂 Button），同节点获取后冒泡点击
+            var btn = m_imgBackground.GetComponent<Button>();
+            if (btn != null)
             {
-                m_button.onClick.AddListener(NotifyItemClicked);
+                btn.onClick.AddListener(NotifyItemClicked);
             }
         }
 

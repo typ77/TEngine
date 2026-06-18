@@ -11,6 +11,7 @@ GameObject:
   - component: {fileID: 400726807549771256}
   - component: {fileID: 400726807549771258}
   - component: {fileID: 6271814870501250284}
+  - component: {fileID: 6746521698030773778}
   m_Layer: 5
   m_Name: Example06_LoopTabBarCell
   m_TagString: Untagged
@@ -67,6 +68,26 @@ Animator:
   m_AllowConstantClipSamplingOptimization: 1
   m_KeepAnimatorStateOnDisable: 0
   m_WriteDefaultValuesOnDisable: 0
+--- !u!114 &6746521698030773778
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 400726807549771263}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: da5b4f8f74fed5b43b4b4c25dc3eac22, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  m_components:
+  - {fileID: 8430130520548219692}
+  - {fileID: 8703839813063446168}
+  genCodePath: Assets/GameScripts/HotFix/GameLogic/UI/FancyScrollViewExamples/Example06_LoopTabBar/View
+  className: Example06_LoopTabBarCell
+  impCodePath: Assets/GameScripts/HotFix/GameLogic/UI/FancyScrollViewExamples/Example06_LoopTabBar/View
+  isGenImpClass: 1
+  uiType: FancyCellWidget
 --- !u!1 &3107368292248027306
 GameObject:
   m_ObjectHideFlags: 0
@@ -80,7 +101,7 @@ GameObject:
   - component: {fileID: 8430130520548219692}
   - component: {fileID: 3613575481545881434}
   m_Layer: 5
-  m_Name: Image
+  m_Name: m_imgBackground
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -200,7 +221,7 @@ GameObject:
   - component: {fileID: 2063500138121890450}
   - component: {fileID: 8703839813063446168}
   m_Layer: 5
-  m_Name: Text
+  m_Name: m_textMessage
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0

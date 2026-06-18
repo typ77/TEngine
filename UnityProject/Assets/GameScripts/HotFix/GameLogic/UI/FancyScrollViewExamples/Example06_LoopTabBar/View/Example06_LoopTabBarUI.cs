@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using Cysharp.Threading.Tasks;
 using GameLogic.DataBinding;
@@ -7,40 +8,45 @@ using UnityEngine;
 
 namespace GameLogic
 {
-    /// <summary>Example06 LoopTabBar 示例（Scroller 路径 + Tab 切换 + 内容面板滑动过渡）。</summary>
+    /// <summary>
+    /// Example06 LoopTabBar 示例：FancyScrollView + MVE 架构（Tab 切换 + 内容面板滑动过渡）。
+    /// </summary>
     /// <remarks>
-    /// 复用 Example03 的 UI prefab 骨架：m_textRandom 复用为选中信息显示位，
-    /// m_btnRandom 复用为"回到首个 Tab"。内容面板 Window_0..3 为 06 专属节点。
+    /// 数据流：DataContext 构建 Tab 列表（静态）→ View.UpdateData；选中态经 FancySelectionContext 广播给 Cell。
+    /// 复用 Example03 的 UI prefab 骨架：m_textRandom 复用为选中信息位，m_btnRandom 复用为「回到首个 Tab」。
     /// </remarks>
     [Window(UILayer.UI)]
     [DataContext(typeof(Example06_LoopTabBarDataContext))]
     public partial class Example06_LoopTabBarUI
     {
+        /// <summary>FancyScrollView 的 Cell 共享上下文，持有选中索引并广播给所有 Cell。
+        /// 注意：这是 FancyScrollView 的广播机制，与 MVE 的 DataContext 是不同概念。</summary>
         private FancySelectionContext _context;
-        private List<Example06_LoopTabBarItemData> _items;
+
         private readonly List<Example06_SlideScreenTransition> _windows = new();
         private int _currentWindowIndex = -1;
 
-        /// <summary>
-        /// 程序滚动（Tab 点击/按钮）的目标索引；非空期间抑制「滑动跟随选中」，
-        /// 避免 ScrollTo 动画的中间位置覆盖目标选中态。
-        /// </summary>
+        /// <summary>程序滚动的目标索引，用于抑制「滑动跟随选中」。
+        /// 点击/Prev/Next 触发 ScrollTo 时置为目标；滑动到达目标后由 OnScrollerPositionChanged 清空。</summary>
         private int? _scrollTarget;
 
-        // m_btnRandom 复用为"回到首个 Tab"
+        /// <summary>Random 按钮：复用为「回到首个 Tab」。</summary>
         private partial void OnClickRandomBtn() => NavigateTo(0);
 
-        private partial void OnClickCloseBtn()
-        {
-            GameModule.UI.CloseUI<Example06_LoopTabBarUI>();
-        }
+        /// <summary>Close 按钮：关闭本窗口。</summary>
+        private partial void OnClickCloseBtn() => GameModule.UI.CloseUI<Example06_LoopTabBarUI>();
 
+        /// <summary>Prev 按钮：选中上一项。</summary>
         private partial void OnClickPrevBtn() => Navigate(-1);
 
+        /// <summary>Next 按钮：选中下一项。</summary>
         private partial void OnClickNextBtn() => Navigate(1);
 
+        /// <summary>初始化 scroller、Cell 上下文与事件；加载 prefab 后首帧渲染、加载内容面板并定位到初始选中项。</summary>
         protected override async void OnCreate()
         {
+            var dc = GetDataContext<Example06_LoopTabBarDataContext>();
+
             m_scrollerController.SetCellFactory(() => new Example06_LoopTabBarCell());
 
             _context = new FancySelectionContext { SelectedIndex = 0 };
@@ -48,16 +54,24 @@ namespace GameLogic
             m_scrollerController.OnCellItemClicked += OnCellClicked;
             m_scrollerController.OnPositionChanged += OnScrollerPositionChanged;
 
-            // m_textRandom 复用为 Random 按钮的标签（原版语义），改为 06 的"首个 Tab"提示
             if (m_textRandom != null) m_textRandom.text = "First";
 
-            await m_scrollerController.LoadCellPrefabAsync("Example06_LoopTabBarCell");
-            _items = Singleton<Example06_LoopTabBarService>.Instance.BuildItems();
-            m_scrollerController.UpdateData(_items);
+            try
+            {
+                await m_scrollerController.LoadCellPrefabAsync("Example06_LoopTabBarCell");
 
-            await CollectContentWindowsAsync();
-            ShowWindow(0, MovementDirection.Right);
-            ScrollToIndex(_context.SelectedIndex);
+                // prefab 就绪后首帧渲染（数据静态，DataContext 构建一次）
+                m_scrollerController.UpdateData(dc.Items);
+
+                await CollectContentWindowsAsync();
+                ShowWindow(0, MovementDirection.Right);
+                ScrollToIndex(_context.SelectedIndex);
+            }
+            catch (Exception e)
+            {
+                // 捕获异步加载/首帧渲染异常：async void 的异常会冒泡到同步上下文难以追踪。
+                Log.Error($"[Example06] OnCreate 初始化失败: {e}");
+            }
         }
 
         /// <summary>异步加载内容面板 Window prefab 为 SlideScreenTransition Widget，挂到 m_tf_Windows 下。</summary>
@@ -68,14 +82,16 @@ namespace GameLogic
             for (int i = 0; i < Example06_LoopTabBarModel.TabCount; i++)
             {
                 var w = await CreateWidgetByPathAsync<Example06_SlideScreenTransition>(parent, "Example06_Window", false);
-                w.SetLabel($"Window {i}");
+                w.SetLabel(Utility.Text.Format("Window {0}", i));
                 _windows.Add(w);
             }
         }
 
+        /// <summary>Cell 点击：记录日志，选中该索引并切换内容面板（若变化则滚动居中）。</summary>
         private void OnCellClicked(int index)
         {
-            var data = (_items != null && index >= 0 && index < _items.Count) ? _items[index] : null;
+            var items = GetDataContext<Example06_LoopTabBarDataContext>().Items;
+            var data = (index >= 0 && index < items.Count) ? items[index] : null;
             Log.Info($"[Example06] 点击 Tab #{index}: {data?.DisplayText ?? "(无数据)"}");
 
             if (SetSelected(index, out var direction))
@@ -85,7 +101,12 @@ namespace GameLogic
             }
         }
 
-        // 滚动跟随选中：居中 index 变化时更新选中态
+        /// <summary>
+        /// 滑动跟随选中：居中 index 变化时更新选中态。
+        /// </summary>
+        /// <remarks>
+        /// 程序滚动（_scrollTarget 非空）期间不跟随，到达目标后清空并恢复跟随。
+        /// </remarks>
         private void OnScrollerPositionChanged(float position)
         {
             int center = m_scrollerController.GetCenterIndex();
@@ -103,12 +124,14 @@ namespace GameLogic
             }
         }
 
+        /// <summary>相对导航：从当前选中项偏移 delta（-1/1），越界自动钳制。</summary>
         private void Navigate(int delta)
         {
             int target = Mathf.Clamp(_context.SelectedIndex + delta, 0, Example06_LoopTabBarModel.TabCount - 1);
             NavigateTo(target);
         }
 
+        /// <summary>导航到指定 Tab：变化则切换面板 + 滚动居中；未变化仍滚动居中。</summary>
         private void NavigateTo(int target)
         {
             if (SetSelected(target, out var direction))
@@ -123,16 +146,15 @@ namespace GameLogic
             }
         }
 
+        /// <summary>程序滚动到指定索引：置 _scrollTarget 抑制期间的滑动跟随（OutCubic 缓动）。</summary>
         private void ScrollToIndex(int index)
         {
             _scrollTarget = index;
             m_scrollerController.ScrollTo(index, 0.35f, Ease.OutCubic);
         }
 
-        /// <summary>
-        /// 统一设置选中项：变化时打印切换日志并更新 SelectedIndex，并计算移动方向。
-        /// </summary>
-        /// <returns>是否发生了变化（未变化返回 false）。</returns>
+        /// <summary>设置选中项：与当前相同返回 false；否则更新 SelectedIndex、计算移动方向并记录日志。</summary>
+        /// <returns>是否发生变化（调用方据此决定是否切换面板/滚动）。</returns>
         private bool SetSelected(int index, out MovementDirection direction)
         {
             direction = MovementDirection.Right;
@@ -159,7 +181,7 @@ namespace GameLogic
 
             if (m_textClose != null)
             {
-                m_textClose.text = $"Selected tab info: index {index}";
+                m_textClose.text = Utility.Text.Format("Selected tab info: index {0}", index);
             }
         }
     }
