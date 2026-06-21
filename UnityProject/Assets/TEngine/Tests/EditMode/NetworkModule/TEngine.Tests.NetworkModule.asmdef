@@ -2,7 +2,8 @@
     "name": "TEngine.Tests.NetworkModule",
     "rootNamespace": "TEngine.Tests",
     "references": [
-        "TEngine.Runtime"
+        "TEngine.Runtime",
+        "UniTask"
     ],
     "includePlatforms": ["Editor"],
     "excludePlatforms": [],
