@@ -37,12 +37,19 @@ Assets/TEngine/Runtime/Module/NetworkModule/
 │       ├── IPlatformNetworkAdapter.cs          T12 平台适配接口
 │       └── WebGLWebSocketAdapter.cs            T12 WebGL 降级适配
 │
-├── Codec/
+├── Codec/                                     【TEngine.Runtime】零三方依赖（T6a 方案 A）
 │   ├── ICodec.cs                              T1  编解码接口
 │   ├── CodecType.cs                           T1  Codec 类型枚举
-│   ├── MessagePackCodec.cs                    T6  MessagePack 实现
-│   ├── ProtobufCodec.cs                       T6  Protobuf 实现
-│   └── CodecFactory.cs                        T6  Codec 工厂
+│   ├── CodecProviderAttribute.cs              T6a codec 自注册特性
+│   └── CodecRegistry.cs                       T6a codec 注册表（替代 CodecFactory）
+├── Codec.MessagePack/                         【TEngine.Network.Codec.MessagePack】可选扩展
+│   ├── TEngine.Network.Codec.MessagePack.asmdef  defineConstraints: TENGINE_CODEC_MESSAGEPACK
+│   ├── MessagePackCodec.cs                    T6b MessagePack 实现（当前 stub）
+│   └── MessagePackCodecProvider.cs            T6b [CodecProvider] 标注
+├── Codec.Protobuf/                            【TEngine.Network.Codec.Protobuf】可选扩展
+│   ├── TEngine.Network.Codec.Protobuf.asmdef     defineConstraints: TENGINE_CODEC_PROTOBUF
+│   ├── ProtobufCodec.cs                       T6b Protobuf 实现（当前 stub）
+│   └── ProtobufCodecProvider.cs               T6b [CodecProvider] 标注
 │
 ├── Protocol/
 │   ├── IMessage.cs                            T1  消息标记接口
@@ -1199,12 +1206,27 @@ git commit -m "feat(network): add SendQueue with pause/resume/clear"
 
 ## 任务 6：Codec 层
 
-**文件：**
-- 创建：`Codec/MessagePackCodec.cs`
-- 创建：`Codec/ProtobufCodec.cs`
-- 创建：`Codec/CodecFactory.cs`
-- 创建：`Assets/TEngine/Tests/EditMode/NetworkModule/CodecTests.cs`
-- 前置依赖：需要通过 UPM 或 UnityPackage 安装 MessagePack-C# 和 protobuf-net
+> ### ⚠️ T6 方案 A 调整（2026-06-23，T6a 骨架已实施）
+>
+> 原计划在 `Codec/` 下直接写 `MessagePackCodec`/`ProtobufCodec` + `CodecFactory`，会迫使 `TEngine.Runtime`（框架核心）`references` 协议库 dll，违背"框架零默认依赖"；且 dll 安装在 TEngine Unity 下多次失败。改为**方案 A 解耦**：
+>
+> - **T6a（骨架，已完成）**：核心只留 `ICodec`/`CodecType` + 新增 `CodecProviderAttribute` + `CodecRegistry`（**替代 `CodecFactory`**）；具体实现下沉到两个可选扩展 asmdef（`Codec.MessagePack`/`Codec.Protobuf`），用 `defineConstraints`（`TENGINE_CODEC_MESSAGEPACK`/`TENGINE_CODEC_PROTOBUF`）守护——dll 未装则扩展不编译，框架零依赖。运行时 `CodecRegistry.Scan()` 用 `AppDomain` 反射扫描 `[CodecProvider]` 自注册（Editor/Player/IL2CPP/HybridCLR 均可用，不用 Editor-only 的 TypeCache）。详见 `~/.claude/plans/composed-jingling-brooks.md`。
+> - **T6b（待办）**：安装 MessagePack/protobuf-net dll → 定义编译符号 → 填充 stub 真实序列化逻辑。安装坑见 memory `network-codec-lib-install-pitfalls`。
+>
+> 下方原"步骤 1-5"**已由方案 A 取代，保留仅作历史参考**。骨架阶段已新增 `CodecRegistryTests`（替代 `CodecTests`，覆盖注册/单例/未注册异常/扫描自注册）。冲突与偏离记录见 memory `network-module-phase1-plan-divergence.md` 的 T6 段。
+
+**文件（T6a 骨架，已实施）：**
+- 创建：`Codec/CodecProviderAttribute.cs`（核心自注册特性）
+- 创建：`Codec/CodecRegistry.cs`（注册表，替代 CodecFactory）
+- 创建：`Codec.MessagePack/`（asmdef + stub codec + provider，defineConstraints 守护）
+- 创建：`Codec.Protobuf/`（同上）
+- 创建：`Assets/TEngine/Tests/EditMode/NetworkModule/CodecRegistryTests.cs`
+
+**T6b 待办文件（原步骤 1-5 涉及，移至此）：**
+- `Codec.MessagePack/MessagePackCodec.cs` 真实实现（替换 stub）
+- `Codec.Protobuf/ProtobufCodec.cs` 真实实现（替换 stub）
+- 安装 MessagePack-C# / protobuf-net dll 并定义编译符号
+- 前置依赖（仅 T6b）：需要通过 UPM 或 UnityPackage 安装 MessagePack-C# 和 protobuf-net
 
 - [ ] **步骤 1：安装依赖库**
 
