@@ -23,8 +23,12 @@ namespace TEngine.Tests
         public event Action<ReadOnlyMemory<byte>> OnDataReceived;
         public event Action<Exception> OnError;
 
+        /// <summary>设非 null 时，Connect/ConnectAsync 抛此异常（模拟连接失败，供重连测试）。</summary>
+        public Exception ConnectException { get; set; }
+
         public UniTask ConnectAsync(string host, int port)
         {
+            if (ConnectException != null) throw ConnectException;
             Connected = true;
             OnConnected?.Invoke();
             return UniTask.CompletedTask;
@@ -32,12 +36,14 @@ namespace TEngine.Tests
 
         public void Connect(string host, int port)
         {
+            if (ConnectException != null) throw ConnectException;
             Connected = true;
             OnConnected?.Invoke();
         }
 
         public void Connect(Uri uri)
         {
+            if (ConnectException != null) throw ConnectException;
             Connected = true;
             OnConnected?.Invoke();
         }

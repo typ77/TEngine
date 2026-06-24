@@ -116,6 +116,10 @@ namespace TEngine
 
             // 状态机事件转发到 INetworkConnection.OnStateChanged
             _stateMachine.OnStateChanged += s => OnStateChanged?.Invoke(s);
+
+            // 订阅心跳事件（阶段2：发心跳包 + 超时判定断线）
+            _heartbeat.OnSendHeartbeat += SendHeartbeatPacket;
+            _heartbeat.OnTimeout += HandleHeartbeatTimeout;
         }
 
         /// <summary>反射调用 codec.RegisterMessage&lt;T&gt;(msgId)，注册消息类型映射。</summary>
@@ -175,26 +179,125 @@ namespace TEngine
 
         private void HandleTransportDisconnected()
         {
-            // 阶段2 完整重连决策；阶段1 转 Disconnected 并暂停发送
-            if (_stateMachine.Current == ConnectionState.Closed)
+            // 防重入：Closed/Disconnected 已处理
+            if (_stateMachine.Current == ConnectionState.Closed
+                || _stateMachine.Current == ConnectionState.Disconnected)
             {
                 return;
             }
             _stateMachine.TransitionTo(ConnectionState.Disconnected);
             _sendQueue.Pause();
             OnDisconnected?.Invoke();
+
+            if (_config.AutoReconnect)
+            {
+                TriggerAutoReconnect().Forget();
+            }
+        }
+
+        private void HandleHeartbeatTimeout()
+        {
+            // 心跳超时：连接被认为已断（仅在已连接时触发）
+            if (_stateMachine.Current != ConnectionState.Connected)
+            {
+                return;
+            }
+            _stateMachine.TransitionTo(ConnectionState.Disconnected);
+            _sendQueue.Pause();
+            try { _transport.Close(); } catch (Exception ex) { RaiseError(ex); }
+            OnDisconnected?.Invoke();
+
+            if (_config.AutoReconnect)
+            {
+                TriggerAutoReconnect().Forget();
+            }
+        }
+
+        private async UniTaskVoid TriggerAutoReconnect()
+        {
+            try
+            {
+                await ReconnectAsync();
+            }
+            catch (Exception ex)
+            {
+                RaiseError(ex);
+            }
         }
 
         /// <inheritdoc />
         public void Disconnect()
         {
-            throw new NotImplementedException("Disconnect 待阶段2 实现。");
+            // 幂等：已 Closed 直接返回
+            if (_stateMachine.Current == ConnectionState.Closed)
+            {
+                return;
+            }
+
+            // RPC 断线处置：FailOnDisconnect 立即 Abort；SafeRecover 保留（待重连恢复）
+            foreach (var rpc in _rpcTracker.GetAllPending())
+            {
+                if (rpc.Policy == RpcPolicy.FailOnDisconnect)
+                {
+                    rpc.Tcs.TrySetException(new RpcAbortException(_config.Name, rpc.MsgId, rpc.RequestId, "Disconnected"));
+                    _rpcTracker.Remove(rpc.RequestId);
+                    _diagnostics.RecordRpcFailed();
+                }
+            }
+
+            _stateMachine.TransitionTo(ConnectionState.Closed);
+            _sendQueue.Clear();
+            _heartbeat.Reset();
+            try
+            {
+                _transport.Close();
+            }
+            catch (Exception ex)
+            {
+                RaiseError(ex);
+            }
+            OnDisconnected?.Invoke();
         }
 
         /// <inheritdoc />
-        public UniTask ReconnectAsync()
+        public async UniTask ReconnectAsync()
         {
-            throw new NotImplementedException("ReconnectAsync 待阶段2 实现。");
+            if (_stateMachine.Current != ConnectionState.Disconnected)
+            {
+                throw new InvalidOperationException($"Reconnect requires Disconnected state, current={_stateMachine.Current}.");
+            }
+
+            _stateMachine.TransitionTo(ConnectionState.Reconnecting);
+
+            while (_reconnectPolicy.CanRetry)
+            {
+                _reconnectPolicy.RecordAttempt();
+                try
+                {
+                    await _transport.ConnectAsync(_config.Host, _config.Port);
+                    // 重连成功
+                    _reconnectPolicy.Reset();
+                    _stateMachine.TransitionTo(ConnectionState.Connected);
+                    _sendQueue.Resume();
+                    _heartbeat.Reset();
+                    _diagnostics.ResetConnectionMetrics();
+                    var toRecover = _rpcTracker.GetNeedsRecovery();
+                    if (toRecover.Count > 0)
+                    {
+                        await _rpcRecovery.RecoverAsync(toRecover);
+                    }
+                    OnConnected?.Invoke();
+                    return;
+                }
+                catch (Exception ex)
+                {
+                    RaiseError(ex);
+                    // 继续重试（注：阶段2 未实现实际退避等待，仅按次数重试；见 memory 偏差记录）
+                }
+            }
+
+            _stateMachine.TransitionTo(ConnectionState.Failed);
+            throw new ReconnectFailedException(_config.Name, _reconnectPolicy.Attempts);
         }
 
         // ---- 发送：事件消息 ----
@@ -386,9 +489,27 @@ namespace TEngine
 
         // ---- 控制包发送回调（心跳/Ping/恢复，阶段2 完整接线）----
 
+        private void SendHeartbeatPacket()
+        {
+            if (_stateMachine.Current != ConnectionState.Connected)
+            {
+                return;
+            }
+            byte[] packet = _formatter.BuildPacket(SystemMessageIds.HeartbeatRequest, 0, Array.Empty<byte>());
+            try
+            {
+                _transport.Send(packet);
+                _diagnostics.RecordSend(packet.Length);
+            }
+            catch (Exception ex)
+            {
+                RaiseError(ex);
+            }
+        }
+
         private void SendPing()
         {
-            // PingMonitor 回调：发 PingRequest。阶段2 实现。
+            // PingMonitor 回调：发 PingRequest。阶段3 实现。
         }
 
         private void SendControlPacket(ushort msgId, byte[] payload)

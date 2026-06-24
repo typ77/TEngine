@@ -183,6 +183,85 @@ namespace TEngine.Tests
             Assert.AreEqual(0, _transport.SentPackets.Count, "拦截器拒绝应丢弃");
         }
 
+        // ---- 阶段2：生命周期 / 重连 / 心跳断线 ----
+
+        [Test]
+        public void Disconnect_FromConnected_TransitionsToClosed()
+        {
+            _conn.ConnectAsync().GetAwaiter().GetResult();
+            bool disconnectedFired = false;
+            _conn.OnDisconnected += () => disconnectedFired = true;
+
+            _conn.Disconnect();
+
+            Assert.AreEqual(ConnectionState.Closed, _conn.State);
+            Assert.IsTrue(disconnectedFired);
+        }
+
+        [Test]
+        public void Disconnect_Idempotent_DoesNotThrowOnRepeat()
+        {
+            _conn.ConnectAsync().GetAwaiter().GetResult();
+            _conn.Disconnect();
+            Assert.DoesNotThrow(() => _conn.Disconnect());
+        }
+
+        [Test]
+        public void Reconnect_FromDisconnected_TransitionsToConnected()
+        {
+            var transport = new FakeTransport();
+            var config = new ConnectionConfig("test").UseTcp().SetEndpoint("h", 1).UseMessagePack()
+                .SetReconnect(false, 100, 3); // AutoReconnect=false，手动重连
+            var conn = CreateConnection(config, transport);
+
+            conn.ConnectAsync().GetAwaiter().GetResult();
+            transport.SimulateDisconnect();
+            Assert.AreEqual(ConnectionState.Disconnected, conn.State);
+
+            conn.ReconnectAsync().GetAwaiter().GetResult();
+
+            Assert.AreEqual(ConnectionState.Connected, conn.State);
+        }
+
+        [Test]
+        public void Reconnect_ExceedsAttempts_ThrowsReconnectFailed()
+        {
+            var transport = new FakeTransport();
+            var config = new ConnectionConfig("test").UseTcp().SetEndpoint("h", 1).UseMessagePack()
+                .SetReconnect(false, 1, 2); // maxAttempts=2
+            var conn = CreateConnection(config, transport);
+
+            conn.ConnectAsync().GetAwaiter().GetResult();
+            transport.SimulateDisconnect();
+            transport.ConnectException = new Exception("connect fail");
+
+            var ex = Assert.Throws<ReconnectFailedException>(() => conn.ReconnectAsync().GetAwaiter().GetResult());
+            Assert.AreEqual(ConnectionState.Failed, conn.State);
+            Assert.AreEqual(2, ex.AttemptCount);
+        }
+
+        [Test]
+        public void HeartbeatTimeout_WhenNoResponse_TransitionsToDisconnected()
+        {
+            var transport = new FakeTransport();
+            var config = new ConnectionConfig("test").UseTcp().SetEndpoint("h", 1).UseMessagePack()
+                .SetHeartbeat(1, 1) // interval=1s, timeout=1s
+                .SetReconnect(false, 100, 3); // AutoReconnect=false
+            var conn = CreateConnection(config, transport);
+
+            conn.ConnectAsync().GetAwaiter().GetResult();
+
+            conn.Update(1.0f); // 触发 OnSendHeartbeat（发心跳，FakeTransport 不回 Response）
+            conn.Update(1.0f); // 等待回复超时 → OnTimeout → Disconnected
+
+            Assert.AreEqual(ConnectionState.Disconnected, conn.State);
+        }
+
+        private static NetworkConnection CreateConnection(ConnectionConfig config, FakeTransport transport)
+        {
+            return new NetworkConnection(config, transport, new FakeCodec(), new DefaultPacketFormatter(), null, null, null);
+        }
+
         // ---- fakes ----
 
         private class TestMessage : IMessage { }
