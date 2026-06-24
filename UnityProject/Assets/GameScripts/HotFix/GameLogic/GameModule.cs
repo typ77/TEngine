@@ -89,8 +89,15 @@ public class GameModule
     /// 获取本地化模块。
     /// </summary>
     public static ILocalizationModule Localization => _localization ??= Get<ILocalizationModule>();
-    
+
     private static ILocalizationModule _localization;
+
+    /// <summary>
+    /// 获取网络模块（多连接管理、消息收发、RPC、诊断）。
+    /// </summary>
+    public static INetworkModule Network => _network ??= Get<INetworkModule>();
+
+    private static INetworkModule _network;
     #endregion
     
     /// <summary>
@@ -121,5 +128,6 @@ public class GameModule
         _scene = null;
         _timer = null;
         _localization = null;
+        _network = null;
     }
 }

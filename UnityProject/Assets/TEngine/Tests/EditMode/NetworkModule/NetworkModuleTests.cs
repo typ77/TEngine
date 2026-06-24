@@ -99,10 +99,21 @@ namespace TEngine.Tests
         }
 
         [Test]
-        public void CreateConnection_Tcp_Throws_NotSupported()
+        public void CreateConnection_Tcp_ReturnsConnection()
         {
-            // Tcp 真实实现待 T9-T12，应抛 NotSupportedException
+            // T9 TcpTransport 已实现并接入，Tcp 不再抛 NotSupportedException（CreateConnection 不实际连接）
             var config = new ConnectionConfig("tcp").UseTcp().UseMessagePack().SetEndpoint("127.0.0.1", 9000);
+            var conn = _module.CreateConnection(config);
+            Assert.IsNotNull(conn, "Tcp 连接应创建成功");
+            Assert.AreEqual("tcp", conn.Name);
+            Assert.IsTrue(_module.HasConnection("tcp"));
+        }
+
+        [Test]
+        public void CreateConnection_Kcp_Throws_NotSupported()
+        {
+            // KCP 真实实现待 T10，仍抛 NotSupportedException
+            var config = new ConnectionConfig("kcp").UseKcp().UseMessagePack().SetEndpoint("127.0.0.1", 9000);
             Assert.Throws<NotSupportedException>(() => _module.CreateConnection(config));
         }
 

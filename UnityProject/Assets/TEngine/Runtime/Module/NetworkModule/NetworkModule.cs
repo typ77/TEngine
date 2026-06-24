@@ -266,7 +266,8 @@ namespace TEngine
 
         /// <summary>
         /// 按 <see cref="ConnectionConfig.Transport"/> 创建传输层。
-        /// Tcp/Kcp/WebSocket 真实实现待 T9-T12，当前抛 <see cref="NotSupportedException"/>；
+        /// Tcp 由 T9 的 <see cref="TcpTransport"/> 提供（基于 .NET Socket，无外部依赖）；
+        /// KCP/WebSocket 待 T10/T11，当前抛 <see cref="NotSupportedException"/>；
         /// Platform 从 <see cref="RegisterPlatformTransport"/> 注册表按 PlatformId 取。
         /// </summary>
         private ITransport CreateTransport(ConnectionConfig config)
@@ -281,10 +282,14 @@ namespace TEngine
                     return platform;
 
                 case TransportType.Tcp:
+                    // T9 已实现 TcpTransport（基于 System.Net.Sockets.Socket，无外部依赖）。
+                    // bufferSize 取接收缓冲（KB→字节），与 TcpTransport 默认接收缓冲语义一致。
+                    return new TcpTransport(config.RecvBufferSize * 1024);
+
                 case TransportType.Kcp:
                 case TransportType.WebSocket:
                     throw new NotSupportedException(
-                        $"{config.Transport} 传输尚未实现（待 T9-T12）；测试请使用 Platform 传输注入 FakeTransport。");
+                        $"{config.Transport} 传输尚未实现（待 T10/T11）；Tcp 已可用，KCP/WebSocket 待实现。");
 
                 default:
                     throw new ArgumentOutOfRangeException(nameof(config), config.Transport, "未知传输类型");
