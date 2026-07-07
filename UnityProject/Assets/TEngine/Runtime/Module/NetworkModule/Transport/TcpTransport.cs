@@ -11,8 +11,8 @@ namespace TEngine
     /// <remarks>
     /// <b>线程模型</b>：<see cref="BeginReceive"/> 的回调在 socket 工作线程触发，
     /// <see cref="OnDataReceived"/> / <see cref="OnDisconnected"/> / <see cref="OnError"/>
-    /// 均可能在该工作线程被调用。上层（如 <see cref="NetworkConnection"/>）须保证线程安全，
-    /// 或自行切换到主线程后再处理（详见网络模块线程安全任务）。
+    /// 均可能在该工作线程被调用。上层 <see cref="NetworkConnection"/> 已通过事件队列将这些回调
+    /// marshal 到主线程 <c>Update</c> 处理（见 <c>DrainTransportEvents</c>），订阅者无需自行加锁。
     /// </remarks>
     public class TcpTransport : ITransport
     {

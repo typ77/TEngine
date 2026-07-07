@@ -229,6 +229,7 @@ namespace TEngine.Tests
 
             conn.ConnectAsync().GetAwaiter().GetResult();
             transport.SimulateDisconnect();
+            conn.Update(0f); // drain：方案② 下 OnDisconnected 入队，需 Update 处理后才转 Disconnected
             Assert.AreEqual(ConnectionState.Disconnected, conn.State);
 
             // ReconnectAsync 含 UniTask.Delay（退避，依赖 PlayerLoop）：EditMode 主线程无 PlayerLoop 推进，
@@ -249,6 +250,7 @@ namespace TEngine.Tests
 
             conn.ConnectAsync().GetAwaiter().GetResult();
             transport.SimulateDisconnect();
+            conn.Update(0f); // drain：OnDisconnected 入队，需 Update 处理后才转 Disconnected
             transport.ConnectException = new Exception("connect fail");
 
             // 注入同步 delay 绕过 PlayerLoop（见上），ReconnectAsync 全程同步，Assert.Throws 可用。

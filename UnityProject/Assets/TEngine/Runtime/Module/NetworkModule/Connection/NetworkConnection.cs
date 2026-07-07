@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using Cysharp.Threading.Tasks;
 
@@ -8,7 +9,9 @@ namespace TEngine
     /// 单条网络连接的实现：持有并协调 Transport/Codec/PacketFormatter/SendQueue/Dispatcher/
     /// InterceptorPipeline/HeartbeatKeeper/ReconnectPolicy/ConnectionStateMachine/RpcTracker/
     /// RpcRecovery/PingMonitor/QualityEstimator/NetworkDiagnostics 全部子系统，实现 <see cref="INetworkConnection"/>。
-    /// <para>Transport 事件驱动：Receive 在 <see cref="ITransport.OnDataReceived"/> 回调里处理（非轮询）。</para>
+    /// <para><b>线程模型</b>：transport 回调（OnDataReceived/OnConnected/OnDisconnected/OnError）在 I/O 线程仅入队
+    /// <c>_eventQueue</c>，主线程 <see cref="Update"/> 中 DrainTransportEvents 统一处理。Dispatcher/Diagnostics/
+    /// Heartbeat/StateMachine/SendQueue 等共享子系统被主线程独占访问，无需加锁。接收处理延迟 ≤1 帧。</para>
     /// </summary>
     internal sealed class NetworkConnection : INetworkConnection
     {
@@ -44,6 +47,21 @@ namespace TEngine
         // 退避等待工厂：生产环境用 UniTask.Delay（依赖 Unity PlayerLoop 推进）；
         // EditMode 单元测试因主线程无 PlayerLoop 推进，注入同步实现绕过（见 SetDelayFactoryForTests）。
         private Func<int, UniTask> _delayFactory = ms => UniTask.Delay(ms);
+
+        // ---- 线程安全：transport 事件队列 ----
+        // transport 回调（OnDataReceived/OnConnected/OnDisconnected/OnError）在 I/O 线程触发，
+        // 仅入队；主线程 Update 中 DrainTransportEvents 统一处理，使 Dispatcher/Diagnostics/
+        // Heartbeat/StateMachine/SendQueue 等共享子系统被主线程独占访问，无需加锁。
+        private enum TransportEventType { Data, Connected, Disconnected, Error }
+
+        private struct TransportEvent
+        {
+            public TransportEventType Type;
+            public ReadOnlyMemory<byte> Data;   // 仅 Type == Data 有效
+            public Exception Error;             // 仅 Type == Error 有效
+        }
+
+        private readonly ConcurrentQueue<TransportEvent> _eventQueue = new ConcurrentQueue<TransportEvent>();
 
         /// <inheritdoc />
         public event Action OnConnected;
@@ -113,11 +131,11 @@ namespace TEngine
             // 接收缓冲（至少 1KB，按配置 RecvBufferSize KB 上取整）
             _recvBuffer = new byte[Math.Max(1024, config.RecvBufferSize * 1024)];
 
-            // 订阅 transport 事件（事件驱动 Receive / 状态变化 / 错误）
-            _transport.OnDataReceived += HandleReceive;
-            _transport.OnConnected += HandleTransportConnected;
-            _transport.OnDisconnected += HandleTransportDisconnected;
-            _transport.OnError += RaiseError;
+            // 订阅 transport 事件：I/O 线程仅入队 _eventQueue，主线程 Update 中 DrainTransportEvents 处理（线程安全）
+            _transport.OnDataReceived += EnqueueReceivedData;
+            _transport.OnConnected += EnqueueConnected;
+            _transport.OnDisconnected += EnqueueDisconnected;
+            _transport.OnError += EnqueueError;
 
             // 状态机事件转发到 INetworkConnection.OnStateChanged
             _stateMachine.OnStateChanged += s => OnStateChanged?.Invoke(s);
@@ -341,9 +359,49 @@ namespace TEngine
             _sendQueue.Enqueue(packet);
         }
 
-        // ---- 接收（transport 事件驱动）----
+        // ---- Transport 事件入队（I/O 线程调用，仅入队不处理）----
 
-        private void HandleReceive(ReadOnlyMemory<byte> data)
+        private void EnqueueReceivedData(ReadOnlyMemory<byte> data)
+            => _eventQueue.Enqueue(new TransportEvent { Type = TransportEventType.Data, Data = data });
+
+        private void EnqueueConnected()
+            => _eventQueue.Enqueue(new TransportEvent { Type = TransportEventType.Connected });
+
+        private void EnqueueDisconnected()
+            => _eventQueue.Enqueue(new TransportEvent { Type = TransportEventType.Disconnected });
+
+        private void EnqueueError(Exception ex)
+            => _eventQueue.Enqueue(new TransportEvent { Type = TransportEventType.Error, Error = ex });
+
+        /// <summary>
+        /// 主线程 Update 调用：drain transport 事件队列，按类型分发处理。
+        /// 所有共享子系统在此（及 Update 后续）被主线程独占访问，无需加锁。
+        /// </summary>
+        private void DrainTransportEvents()
+        {
+            while (_eventQueue.TryDequeue(out TransportEvent evt))
+            {
+                switch (evt.Type)
+                {
+                    case TransportEventType.Data:
+                        ProcessReceivedData(evt.Data);
+                        break;
+                    case TransportEventType.Connected:
+                        HandleTransportConnected();
+                        break;
+                    case TransportEventType.Disconnected:
+                        HandleTransportDisconnected();
+                        break;
+                    case TransportEventType.Error:
+                        RaiseError(evt.Error);
+                        break;
+                }
+            }
+        }
+
+        // ---- 接收处理（主线程 drain 调用）----
+
+        private void ProcessReceivedData(ReadOnlyMemory<byte> data)
         {
             AppendRecv(data);
 
@@ -447,7 +505,9 @@ namespace TEngine
 
         internal void Update(float elapseSeconds)
         {
-            // Transport 事件驱动，无 Poll
+            // drain transport 事件队列（I/O 线程入队的事件在此主线程统一处理）
+            DrainTransportEvents();
+
             _heartbeat.Update(elapseSeconds);
             if (_diagnostics.PingEnabled)
             {

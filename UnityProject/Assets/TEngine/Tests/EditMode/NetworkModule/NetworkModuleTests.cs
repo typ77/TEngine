@@ -222,6 +222,7 @@ namespace TEngine.Tests
 
             var ex = new InvalidOperationException("boom");
             transport.SimulateError(ex);
+            _module.Update(0.016f, 0.016f); // drain：方案② 下 OnError 入队，需 Update 处理后才广播
 
             Assert.AreEqual("c", firedName);
             Assert.AreSame(ex, firedEx);
