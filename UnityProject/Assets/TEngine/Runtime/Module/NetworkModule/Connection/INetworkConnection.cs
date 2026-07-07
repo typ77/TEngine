@@ -32,6 +32,7 @@ namespace TEngine
         void Send<T>(ushort msgId, T message) where T : IMessage;
 
         /// <summary>发送 RPC 请求并等待响应。</summary>
+        /// <remarks><b>当前为阶段 3 占位、尚未实现。</b>调用将抛 <see cref="NotSupportedException"/>。RPC 主体（RequestId 编排、响应匹配、超时、断线恢复）待阶段 3 实现，届时本方法拟从基础接口拆出为独立 RPC 接口。</remarks>
         UniTask<TResp> SendAsync<TReq, TResp>(
             ushort msgId, TReq message,
             RpcPolicy policy = RpcPolicy.SafeRecover,

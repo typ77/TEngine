@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using Cysharp.Threading.Tasks;
 using NUnit.Framework;
 using TEngine;
 
@@ -183,6 +184,18 @@ namespace TEngine.Tests
             Assert.AreEqual(0, _transport.SentPackets.Count, "拦截器拒绝应丢弃");
         }
 
+        // ---- RPC（阶段 3 占位）----
+
+        [Test]
+        public void SendAsync_NotImplemented_ThrowsNotSupported()
+        {
+            // RPC 待阶段 3 实现：当前调用应抛 NotSupportedException（非 NotImplementedException），
+            // 错误消息须明确标注未实现，使调用方能区分"用错 API"与"框架 bug"。
+            var ex = Assert.Throws<NotSupportedException>(() =>
+                _conn.SendAsync<TestMessage, TestMessage>(100, new TestMessage()).GetAwaiter().GetResult());
+            StringAssert.IsMatch("阶段|RPC|未实现", ex.Message);
+        }
+
         // ---- 阶段2：生命周期 / 重连 / 心跳断线 ----
 
         [Test]
@@ -218,6 +231,9 @@ namespace TEngine.Tests
             transport.SimulateDisconnect();
             Assert.AreEqual(ConnectionState.Disconnected, conn.State);
 
+            // ReconnectAsync 含 UniTask.Delay（退避，依赖 PlayerLoop）：EditMode 主线程无 PlayerLoop 推进，
+            // 注入同步 delay 工厂绕过，使 ReconnectAsync 全程同步可在主线程 GetResult 完成。
+            conn.SetDelayFactoryForTests(_ => UniTask.CompletedTask);
             conn.ReconnectAsync().GetAwaiter().GetResult();
 
             Assert.AreEqual(ConnectionState.Connected, conn.State);
@@ -235,6 +251,8 @@ namespace TEngine.Tests
             transport.SimulateDisconnect();
             transport.ConnectException = new Exception("connect fail");
 
+            // 注入同步 delay 绕过 PlayerLoop（见上），ReconnectAsync 全程同步，Assert.Throws 可用。
+            conn.SetDelayFactoryForTests(_ => UniTask.CompletedTask);
             var ex = Assert.Throws<ReconnectFailedException>(() => conn.ReconnectAsync().GetAwaiter().GetResult());
             Assert.AreEqual(ConnectionState.Failed, conn.State);
             Assert.AreEqual(2, ex.AttemptCount);

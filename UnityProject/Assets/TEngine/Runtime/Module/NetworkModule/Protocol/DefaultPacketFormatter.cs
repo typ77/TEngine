@@ -24,6 +24,12 @@ namespace TEngine
         {
             bool isRpc = (flags & PacketFlags.Rpc) != 0;
             int headerLen = isRpc ? RpcHeaderSize : HeaderSize;
+            // 防御：payload 过大导致 totalLen 整数溢出（发送侧对称保护）。
+            if (payload.Length > int.MaxValue - headerLen)
+            {
+                throw new InvalidOperationException(
+                    $"Payload length {payload.Length} exceeds the maximum allowed size (int.MaxValue - {headerLen}).");
+            }
             int totalLen = headerLen + payload.Length;
 
             byte[] packet = new byte[totalLen];
@@ -58,7 +64,7 @@ namespace TEngine
         }
 
         /// <inheritdoc />
-        public PacketParseResult? TryParse(byte[] buffer, int offset, int count, out int consumed)
+        public PacketParseResult? TryParse(byte[] buffer, int offset, int count, int maxAllowed, out int consumed)
         {
             consumed = 0;
 
@@ -84,6 +90,21 @@ namespace TEngine
             int length = (buffer[pos] << 24) | (buffer[pos + 1] << 16)
                        | (buffer[pos + 2] << 8) | buffer[pos + 3];
             pos += 4;
+
+            // 超限校验：length 为负、超过 maxAllowed 时判定字节流不可信。
+            // 必须在 headerLen + length 加法之前校验——否则大 length（接近 int.MaxValue）
+            // 会使 headerLen + length 整数溢出成负数，绕过下方 count < totalPacketSize 检查，
+            // 导致 new byte[length] 分配 ~2GB 触发 OOM（本加固的目标漏洞）。
+            if (length < 0 || length > maxAllowed)
+            {
+                return new PacketParseResult
+                {
+                    IsOversized = true,
+                    MsgId = msgId,
+                    Flags = flags,
+                    Payload = null,
+                };
+            }
 
             // ReqId (if RPC)
             uint reqId = 0;

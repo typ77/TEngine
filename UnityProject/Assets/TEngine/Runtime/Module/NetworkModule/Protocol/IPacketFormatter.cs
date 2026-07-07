@@ -21,7 +21,8 @@ namespace TEngine
         /// <param name="offset">起始偏移。</param>
         /// <param name="count">可用字节数。</param>
         /// <param name="consumed">本次实际消费的字节数（不完整包为 0）。</param>
-        /// <returns>解析成功返回结果；数据不足返回 null。</returns>
-        PacketParseResult? TryParse(byte[] buffer, int offset, int count, out int consumed);
+        /// <param name="maxAllowed">单包负载上限（字节）。声明长度超过此值或为负时返回 <see cref="PacketParseResult.IsOversized"/> 为 true 的结果，不分配大缓冲。</param>
+        /// <returns>解析成功返回结果；数据不足返回 null；负载超限返回 <see cref="PacketParseResult.IsOversized"/> 为 true 的结果。</returns>
+        PacketParseResult? TryParse(byte[] buffer, int offset, int count, int maxAllowed, out int consumed);
     }
 }

@@ -16,5 +16,11 @@ namespace TEngine
 
         /// <summary>RPC 请求 Id（仅当 <see cref="Flags"/> 含 <see cref="PacketFlags.Rpc"/> 时有效）。</summary>
         public uint RequestId;
+
+        /// <summary>
+        /// 是否负载超限：声明的负载长度超过调用方给定的 <c>maxAllowed</c> 上限，或为负、或会导致整数溢出。
+        /// 为 <c>true</c> 时调用方应判定字节流不可信并断开连接，此时 <see cref="Payload"/> 为 null。
+        /// </summary>
+        public bool IsOversized;
     }
 }

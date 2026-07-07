@@ -40,6 +40,11 @@ namespace TEngine
         private uint _sendSeq;
         private uint _recvSeq;
 
+        // ---- 可测性钩子 ----
+        // 退避等待工厂：生产环境用 UniTask.Delay（依赖 Unity PlayerLoop 推进）；
+        // EditMode 单元测试因主线程无 PlayerLoop 推进，注入同步实现绕过（见 SetDelayFactoryForTests）。
+        private Func<int, UniTask> _delayFactory = ms => UniTask.Delay(ms);
+
         /// <inheritdoc />
         public event Action OnConnected;
         /// <inheritdoc />
@@ -271,6 +276,10 @@ namespace TEngine
 
             while (_reconnectPolicy.CanRetry)
             {
+                // 退避等待：指数退避 base × backoff^attempts（上限 maxInterval）。
+                // 必须在 RecordAttempt 之前读取，使首次（attempts=0）等待 base interval，之后递增，
+                // 避免断线时紧密重连轰炸对端。
+                await _delayFactory(_reconnectPolicy.GetNextIntervalMs());
                 _reconnectPolicy.RecordAttempt();
                 try
                 {
@@ -292,7 +301,7 @@ namespace TEngine
                 catch (Exception ex)
                 {
                     RaiseError(ex);
-                    // 继续重试（注：阶段2 未实现实际退避等待，仅按次数重试；见 memory 偏差记录）
+                    // 继续重试（下一轮循环顶部按退避等待）
                 }
             }
 
@@ -341,13 +350,32 @@ namespace TEngine
             int offset = 0;
             while (offset < _recvCount)
             {
-                PacketParseResult? parsed = _formatter.TryParse(_recvBuffer, offset, _recvCount - offset, out int consumed);
+                PacketParseResult? parsed = _formatter.TryParse(_recvBuffer, offset, _recvCount - offset, _config.MaxPacketSize, out int consumed);
                 if (parsed == null || consumed <= 0)
                 {
                     break; // 半包，等待更多数据到达
                 }
 
                 PacketParseResult pkt = parsed.Value;
+
+                // 超限保护：声明长度超过 MaxPacketSize 或导致整数溢出 → 字节流不可信，断连。
+                // 流对齐已破坏，后续字节不再解析；采用与心跳超时相同的断连处置。
+                if (pkt.IsOversized)
+                {
+                    RaiseError(new TransportException(_config.Name, "receive",
+                        new InvalidOperationException(
+                            $"收到超限包 msgId={pkt.MsgId}（声明负载超过 MaxPacketSize={_config.MaxPacketSize}），断开连接。")));
+                    _stateMachine.TransitionTo(ConnectionState.Disconnected);
+                    _sendQueue.Pause();
+                    try { _transport.Close(); } catch (Exception ex) { RaiseError(ex); }
+                    OnDisconnected?.Invoke();
+                    if (_config.AutoReconnect)
+                    {
+                        TriggerAutoReconnect().Forget();
+                    }
+                    return;
+                }
+
                 offset += consumed;
 
                 _recvSeq++;
@@ -484,7 +512,7 @@ namespace TEngine
             RpcPolicy policy = RpcPolicy.SafeRecover, int timeoutMs = 10000)
             where TReq : IMessage where TResp : IMessage
         {
-            throw new NotImplementedException("RPC 待阶段3 实现。");
+            throw new NotSupportedException("RPC 待阶段 3 实现，当前 SendAsync 为占位。");
         }
 
         // ---- 控制包发送回调（心跳/Ping/恢复，阶段2 完整接线）----
@@ -520,6 +548,16 @@ namespace TEngine
         private void RaiseError(Exception ex)
         {
             OnError?.Invoke(ex);
+        }
+
+        /// <summary>
+        /// 供单元测试注入退避等待实现。生产用默认 <see cref="UniTask.Delay"/>（依赖 PlayerLoop）；
+        /// EditMode 测试注入同步实现（如 <c>_ =&gt; UniTask.CompletedTask</c>）绕过 PlayerLoop 依赖，
+        /// 使 <see cref="ReconnectAsync"/> 全程同步可在主线程 <c>GetResult</c> 完成。
+        /// </summary>
+        internal void SetDelayFactoryForTests(Func<int, UniTask> factory)
+        {
+            _delayFactory = factory ?? (ms => UniTask.Delay(ms));
         }
     }
 }

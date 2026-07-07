@@ -40,6 +40,10 @@ namespace TEngine
         public int SendBufferSize { get; private set; } = 64;
         public int RecvBufferSize { get; private set; } = 64;
 
+        // ---- 协议安全 ----
+        /// <summary>单包负载上限（字节）。入站包声明长度超过此值即判定为恶意/异常，触发断连，防御 OOM 与内存放大。默认 1 MiB（1048576）。</summary>
+        public int MaxPacketSize { get; private set; } = 1048576;
+
         // ---- 分发预算 ----
         public int MaxDispatchPerFrame { get; private set; } = 50;
         public int MaxDispatchTimeMs { get; private set; } = 4;
@@ -75,6 +79,8 @@ namespace TEngine
         public ConnectionConfig SetHeartbeat(int intervalSec, int timeoutSec) { HeartbeatInterval = intervalSec; HeartbeatTimeout = timeoutSec; return this; }
         public ConnectionConfig SetReconnect(bool auto, int intervalMs, int maxAttempts, float backoff = 1.0f, int maxIntervalMs = 30000) { AutoReconnect = auto; ReconnectInterval = intervalMs; MaxReconnectAttempts = maxAttempts; BackoffMultiplier = backoff; MaxReconnectInterval = maxIntervalMs; return this; }
         public ConnectionConfig SetBuffer(int sendKB, int recvKB) { SendBufferSize = sendKB; RecvBufferSize = recvKB; return this; }
+        /// <summary>设置单包负载上限（字节）。入站包超过此长度将触发断连，防御恶意超大包导致的 OOM。</summary>
+        public ConnectionConfig SetMaxPacketSize(int maxBytes) { MaxPacketSize = maxBytes; return this; }
         public ConnectionConfig SetDispatchBudget(int maxPerFrame, int maxTimeMs = 4) { MaxDispatchPerFrame = maxPerFrame; MaxDispatchTimeMs = maxTimeMs; return this; }
         public ConnectionConfig SetConnectTimeout(int ms) { ConnectTimeout = ms; return this; }
 
@@ -89,6 +95,7 @@ namespace TEngine
             if (!_endpointSet) throw new ArgumentException("Endpoint (host:port or url) is required");
             if (HeartbeatInterval <= 0) throw new ArgumentException("HeartbeatInterval must be positive");
             if (MaxDispatchPerFrame <= 0) throw new ArgumentException("MaxDispatchPerFrame must be positive");
+            if (MaxPacketSize <= 0) throw new ArgumentException("MaxPacketSize must be positive");
         }
     }
 }
