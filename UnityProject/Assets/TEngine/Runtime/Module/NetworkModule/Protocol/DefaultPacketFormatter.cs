@@ -7,10 +7,7 @@ namespace TEngine
     /// <para>普通包：<c>MsgId(2B,BE) + Flags(1B) + Length(4B,BE) + Payload</c>，包头 7B。</para>
     /// <para>RPC 包：在 Flags 后插入 <c>RequestId(4B,BE)</c>，包头 11B。</para>
     /// <para><see cref="TryParse"/> 支持粘包切分与半包等待。</para>
-    /// <para>注：组包/解包产出的数组都要求精确大小（交给上层 Codec/业务使用），因此直接
-    /// <c>new byte[]</c> 分配，不走 <see cref="BufferPool"/>——后者按桶向上取整会返回更大数组，
-    /// 消费方按 <c>Payload.Length</c> 读取会越界。BufferPool 适用于 Transport 接收缓冲等
-    /// 短生命周期场景。</para>
+    /// <para>注：组包/解包产出的数组都要求精确大小（交给上层 Codec/业务使用），因此直接 <c>new byte[]</c> 分配。</para>
     /// </summary>
     public class DefaultPacketFormatter : IPacketFormatter
     {
