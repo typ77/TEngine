@@ -131,5 +131,16 @@ namespace TEngine
                 RequestId = reqId,
             };
         }
+
+        /// <inheritdoc />
+        public void WriteRequestId(byte[] packet, uint requestId)
+        {
+            // ReqId 位于 MsgId(2) + Flags(1) + Length(4) = 7 之后，4 字节 big-endian。
+            const int reqIdOffset = 7;
+            packet[reqIdOffset]     = (byte)(requestId >> 24);
+            packet[reqIdOffset + 1] = (byte)(requestId >> 16);
+            packet[reqIdOffset + 2] = (byte)(requestId >> 8);
+            packet[reqIdOffset + 3] = (byte)(requestId & 0xFF);
+        }
     }
 }

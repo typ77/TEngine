@@ -16,7 +16,10 @@ namespace TEngine
         /// <summary>序列化消息为负载字节。</summary>
         byte[] Serialize<T>(T message) where T : IMessage;
 
-        /// <summary>按 msgId 反序列化为消息对象。</summary>
+        /// <summary>按 msgId 反序列化为消息对象（业务消息分发用）。</summary>
         object Deserialize(ushort msgId, byte[] data, int offset, int count);
+
+        /// <summary>按类型反序列化为消息对象（RPC 响应用：匹配靠 RequestId，反序列化用 pending 的 ResponseType，不依赖 msgId）。</summary>
+        object Deserialize(Type responseType, byte[] data, int offset, int count);
     }
 }

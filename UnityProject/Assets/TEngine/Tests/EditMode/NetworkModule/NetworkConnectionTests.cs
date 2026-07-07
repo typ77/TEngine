@@ -187,13 +187,12 @@ namespace TEngine.Tests
         // ---- RPC（阶段 3 占位）----
 
         [Test]
-        public void SendAsync_NotImplemented_ThrowsNotSupported()
+        public void SendAsync_NotConnected_ThrowsInvalidOperation()
         {
-            // RPC 待阶段 3 实现：当前调用应抛 NotSupportedException（非 NotImplementedException），
-            // 错误消息须明确标注未实现，使调用方能区分"用错 API"与"框架 bug"。
-            var ex = Assert.Throws<NotSupportedException>(() =>
+            // SetUp 的 conn 未连接（State=None）；SendAsync 要求 Connected 状态
+            var ex = Assert.Throws<InvalidOperationException>(() =>
                 _conn.SendAsync<TestMessage, TestMessage>(100, new TestMessage()).GetAwaiter().GetResult());
-            StringAssert.IsMatch("阶段|RPC|未实现", ex.Message);
+            StringAssert.IsMatch("Connected", ex.Message);
         }
 
         // ---- 阶段2：生命周期 / 重连 / 心跳断线 ----
@@ -324,6 +323,12 @@ namespace TEngine.Tests
         }
 
         public object Deserialize(ushort msgId, byte[] data, int offset, int count)
+        {
+            DeserializeCallCount++;
+            return DeserializeResult;
+        }
+
+        public object Deserialize(Type responseType, byte[] data, int offset, int count)
         {
             DeserializeCallCount++;
             return DeserializeResult;

@@ -71,6 +71,7 @@ namespace TEngine.Tests
         public void RegisterMessage<T>(ushort msgId) where T : IMessage { }
         public byte[] Serialize<T>(T message) where T : IMessage => Array.Empty<byte>();
         public object Deserialize(ushort msgId, byte[] data, int offset, int count) => null;
+        public object Deserialize(Type responseType, byte[] data, int offset, int count) => null;
     }
 
     public sealed class FakeScannedCodec : ICodec
@@ -79,6 +80,7 @@ namespace TEngine.Tests
         public void RegisterMessage<T>(ushort msgId) where T : IMessage { }
         public byte[] Serialize<T>(T message) where T : IMessage => Array.Empty<byte>();
         public object Deserialize(ushort msgId, byte[] data, int offset, int count) => null;
+        public object Deserialize(Type responseType, byte[] data, int offset, int count) => null;
     }
 
     // 用 Protobuf 与手动注册用例的 MessagePack 错开，避免 [CodecProvider] 自动注册污染手注册断言。

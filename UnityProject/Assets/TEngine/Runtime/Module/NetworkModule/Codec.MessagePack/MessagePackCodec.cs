@@ -29,5 +29,11 @@ namespace TEngine.Network.Codec.MessagePack
         {
             throw new NotImplementedException("待安装 MessagePack dll 后实现，见 T6b。");
         }
+
+        /// <inheritdoc />
+        public object Deserialize(Type responseType, byte[] data, int offset, int count)
+        {
+            throw new NotImplementedException("待安装 MessagePack dll 后实现，见 T6b。");
+        }
     }
 }

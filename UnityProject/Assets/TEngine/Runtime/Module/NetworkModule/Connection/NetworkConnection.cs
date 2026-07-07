@@ -446,6 +446,13 @@ namespace TEngine
                     continue;
                 }
 
+                // RPC 响应：靠 RequestId 匹配 pending，完成 await，不走业务分发
+                if ((pkt.Flags & PacketFlags.Rpc) != 0)
+                {
+                    HandleRpcResponse(pkt.RequestId, pkt.MsgId, payload);
+                    continue;
+                }
+
                 object message = null;
                 try
                 {
@@ -485,6 +492,35 @@ namespace TEngine
                 }
                 _recvCount = remaining;
             }
+        }
+
+        /// <summary>
+        /// 处理 RPC 响应包：按 RequestId 匹配 pending，用 pending 的 ResponseType 反序列化响应，
+        /// 完成 pending 的 TCS（TrySetResult）并移除。未知 RequestId 忽略。
+        /// </summary>
+        private void HandleRpcResponse(uint requestId, ushort msgId, byte[] payload)
+        {
+            if (!_rpcTracker.TryGet(requestId, out var rpc))
+            {
+                return; // 未知 RequestId（已超时/完成/伪造），忽略
+            }
+
+            object response;
+            try
+            {
+                response = _codec.Deserialize(rpc.ResponseType, payload, 0, payload.Length);
+            }
+            catch (Exception ex)
+            {
+                rpc.Tcs.TrySetException(new SerializationException(_config.Name, msgId, "Receive", ex));
+                _rpcTracker.Remove(requestId);
+                _diagnostics.RecordRpcFailed();
+                return;
+            }
+
+            rpc.Tcs.TrySetResult(response);
+            _rpcTracker.Remove(requestId);
+            _diagnostics.RecordRpcCompleted();
         }
 
         private void AppendRecv(ReadOnlyMemory<byte> data)
@@ -568,11 +604,49 @@ namespace TEngine
         // ---- RPC（阶段3）----
 
         /// <inheritdoc />
-        public UniTask<TResp> SendAsync<TReq, TResp>(ushort msgId, TReq message,
+        public async UniTask<TResp> SendAsync<TReq, TResp>(ushort msgId, TReq message,
             RpcPolicy policy = RpcPolicy.SafeRecover, int timeoutMs = 10000)
             where TReq : IMessage where TResp : IMessage
         {
-            throw new NotSupportedException("RPC 待阶段 3 实现，当前 SendAsync 为占位。");
+            if (_stateMachine.Current != ConnectionState.Connected)
+            {
+                throw new InvalidOperationException("SendAsync requires Connected state.");
+            }
+
+            uint requestId = _rpcTracker.AllocateId();
+
+            byte[] payload;
+            try
+            {
+                payload = _codec.Serialize(message);
+            }
+            catch (Exception ex)
+            {
+                throw new SerializationException(_config.Name, msgId, "SendAsync", ex);
+            }
+
+            byte[] packet = _formatter.BuildPacket(msgId, PacketFlags.Rpc, payload);
+            _formatter.WriteRequestId(packet, requestId);
+
+            var tcs = new UniTaskCompletionSource<object>();
+            _rpcTracker.Add(requestId, msgId, payload, policy, tcs, typeof(TResp), timeoutMs);
+            _diagnostics.RecordRpcStarted();
+
+            _sendSeq++;
+            MessageTrace trace = MessageTrace.Create(_sendSeq, MessageDirection.Send, packet.Length);
+            if (!_interceptors.ProcessSending(msgId, ref packet, in trace))
+            {
+                _rpcTracker.Remove(requestId);
+                _diagnostics.RecordRpcFailed();
+                throw new RpcAbortException(_config.Name, msgId, requestId, "Blocked by interceptor");
+            }
+
+            _diagnostics.RecordSend(packet.Length);
+            _sendQueue.Enqueue(packet);
+            _rpcTracker.MarkSent(requestId);
+
+            object response = await tcs.Task;
+            return (TResp)response;
         }
 
         // ---- 控制包发送回调（心跳/Ping/恢复，阶段2 完整接线）----
@@ -619,5 +693,8 @@ namespace TEngine
         {
             _delayFactory = factory ?? (ms => UniTask.Delay(ms));
         }
+
+        /// <summary>供测试读取当前 RPC pending 数（验证登记/完成）。</summary>
+        internal int RpcPendingCountForTests => _rpcTracker.PendingCount;
     }
 }
