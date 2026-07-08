@@ -289,7 +289,7 @@ namespace TEngine
                 case TransportType.Kcp:
                 case TransportType.WebSocket:
                     throw new NotSupportedException(
-                        $"{config.Transport} 传输尚未实现（待 T10/T11）；Tcp 已可用，KCP/WebSocket 待实现。");
+                        $"{config.Transport} 传输尚未实现。TCP 已可用；KCP 待 T10（借 kcp2k）、WebSocket 待 T11（借 NativeWebSocket），见 docs/adr/network-kcp-strategy.md。");
 
                 default:
                     throw new ArgumentOutOfRangeException(nameof(config), config.Transport, "未知传输类型");
