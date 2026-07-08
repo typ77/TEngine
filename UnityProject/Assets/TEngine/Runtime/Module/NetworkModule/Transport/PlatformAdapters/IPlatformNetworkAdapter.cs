@@ -15,5 +15,8 @@ namespace TEngine
         event Action OnConnected;
         event Action OnDisconnected;
         event Action<byte[]> OnDataReceived;
+
+        /// <summary>adapter 内部异步错误（连接建立后 SDK 回调失败等）。PlatformTransport 订阅后转发为自身 OnError。</summary>
+        event Action<Exception> OnError;
     }
 }

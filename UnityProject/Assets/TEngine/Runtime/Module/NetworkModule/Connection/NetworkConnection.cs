@@ -201,9 +201,23 @@ namespace TEngine
             }
         }
 
+        /// <summary>
+        /// 开启新连接会话：复位全部会话相关状态（接收缓冲写入位置、收发序号、transport 事件队列、诊断连接指标）。
+        /// Connect/Reconnect 成功时调用，保证新会话从干净状态开始——这是重连不再协议错乱的根（修 S2）。
+        /// </summary>
+        private void BeginSession()
+        {
+            _recvCount = 0;
+            _sendSeq = 0;
+            _recvSeq = 0;
+            _eventQueue.Clear();          // 清断线瞬间入队未 drain 的 transport 事件（防残留带入新会话）
+            _diagnostics.ResetConnectionMetrics();
+        }
+
         private void EnterConnected()
         {
             _stateMachine.TransitionTo(ConnectionState.Connected);
+            BeginSession();              // 会话复位：清缓冲/序号/事件队列/诊断指标
             _sendQueue.Resume();
             _heartbeat.Reset();
             OnConnected?.Invoke();
@@ -314,9 +328,9 @@ namespace TEngine
                     // 重连成功
                     _reconnectPolicy.Reset();
                     _stateMachine.TransitionTo(ConnectionState.Connected);
+                    BeginSession();              // 会话复位（含清缓冲/事件队列/ResetConnectionMetrics）
                     _sendQueue.Resume();
                     _heartbeat.Reset();
-                    _diagnostics.ResetConnectionMetrics();
                     var toRecover = _rpcTracker.GetNeedsRecovery();
                     if (toRecover.Count > 0)
                     {

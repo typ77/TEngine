@@ -306,6 +306,81 @@ namespace TEngine.Tests
             Assert.AreEqual(ConnectionState.Disconnected, conn.State);
         }
 
+        // ---- 会话化（WS-A）：重连清缓冲/事件队列 ----
+
+        [Test]
+        public void Reconnect_ClearsReceiveBuffer_FirstPacketParsedCorrectly()
+        {
+            var transport = new FakeTransport();
+            var codec = new FakeCodec { DeserializeResult = new TestMessage() };
+            var formatter = new DefaultPacketFormatter();
+            var config = new ConnectionConfig("test").UseTcp().SetEndpoint("127.0.0.1", 8080).UseMessagePack()
+                .SetReconnect(false, 100, 3);
+            var conn = new NetworkConnection(config, transport, codec, formatter, null, null, null);
+
+            conn.ConnectAsync().GetAwaiter().GetResult();
+
+            bool dispatched = false;
+            conn.On<TestMessage>(100, msg => dispatched = true);
+
+            byte[] fullPacket = formatter.BuildPacket(100, 0, new byte[] { 0x01 });
+            // 半包（4 字节 < 7 字节包头），留缓冲不分发
+            byte[] half = new byte[4];
+            System.Buffer.BlockCopy(fullPacket, 0, half, 0, 4);
+            transport.SimulateReceive(half);
+            conn.Update(0.016f);
+            Assert.IsFalse(dispatched, "半包不应分发");
+
+            // 断线 → Disconnected
+            transport.SimulateDisconnect();
+            conn.Update(0f);
+            Assert.AreEqual(ConnectionState.Disconnected, conn.State);
+
+            // 重连（BeginSession 清缓冲/事件队列）
+            conn.SetDelayFactoryForTests(_ => UniTask.CompletedTask);
+            conn.ReconnectAsync().GetAwaiter().GetResult();
+            Assert.AreEqual(ConnectionState.Connected, conn.State);
+
+            // 重连后发完整首包
+            transport.SimulateReceive(fullPacket);
+            conn.Update(0.016f);
+
+            Assert.IsTrue(dispatched, "重连后完整首包应被正确解析分发，证明缓冲已清空无残留（S2）");
+        }
+
+        [Test]
+        public void Reconnect_ClearsEventQueue_StaleDataNotDispatched()
+        {
+            var transport = new FakeTransport();
+            var codec = new FakeCodec { DeserializeResult = new TestMessage() };
+            var formatter = new DefaultPacketFormatter();
+            var config = new ConnectionConfig("test").UseTcp().SetEndpoint("127.0.0.1", 8080).UseMessagePack()
+                .SetReconnect(false, 100, 3);
+            var conn = new NetworkConnection(config, transport, codec, formatter, null, null, null);
+            conn.ConnectAsync().GetAwaiter().GetResult();
+
+            int dispatchCount = 0;
+            conn.On<TestMessage>(100, msg => dispatchCount++);
+
+            byte[] packet = formatter.BuildPacket(100, 0, new byte[] { 0x01 });
+
+            // 断线 → drain → Disconnected
+            transport.SimulateDisconnect();
+            conn.Update(0f);
+            Assert.AreEqual(ConnectionState.Disconnected, conn.State);
+
+            // 断线后、重连前入队一个旧 Data（不 Update，留事件队列）
+            transport.SimulateReceive(packet);
+
+            // 重连（BeginSession 清事件队列，丢弃旧 Data）
+            conn.SetDelayFactoryForTests(_ => UniTask.CompletedTask);
+            conn.ReconnectAsync().GetAwaiter().GetResult();
+
+            conn.Update(0.016f);
+
+            Assert.AreEqual(0, dispatchCount, "重连应清空事件队列，旧连接残留 Data 不被分发（S2 变种）");
+        }
+
         private static NetworkConnection CreateConnection(ConnectionConfig config, FakeTransport transport)
         {
             return new NetworkConnection(config, transport, new FakeCodec(), new DefaultPacketFormatter(), null, null, null);

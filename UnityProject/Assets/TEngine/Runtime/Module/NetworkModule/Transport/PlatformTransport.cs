@@ -52,6 +52,7 @@ namespace TEngine
             _adapter.OnConnected += HandleAdapterConnected;
             _adapter.OnDisconnected += HandleAdapterDisconnected;
             _adapter.OnDataReceived += HandleAdapterDataReceived;
+            _adapter.OnError += HandleAdapterError;
         }
 
         // ============== 连接 ==============
@@ -78,6 +79,10 @@ namespace TEngine
         /// </summary>
         private void ConnectCore(string url)
         {
+            // 复位一次性标志：transport 可重复 Connect（重连复用同一实例，修 S1）
+            _closed = false;
+            _disconnectedNotified = false;
+            _connected = false;
             _connectTcs = new UniTaskCompletionSource();
             try
             {
@@ -172,7 +177,16 @@ namespace TEngine
 
         private void HandleAdapterDataReceived(byte[] data)
         {
-            OnDataReceived?.Invoke(new ReadOnlyMemory<byte>(data));
+            // 防御性拷贝：adapter 可能复用内部缓冲，避免跨帧处理被覆盖（M8，与 TcpTransport.OnReceive 对齐）
+            byte[] copy = new byte[data.Length];
+            Buffer.BlockCopy(data, 0, copy, 0, data.Length);
+            OnDataReceived?.Invoke(new ReadOnlyMemory<byte>(copy));
+        }
+
+        private void HandleAdapterError(Exception ex)
+        {
+            // 围栏：转发 adapter 异步错误为自身 OnError（M6）
+            OnError?.Invoke(ex);
         }
 
         /// <summary>

@@ -36,6 +36,9 @@ namespace TEngine.Tests
         public event Action<byte[]> OnDataReceived;
 
         /// <inheritdoc />
+        public event Action<Exception> OnError;
+
+        /// <inheritdoc />
         public void Connect(string url)
         {
             LastConnectUrl = url;
@@ -69,6 +72,9 @@ namespace TEngine.Tests
 
         /// <summary>模拟底层收包（触发 OnDataReceived）。</summary>
         public void SimulateReceive(byte[] data) => OnDataReceived?.Invoke(data);
+
+        /// <summary>模拟底层异步错误（触发 OnError，验证 M6 转发）。</summary>
+        public void SimulateError(Exception ex) => OnError?.Invoke(ex);
     }
 
     /// <summary>
@@ -200,6 +206,20 @@ namespace TEngine.Tests
             CollectionAssert.AreEqual(new byte[] { 7, 8, 9 }, received);
         }
 
+        [Test]
+        public void AdapterError_ForwardedToOnError()
+        {
+            var adapter = new FakePlatformNetworkAdapter();
+            using var transport = new PlatformTransport(adapter);
+            Exception received = null;
+            transport.OnError += ex => received = ex;
+
+            var error = new InvalidOperationException("adapter async fail");
+            adapter.SimulateError(error);
+
+            Assert.AreSame(error, received, "adapter OnError 应转发为 transport.OnError（M6）");
+        }
+
         // ============== 收发 ==============
 
         [Test]
@@ -287,6 +307,32 @@ namespace TEngine.Tests
             adapter.SimulateDisconnected(); // Close 后 adapter 再触发断线
 
             Assert.AreEqual(1, count, "Close 后的 adapter 断线不应重复通知");
+        }
+
+        // ============== 会话化（WS-A）：Connect 自清洁，支持重连复用 ==============
+
+        [Test]
+        public void Reconnect_AfterClose_RaisesOnDisconnectedAgain()
+        {
+            var adapter = new FakePlatformNetworkAdapter();
+            using var transport = new PlatformTransport(adapter);
+            adapter.SimulateConnected();
+            Assert.IsTrue(transport.Connected);
+
+            int disconnectCount = 0;
+            transport.OnDisconnected += () => disconnectCount++;
+            transport.Close();   // 第一次断开（_disconnectedNotified=true）
+            Assert.AreEqual(1, disconnectCount);
+
+            // 重连（ConnectCore 复位一次性标志）
+            transport.Connect("127.0.0.1", 9000);
+            adapter.SimulateConnected();
+            Assert.IsTrue(transport.Connected, "重连应成功");
+
+            // 第二次断开
+            adapter.SimulateDisconnected();
+
+            Assert.AreEqual(2, disconnectCount, "重连后再次断开应通知（S1：不复位标志会丢失）");
         }
 
         // ============== ConnectAsync（EditMode 异步需 ThreadPool）==============
