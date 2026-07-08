@@ -42,6 +42,9 @@ namespace TEngine
             _dirty = true;
         }
 
+        /// <summary>拦截器抛异常时触发（围栏1 可观测：上报拦截器名/msgId/异常，与"主动拒绝"区分）。</summary>
+        public event Action<string, ushort, Exception> OnInterceptError;
+
         private void RebuildCache()
         {
             // 出站: 全局(升序) → 连接级(升序)
@@ -70,9 +73,10 @@ namespace TEngine
                     if (!interceptor.OnSending(msgId, ref payload, in trace))
                         return false;
                 }
-                catch
+                catch (Exception ex)
                 {
-                    // 单个拦截器异常不应击垮整条管道
+                    // 围栏1：拦截器异常上报（与"主动拒绝"区分），中止管道
+                    OnInterceptError?.Invoke(interceptor.Name, msgId, ex);
                     return false;
                 }
             }
@@ -90,8 +94,10 @@ namespace TEngine
                     if (!interceptor.OnReceiving(msgId, ref payload, in trace))
                         return false;
                 }
-                catch
+                catch (Exception ex)
                 {
+                    // 围栏1：拦截器异常上报（与"主动拒绝"区分），中止管道
+                    OnInterceptError?.Invoke(interceptor.Name, msgId, ex);
                     return false;
                 }
             }

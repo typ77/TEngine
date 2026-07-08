@@ -48,6 +48,9 @@ namespace TEngine
         // EditMode 单元测试因主线程无 PlayerLoop 推进，注入同步实现绕过（见 SetDelayFactoryForTests）。
         private Func<int, UniTask> _delayFactory = ms => UniTask.Delay(ms);
 
+        // 围栏3 测试钩子：置 true 后下一次 Update 直接抛异常（位于围栏2 try 之外），供 NetworkModule 围栏3 隔离测试。
+        internal bool ThrowOnNextUpdateForTests;
+
         // ---- 线程安全：transport 事件队列 ----
         // transport 回调（OnDataReceived/OnConnected/OnDisconnected/OnError）在 I/O 线程触发，
         // 仅入队；主线程 Update 中 DrainTransportEvents 统一处理，使 Dispatcher/Diagnostics/
@@ -143,6 +146,12 @@ namespace TEngine
             // 订阅心跳事件（阶段2：发心跳包 + 超时判定断线）
             _heartbeat.OnSendHeartbeat += SendHeartbeatPacket;
             _heartbeat.OnTimeout += HandleHeartbeatTimeout;
+
+            // 围栏1 可观测：订阅分发器/拦截器错误回调，转 OnError（带 msgId/拦截器名上下文，保留 inner）
+            _dispatcher.OnDispatchError += (msgId, ex, trace) =>
+                RaiseError(new NetworkException(_config.Name, $"dispatch msgId={msgId} handler 异常", ex));
+            _interceptors.OnInterceptError += (name, msgId, ex) =>
+                RaiseError(new NetworkException(_config.Name, $"interceptor '{name}' msgId={msgId} 异常", ex));
         }
 
         /// <summary>反射调用 codec.RegisterMessage&lt;T&gt;(msgId)，注册消息类型映射。</summary>
@@ -541,30 +550,65 @@ namespace TEngine
 
         internal void Update(float elapseSeconds)
         {
-            // drain transport 事件队列（I/O 线程入队的事件在此主线程统一处理）
-            DrainTransportEvents();
-
-            _heartbeat.Update(elapseSeconds);
-            if (_diagnostics.PingEnabled)
+            // 可测性钩子：模拟 Update 抛异常（位于围栏2 try 之外），供 NetworkModule 围栏3 隔离测试。
+            if (ThrowOnNextUpdateForTests)
             {
-                _pingMonitor.Update(elapseSeconds);
+                ThrowOnNextUpdateForTests = false;
+                throw new InvalidOperationException("test: update throws");
             }
-            _rpcTracker.CheckTimeouts();
 
-            if (_stateMachine.Current == ConnectionState.Connected)
+            // 围栏2：Update 全部子系统操作异常收敛为 OnError，不冒泡到 NetworkModule.Update。
+            try
             {
-                List<byte[]> packets = _sendQueue.DequeueAll();
-                for (int i = 0; i < packets.Count; i++)
+                // drain transport 事件队列（I/O 线程入队的事件在此主线程统一处理）
+                DrainTransportEvents();
+
+                _heartbeat.Update(elapseSeconds);
+                if (_diagnostics.PingEnabled)
                 {
-                    _transport.Send(packets[i]);
+                    _pingMonitor.Update(elapseSeconds);
                 }
+                _rpcTracker.CheckTimeouts();
+
+                if (_stateMachine.Current == ConnectionState.Connected)
+                {
+                    List<byte[]> packets = _sendQueue.DequeueAll();
+                    for (int i = 0; i < packets.Count; i++)
+                    {
+                        if (!TrySend(packets[i]))
+                            break;   // 单包发送失败：触发断线处置，本轮停止，剩余包留队等重连
+                    }
+                }
+
+                _dispatcher.Dispatch(elapseSeconds);
+                _qualityEstimator.MaybeUpdate();
+
+                // 回填分发统计到诊断
+                _diagnostics.Dispatch = _dispatcher.Stats;
             }
+            catch (Exception ex)
+            {
+                RaiseError(ex);
+            }
+        }
 
-            _dispatcher.Dispatch(elapseSeconds);
-            _qualityEstimator.MaybeUpdate();
-
-            // 回填分发统计到诊断
-            _diagnostics.Dispatch = _dispatcher.Stats;
+        /// <summary>
+        /// 围栏2（Send）：单包发送异常收敛为 RaiseError + 断线处置，绝不冒泡到 Update。
+        /// 失败返回 false 使调用方停止本轮批量发送，剩余包留在 SendQueue 等待重连恢复。
+        /// </summary>
+        private bool TrySend(byte[] packet)
+        {
+            try
+            {
+                _transport.Send(packet);
+                return true;
+            }
+            catch (Exception ex)
+            {
+                RaiseError(new TransportException(_config.Name, "send", ex));
+                HandleTransportDisconnected();   // 触发断线/重连，避免继续 Send 已断 socket
+                return false;
+            }
         }
 
         // ---- 订阅 ----

@@ -28,6 +28,9 @@ namespace TEngine
         /// <summary>消息分发完成后触发。</summary>
         public event Action<ushort, object, MessageTrace> OnAfterDispatch;
 
+        /// <summary>消息 handler 抛异常时触发（围栏1 可观测：上报 msgId/异常/trace，不静默吞）。</summary>
+        public event Action<ushort, Exception, MessageTrace> OnDispatchError;
+
         /// <summary>最近一次 Dispatch 的统计快照。</summary>
         public DispatchStats Stats { get; private set; }
 
@@ -131,10 +134,11 @@ namespace TEngine
 
                 OnAfterDispatch?.Invoke(entry.MsgId, entry.Message, entry.Trace);
             }
-            catch
+            catch (Exception ex)
             {
-                // 单条消息 handler 异常不应击垮整个分发循环
+                // 围栏1：单条 handler 异常上报（含 msgId 上下文），不击垮分发循环
                 dropped++;
+                OnDispatchError?.Invoke(entry.MsgId, ex, entry.Trace);
             }
         }
     }

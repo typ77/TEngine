@@ -68,7 +68,15 @@ namespace TEngine
         {
             foreach (ConnectionEntry entry in _connections.Values)
             {
-                entry.Connection.Update(elapseSeconds);
+                try
+                {
+                    entry.Connection.Update(elapseSeconds);
+                }
+                catch (Exception ex)
+                {
+                    // 围栏3：单连接异常不级联到其他连接，转模块级 OnError 上报
+                    OnError?.Invoke(entry.Connection.Name, ex);
+                }
             }
         }
 

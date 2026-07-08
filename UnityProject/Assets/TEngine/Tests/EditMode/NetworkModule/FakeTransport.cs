@@ -26,6 +26,9 @@ namespace TEngine.Tests
         /// <summary>设非 null 时，Connect/ConnectAsync 抛此异常（模拟连接失败，供重连测试）。</summary>
         public Exception ConnectException { get; set; }
 
+        /// <summary>设非 null 时，Send 抛此异常（模拟发送瞬间 socket 已断，供 S3 围栏测试）。</summary>
+        public Exception SendException { get; set; }
+
         public UniTask ConnectAsync(string host, int port)
         {
             if (ConnectException != null) throw ConnectException;
@@ -50,6 +53,7 @@ namespace TEngine.Tests
 
         public void Send(byte[] data)
         {
+            if (SendException != null) throw SendException;
             var copy = new byte[data.Length];
             Buffer.BlockCopy(data, 0, copy, 0, data.Length);
             SentPackets.Add(copy);

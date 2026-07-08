@@ -228,6 +228,33 @@ namespace TEngine.Tests
             Assert.AreSame(ex, firedEx);
         }
 
+        // ============== 围栏（WS-B）：多连接故障隔离 ==============
+
+        [Test]
+        public void Update_OneConnectionThrows_OthersStillUpdated_ErrorBroadcast()
+        {
+            var t1 = RegisterPlatform("p1");
+            var t2 = RegisterPlatform("p2");
+            var c1 = (NetworkConnection)_module.CreateConnection(MakeHeartbeatConfig("a", "p1"));
+            var c2 = (NetworkConnection)_module.CreateConnection(MakeHeartbeatConfig("b", "p2"));
+            c1.ConnectAsync().GetAwaiter().GetResult();
+            c2.ConnectAsync().GetAwaiter().GetResult();
+
+            // 让连接 a 下一次 Update 抛异常（位于围栏2 之外，触发模块级围栏3）
+            c1.ThrowOnNextUpdateForTests = true;
+
+            string errorName = null;
+            Exception errorEx = null;
+            _module.OnError += (n, e) => { errorName = n; errorEx = e; };
+
+            // 围栏3：a 抛异常不应冒泡，b 仍被 Update
+            Assert.DoesNotThrow(() => _module.Update(1.0f, 1.0f));
+
+            Assert.Greater(t2.SentPackets.Count, 0, "连接 b 应在 a 异常后仍被 Update（发心跳）");
+            Assert.AreEqual("a", errorName, "a 的异常应经模块级 OnError 上报");
+            Assert.IsNotNull(errorEx);
+        }
+
         // ============== 销毁 / Shutdown ==============
 
         [Test]

@@ -15,5 +15,11 @@ namespace TEngine
         {
             ConnectionName = connectionName;
         }
+
+        public NetworkException(string connectionName, string message, Exception innerException)
+            : base($"[{connectionName}] {message}", innerException)
+        {
+            ConnectionName = connectionName;
+        }
     }
 }

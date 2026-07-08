@@ -184,6 +184,36 @@ namespace TEngine.Tests
             Assert.AreEqual(0, _transport.SentPackets.Count, "拦截器拒绝应丢弃");
         }
 
+        // ---- 围栏（WS-B）：发送异常隔离 ----
+
+        [Test]
+        public void Send_MidFlightSocketError_DoesNotBubble_RaisesError_TriggersDisconnect()
+        {
+            // AutoReconnect=false，避免断线处置触发重连干扰（重连 await 依赖 PlayerLoop）
+            var transport = new FakeTransport();
+            var config = new ConnectionConfig("test").UseTcp().SetEndpoint("127.0.0.1", 8080).UseMessagePack()
+                .SetReconnect(false, 100, 3);
+            var conn = CreateConnection(config, transport);
+
+            conn.ConnectAsync().GetAwaiter().GetResult();
+            // 入队 3 个待发包
+            conn.Send(100, new TestMessage());
+            conn.Send(100, new TestMessage());
+            conn.Send(100, new TestMessage());
+
+            // 模拟发送瞬间 socket 已断：FakeTransport.Send 抛
+            transport.SendException = new InvalidOperationException("socket closed");
+
+            Exception raised = null;
+            conn.OnError += ex => raised = ex;
+
+            // 围栏2：Update 不应抛（异常收敛为 OnError），剩余包留队不静默丢失
+            Assert.DoesNotThrow(() => conn.Update(0.016f));
+
+            Assert.IsNotNull(raised, "发送失败应通过围栏2 收敛为 OnError");
+            Assert.AreEqual(ConnectionState.Disconnected, conn.State, "发送失败应触发断线处置");
+        }
+
         // ---- RPC（阶段 3 占位）----
 
         [Test]
