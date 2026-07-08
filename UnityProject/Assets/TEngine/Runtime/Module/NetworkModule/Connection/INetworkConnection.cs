@@ -31,8 +31,13 @@ namespace TEngine
         /// <summary>发送单向消息（事件消息）。</summary>
         void Send<T>(ushort msgId, T message) where T : IMessage;
 
-        /// <summary>发送 RPC 请求并等待响应。</summary>
-        /// <remarks><b>当前为阶段 3 占位、尚未实现。</b>调用将抛 <see cref="NotSupportedException"/>。RPC 主体（RequestId 编排、响应匹配、超时、断线恢复）待阶段 3 实现，届时本方法拟从基础接口拆出为独立 RPC 接口。</remarks>
+        /// <summary>发送 RPC 请求并等待响应（RPC 主体已实现：RequestId 编排、响应匹配、超时、断线处置）。</summary>
+        /// <remarks>
+        /// 仅在 <see cref="ConnectionState.Connected"/> 状态可调用，否则抛 <see cref="InvalidOperationException"/>。
+        /// <para><see cref="RpcPolicy.SafeRecover"/> 当前版本等价于 <see cref="RpcPolicy.FailOnDisconnect"/>：
+        /// 断线（含重连成功后）以 <see cref="RpcAbortException"/> 中止 pending RPC，而非继续等待原响应。
+        /// 真正的断线恢复协商协议待后续版本。</para>
+        /// </remarks>
         UniTask<TResp> SendAsync<TReq, TResp>(
             ushort msgId, TReq message,
             RpcPolicy policy = RpcPolicy.SafeRecover,

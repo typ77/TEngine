@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Reflection;
+using System.Threading;
 
 namespace TEngine
 {
@@ -20,6 +21,10 @@ namespace TEngine
         private static readonly Dictionary<CodecType, ICodec> _instances = new Dictionary<CodecType, ICodec>();
         private static bool _initialized;
         private static readonly object _lock = new object();
+        private static int _scanCount;
+
+        /// <summary>累计 <see cref="Scan"/> 调用次数（测试可观测点，验证扫描已迁移到启动期、运行期 Get 不再触发，修 M9）。</summary>
+        internal static int ScanCount => _scanCount;
 
         /// <summary>手动注册一个 codec 工厂。</summary>
         public static void Register(CodecType type, Func<ICodec> factory)
@@ -74,6 +79,7 @@ namespace TEngine
         /// </summary>
         internal static void Scan()
         {
+            Interlocked.Increment(ref _scanCount);
             Assembly[] assemblies = AppDomain.CurrentDomain.GetAssemblies();
             foreach (Assembly assembly in assemblies)
             {
@@ -116,7 +122,11 @@ namespace TEngine
             }
         }
 
-        private static void EnsureInitialized()
+        /// <summary>
+        /// 触发一次全程序集扫描注册 [CodecProvider]（幂等）。由 <see cref="NetworkModule.OnInit"/> 在启动期显式调用，
+        /// 把扫描固定到启动阶段，避免运行期首次 <see cref="Get"/> 同步扫描卡帧（修 M9）。
+        /// </summary>
+        internal static void EnsureInitialized()
         {
             if (_initialized)
             {
@@ -141,6 +151,7 @@ namespace TEngine
                 _factories.Clear();
                 _instances.Clear();
                 _initialized = false;
+                _scanCount = 0;
             }
         }
     }

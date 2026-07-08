@@ -89,13 +89,35 @@ namespace TEngine
         /// </summary>
         internal void Validate()
         {
-            if (string.IsNullOrEmpty(Name)) throw new ArgumentException("Name is required");
-            if (!_transportSet) throw new ArgumentException("Transport type is required");
-            if (!_codecSet) throw new ArgumentException("Codec type is required");
-            if (!_endpointSet) throw new ArgumentException("Endpoint (host:port or url) is required");
-            if (HeartbeatInterval <= 0) throw new ArgumentException("HeartbeatInterval must be positive");
-            if (MaxDispatchPerFrame <= 0) throw new ArgumentException("MaxDispatchPerFrame must be positive");
-            if (MaxPacketSize <= 0) throw new ArgumentException("MaxPacketSize must be positive");
+            if (string.IsNullOrEmpty(Name)) throw new ArgumentException("连接名称（Name）不能为空", nameof(Name));
+            if (!_transportSet) throw new ArgumentException("必须指定传输方式（UseTcp/UseKcp/UseWebSocket/UsePlatform）");
+            if (!_codecSet) throw new ArgumentException("必须指定编解码方式（UseMessagePack/UseProtobuf）");
+            if (!_endpointSet) throw new ArgumentException("必须指定端点（SetEndpoint 或 SetUrl）");
+
+            // 端点边界：host:port 模式（Host 非空）校验 Host 非空 + 端口范围；url 模式（Host 为 null）校验 Url 非空
+            if (Host != null)
+            {
+                if (string.IsNullOrWhiteSpace(Host)) throw new ArgumentException("Host 不能为空", nameof(Host));
+                if (Port < 0 || Port > 65535) throw new ArgumentException($"Port 越界：{Port}（合法范围 0–65535）", nameof(Port));
+            }
+            else if (string.IsNullOrEmpty(Url))
+            {
+                throw new ArgumentException("端点不完整：须通过 SetEndpoint 设置 host:port 或 SetUrl 设置 url");
+            }
+
+            // 心跳 / 重连 / 退避边界
+            if (HeartbeatInterval <= 0) throw new ArgumentException("HeartbeatInterval 必须为正", nameof(HeartbeatInterval));
+            if (HeartbeatTimeout < HeartbeatInterval)
+                throw new ArgumentException($"HeartbeatTimeout（{HeartbeatTimeout}）须 >= HeartbeatInterval（{HeartbeatInterval}）", nameof(HeartbeatTimeout));
+            if (ReconnectInterval <= 0) throw new ArgumentException("ReconnectInterval 必须为正", nameof(ReconnectInterval));
+            if (MaxReconnectInterval < ReconnectInterval)
+                throw new ArgumentException($"MaxReconnectInterval（{MaxReconnectInterval}）须 >= ReconnectInterval（{ReconnectInterval}）", nameof(MaxReconnectInterval));
+            if (BackoffMultiplier < 1.0f)
+                throw new ArgumentException($"BackoffMultiplier（{BackoffMultiplier}）须 >= 1.0（防反向退避轰炸对端）", nameof(BackoffMultiplier));
+
+            // 分发 / 协议安全
+            if (MaxDispatchPerFrame <= 0) throw new ArgumentException("MaxDispatchPerFrame 必须为正", nameof(MaxDispatchPerFrame));
+            if (MaxPacketSize <= 0) throw new ArgumentException("MaxPacketSize 必须为正", nameof(MaxPacketSize));
         }
     }
 }

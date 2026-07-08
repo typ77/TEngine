@@ -1,6 +1,7 @@
 using System;
 using System.Net;
 using System.Net.Sockets;
+using System.Runtime.InteropServices;
 using Cysharp.Threading.Tasks;
 
 namespace TEngine
@@ -22,7 +23,9 @@ namespace TEngine
         /// <inheritdoc />
         public TransportType TransportType => TransportType.Tcp;
 
-        private Socket _socket;
+        // volatile：保证 I/O 线程（OnReceive）与主线程（Connect/Close）间 _socket 引用的内存可见性，
+        // 避免 Close 置 null 后接收回调读到旧引用而 NRE 误报（修 M3）。
+        private volatile Socket _socket;
         private readonly byte[] _receiveBuffer;
 
         /// <inheritdoc />
@@ -61,7 +64,9 @@ namespace TEngine
             }
             catch (Exception ex)
             {
+                // 触发事件供事件驱动上层感知，同时重抛以便同步调用方 try-catch 捕获（与 ConnectAsync 一致，修 M4）
                 OnError?.Invoke(new TransportException("Tcp", "connect", ex));
+                throw;
             }
         }
 
@@ -105,7 +110,16 @@ namespace TEngine
             {
                 throw new InvalidOperationException("Not connected");
             }
-            _socket.Send(data.ToArray());
+            // 零拷贝快赢：ROM 通常由 byte[] 包装，TryGetArray 取底层 array 直接发；仅非连续 ROM 才回退 ToArray（修 D8 / 4.4）。
+            // BuildPacket/TryParse 的池化涉及 buffer 所有权重构，移交 hotpath-allocation-reduction 独立 spec。
+            if (MemoryMarshal.TryGetArray(data, out ArraySegment<byte> segment))
+            {
+                _socket.Send(segment.Array, segment.Offset, segment.Count, SocketFlags.None);
+            }
+            else
+            {
+                _socket.Send(data.ToArray());
+            }
         }
 
         // ============== 关闭 ==============
@@ -155,9 +169,15 @@ namespace TEngine
 
         private void OnReceive(IAsyncResult ar)
         {
+            // 防御性捕获局部引用：Close 可能在回调期间将 _socket 置 null，用局部变量避免 NRE 误报（修 M3）。
+            Socket sock = _socket;
+            if (sock == null)
+            {
+                return; // Close 已置 null，正常退出接收循环
+            }
             try
             {
-                int bytesReceived = _socket.EndReceive(ar);
+                int bytesReceived = sock.EndReceive(ar);
                 if (bytesReceived == 0)
                 {
                     // 对端正常关闭

@@ -2,6 +2,7 @@ using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using Cysharp.Threading.Tasks;
+using UnityEngine;
 
 namespace TEngine
 {
@@ -34,6 +35,9 @@ namespace TEngine
         private readonly NetworkDiagnostics _diagnostics;
         private readonly PingMonitor _pingMonitor;
         private readonly QualityEstimator _qualityEstimator;
+
+        // SendPing 占位告知去重：Ping 未实现时仅 warning 一次，避免按 PingInterval 周期刷屏。
+        private bool _pingNotImplementedWarned;
 
         // ---- 接收缓冲（粘包/半包累积）----
         private byte[] _recvBuffer;
@@ -113,8 +117,8 @@ namespace TEngine
             _reconnectPolicy = new ReconnectPolicy(config.ReconnectInterval, config.MaxReconnectAttempts,
                 config.BackoffMultiplier, config.MaxReconnectInterval);
             _stateMachine = new ConnectionStateMachine();
-            _rpcTracker = new RpcTracker(config.Name);
             _diagnostics = new NetworkDiagnostics();
+            _rpcTracker = new RpcTracker(config.Name, _diagnostics);
             _pingMonitor = new PingMonitor(_diagnostics, SendPing);
             _qualityEstimator = new QualityEstimator(_diagnostics);
             _rpcRecovery = new RpcRecovery(config.Name, SendControlPacket);
@@ -280,14 +284,13 @@ namespace TEngine
                 return;
             }
 
-            // RPC 断线处置：FailOnDisconnect 立即 Abort；SafeRecover 保留（待重连恢复）
+            // RPC 断线处置：FailOnDisconnect 立即 Abort；SafeRecover 保留（待重连恢复）。统一走 Complete。
             foreach (var rpc in _rpcTracker.GetAllPending())
             {
                 if (rpc.Policy == RpcPolicy.FailOnDisconnect)
                 {
-                    rpc.Tcs.TrySetException(new RpcAbortException(_config.Name, rpc.MsgId, rpc.RequestId, "Disconnected"));
-                    _rpcTracker.Remove(rpc.RequestId);
-                    _diagnostics.RecordRpcFailed();
+                    _rpcTracker.Complete(rpc.RequestId, RpcOutcome.Aborted,
+                        r => r.Tcs.TrySetException(new RpcAbortException(_config.Name, r.MsgId, r.RequestId, "Disconnected")));
                 }
             }
 
@@ -535,15 +538,15 @@ namespace TEngine
             }
             catch (Exception ex)
             {
-                rpc.Tcs.TrySetException(new SerializationException(_config.Name, msgId, "Receive", ex));
-                _rpcTracker.Remove(requestId);
-                _diagnostics.RecordRpcFailed();
+                // 反序列化失败：经 Complete(Failed) 统一移除 + 计入 RpcsFailed
+                _rpcTracker.Complete(requestId, RpcOutcome.Failed,
+                    r => r.Tcs.TrySetException(new SerializationException(_config.Name, msgId, "Receive", ex)));
                 return;
             }
 
-            rpc.Tcs.TrySetResult(response);
-            _rpcTracker.Remove(requestId);
-            _diagnostics.RecordRpcCompleted();
+            // 正常完成：经 Complete(Completed) 统一移除 + 计入 RpcsCompleted
+            _rpcTracker.Complete(requestId, RpcOutcome.Completed,
+                r => r.Tcs.TrySetResult(response));
         }
 
         private void AppendRecv(ReadOnlyMemory<byte> data)
@@ -694,8 +697,8 @@ namespace TEngine
             MessageTrace trace = MessageTrace.Create(_sendSeq, MessageDirection.Send, packet.Length);
             if (!_interceptors.ProcessSending(msgId, ref packet, in trace))
             {
-                _rpcTracker.Remove(requestId);
-                _diagnostics.RecordRpcFailed();
+                // 拦截器拒绝：经 Complete(Aborted) 统一移除 + 计入 RpcsFailed；不完成 TCS（异常直接抛给调用方）
+                _rpcTracker.Complete(requestId, RpcOutcome.Aborted, null);
                 throw new RpcAbortException(_config.Name, msgId, requestId, "Blocked by interceptor");
             }
 
@@ -729,7 +732,14 @@ namespace TEngine
 
         private void SendPing()
         {
-            // PingMonitor 回调：发 PingRequest。阶段3 实现。
+            // Ping 往返尚未实现：PingEnabled 时仅 warning 一次告知，不抛不崩（修 L2）。
+            // 注：SendPing 为 PingMonitor 的 private 内部回调，不受 interface-contract「未实现抛 NotSupportedException」契约约束
+            // （该契约仅管 INetworkConnection 公共方法）。
+            if (_diagnostics.PingEnabled && !_pingNotImplementedWarned)
+            {
+                _pingNotImplementedWarned = true;
+                Debug.LogWarning($"[{_config.Name}] Ping 往返尚未实现，PingEnabled 已忽略。");
+            }
         }
 
         private void SendControlPacket(ushort msgId, byte[] payload)

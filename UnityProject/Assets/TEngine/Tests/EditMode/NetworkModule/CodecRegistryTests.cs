@@ -61,6 +61,21 @@ namespace TEngine.Tests
 
             Assert.IsInstanceOf<FakeScannedCodec>(codec);
         }
+
+        // EnsureInitialized 后扫描已完成；后续 Get 不再触发同步扫描（修 M9：扫描迁移到启动期）。
+        [Test]
+        public void EnsureInitialized_ScanOnce_GetDoesNotRescan()
+        {
+            CodecRegistry.ResetForTests();
+
+            CodecRegistry.EnsureInitialized();
+            Assert.AreEqual(1, CodecRegistry.ScanCount, "EnsureInitialized 应触发一次扫描");
+
+            CodecRegistry.Register<FakeManualCodec>(CodecType.MessagePack);
+            CodecRegistry.Get(CodecType.MessagePack);
+
+            Assert.AreEqual(1, CodecRegistry.ScanCount, "Get 不应再次触发扫描");
+        }
     }
 
     // ---- 顶级 fixtures：Assembly.GetTypes() 能扫到，Activator.CreateInstance 能实例化 ----

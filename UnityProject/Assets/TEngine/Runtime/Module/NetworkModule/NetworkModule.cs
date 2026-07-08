@@ -48,8 +48,8 @@ namespace TEngine
         /// <inheritdoc />
         public override void OnInit()
         {
-            // CodecRegistry.Get 时由 EnsureInitialized 自动 Scan 注册 [CodecProvider]，
-            // 此处无需显式调用。
+            // 启动期固定全程序集扫描注册 [CodecProvider]，避免运行期首次建连卡帧（修 M9）。
+            CodecRegistry.EnsureInitialized();
         }
 
         /// <inheritdoc />
