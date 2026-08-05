@@ -1,0 +1,17 @@
+{
+    "name": "TEngine.Tests.RedDotModule",
+    "rootNamespace": "TEngine.Tests.RedDot",
+    "references": [
+        "GameLogic"
+    ],
+    "includePlatforms": ["Editor"],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": true,
+    "precompiledReferences": ["nunit.framework.dll"],
+    "autoReferenced": false,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false,
+    "optionalUnityReferences": ["TestAssemblies"]
+}
