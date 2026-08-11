@@ -6,7 +6,7 @@
 
 - **DAG 架构**：支持多父节点（菱形依赖 A→B, A→C, B→D, C→D），内置环检测
 - **多状态红点**：普通 / 数量 / 新 / 满（位掩码 + 优先级，自动取最高）
-- **MVE 接入**：每个节点一个 `BindableProperty<RedDotNodeState>`，UIWidget `Bind()` 自动刷新
+- **MVE 接入**：每个节点一个 `BindableProperty<RedDotNodeState>`，UIWindow `Bind()` 自动刷新
 - **脏传播 + 帧末批处理**：标脏 BFS 向上传播，`ILateUpdate` 帧末统一刷新，避免中间态抖动
 - **动态叶子增删**：列表项红点（邮件/任务/商品）运行时增删，对象池复用，软删除不触发全图重映射
 - **配置驱动**：JSON 配置红点树结构（编辑器导出，见阶段 5）
@@ -26,7 +26,6 @@ Core/                    纯逻辑层（移植自 fermsi，几乎零 Unity 依�
 RedDotNodeState.cs       readonly struct（Status + Count，接入 MVE）
 RedDotNode.cs            节点门面（持 BindableProperty）
 RedDotSystem.cs          Singleton<RedDotSystem> + ILateUpdate（对门外壳）
-RedDotWidget.cs          UIWidget 组件（挂在 prefab 自动刷新）
 ```
 
 ## 快速上手
@@ -55,12 +54,12 @@ RedDotWidget.cs          UIWidget 组件（挂在 prefab 自动刷新）
 ### 2. 初始化
 
 ```csharp
-// 在游戏启动时（如 GameApp.StartGameLogic）
+// 在游戏启动时（如 Procedure 的 OnEnter 或 GameApp.StartGameLogic）
 var sys = RedDotSystem.Instance;
 
-// 加载配置
-sys.LoadJsonAsset("Assets/AssetRaw/Config/reddot");  // 走资源系统
-// 或 sys.LoadJsonText(jsonString);
+// 加载配置（异步，遵循异步优先红线）
+await sys.LoadJsonAssetAsync("Assets/AssetRaw/Config/reddot");  // 走资源系统
+// 或 sys.LoadJsonText(jsonString);  // 直接加载文本（测试/内嵌配置）
 
 // 注册叶子逻辑（externalId 对应配置里的值）
 sys.RegLogic(1, (out RedDotStatus s, out int n) =>
@@ -74,24 +73,24 @@ sys.RegLogic(1, (out RedDotStatus s, out int n) =>
 sys.RefreshAll();
 ```
 
-### 3. UI 绑定（RedDotWidget）
+### 3. UI 绑定（MVE 直接 Bind 模式）
 
-在 prefab 上挂 `RedDotWidget` 组件：
-- `RedDot Key`：填配置里的 key（如 `Root.Mail`）
-- `Dot Obj`：拖入红点 GameObject（显隐控制）
-- `Num Text`：拖入 TMP 数字文本（可选，仅 Number 状态显示）
+在 UIWindow/UIWidget 的 `SetupBindings()` 里，对每个红点节点调用 `Bind(node.State, callback)`：
 
-刷新全自动：状态变化时 MVE 的 `BindableProperty` 触发回调，UIWidget 销毁时绑定自动解除。
+```csharp
+protected override void SetupBindings() {
+    var node = RedDotSystem.Instance.GetNode("Root.Mail");
+    if (node == null) return;
+    Bind(node.State, state => {
+        m_dotObj.SetActive(state.IsActive);
+        if (state.Status == RedDotStatus.Number && state.Count > 0) {
+            m_numText.text = state.Count > 99 ? "99+" : state.Count.ToString();
+        }
+    });
+}
+```
 
-> 手动绑定（不用 RedDotWidget）：
-> ```csharp
-> protected override void SetupBindings() {
->     var node = RedDotSystem.Instance.GetNode("Root.Mail");
->     Bind(node.State, state => {
->         m_dotObj.SetActive(state.IsActive);
->     });
-> }
-> ```
+刷新全自动：状态变化时 MVE 的 `BindableProperty` 触发回调，UIWindow 销毁时 `RemoveAllBindings` 自动解除绑定。这与 TEngine LoginUI 的 MVE 范式一致（参见 Demo `RedDotDemoUI.BindRedDotNode`）。
 
 ### 4. 触发刷新
 
@@ -136,12 +135,12 @@ RedDotSystem.Instance.MarkDirty("Root.Mail.Item", mailId);
 
 | 方法 | 说明 |
 |------|------|
-| `LoadJsonText/LoadJsonAsset/LoadJsonAssetAsync` | 加载红点树配置 |
-| `RegLogic(id, delegate)` | 注册叶子判断逻辑 |
+| `LoadJsonText(json)` / `LoadJsonAssetAsync(location)` | 加载红点树配置（文本 / 异步资源） |
+| `RegLogic(id, delegate)` | 注册叶子判断逻辑（带 id / 不带 id 两版重载） |
 | `GetNode(key)` | 获取节点门面（含 `BindableProperty<RedDotNodeState> State`） |
 | `MarkDirty(key)` / `MarkDirty(key, id)` | 标记数据变更（触发脏传播 + 帧末刷新） |
 | `RefreshAll()` | 全量刷新（配置加载后调用） |
-| `AddLeaf/RemoveLeaf/ClearLeavesUnder` | 动态叶子增删 |
+| `AddLeaf/RemoveLeaf/ClearLeavesUnder` | 动态叶子增删（列表项红点） |
 | `AddIdListener/RemoveIdListener` | 带 id 的列表项红点订阅 |
 
 ## 关键设计点
@@ -186,7 +185,7 @@ EditMode 测试 43 例（全通过），覆盖：
    - 从父节点 OutPort("子节点") 拖线到子节点 InPort 建立父子关系（自动环检测）
 4. **管理 Key/逻辑ID**：工具栏 `Key设置` / `逻辑ID设置` 打开字典管理窗口（增删条目、生成枚举代码）
 5. **保存**：`保存` 按钮写回 `.reddotgraph`
-6. **导出运行时配置**：`导出红点配置` 按钮生成 `.json`，运行时用 `LoadJsonAsset` 加载
+6. **导出运行时配置**：`导出红点配置` 按钮生成 `.json`，运行时用 `LoadJsonAssetAsync` 加载
 
 ### 编辑器架构（Editor/ 目录，独立 asmdef `GameLogic.RedDot.Editor`）
 
@@ -211,7 +210,10 @@ Editor/
 │   ├── RedDotGraphImporterEditor.cs 双击打开 + Inspector 按钮
 │   └── RedDotGraphAssetPostProcessor.cs 资产变更监听
 ├── AssetsCallback/              Create 菜单
-└── Util/                        FileUtilities / PathUtil
+├── Util/                        FileUtilities / PathUtil
+└── DemoBuilder/
+    └── RedDotDemoBuilder.cs     Demo 一键构建工具（菜单 TEngine/RedDot/Build Demo Scene，
+                                 生成 RedDotDemoUI.prefab + RedDotDemoScene.unity）
 ```
 
 > 移植说明：原 fermsi 编辑器依赖 6 个 USS/UXML 资源文件。移植版本改为**纯代码构建 UI**（VisualElement 直接构造），去掉了 USS/UXML 依赖。可选的 USS 样式（`Node.uss`/`Label.uss`）若存在会加载，缺失则用默认样式。

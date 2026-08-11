@@ -34,9 +34,7 @@ namespace Procedure
   ]
 }";
 
-        private const int LOGIC_UNREAD = 1;
-        private const int LOGIC_ANNOUNCE = 2;
-        private const int LOGIC_NEW_MAIL = 3;
+        // 叶子逻辑 ID 用 RedDotDemoLogicIds 共享常量（避免魔法数字重复）
 
         protected override void OnEnter(IFsm<IProcedureModule> procedureOwner)
         {
@@ -84,12 +82,13 @@ namespace Procedure
         {
             var sys = RedDotSystem.Instance;
 
-            // 加载内嵌配置
+            // 加载内嵌配置。checkVisitor:false 因逻辑在配置加载后才注册（下文 RegLogic），
+            // 此时 visitor 尚未就绪，校验会误报。生产中若逻辑先注册，应传 true 以校验配置笔误。
             sys.LoadJsonText(REDDOT_JSON, checkVisitor: false);
             Log.Info("[ProcedureRedDotDemo] RedDot tree loaded.");
 
             // 注册叶子逻辑 1：未读邮件数（数量型）
-            sys.RegLogic(LOGIC_UNREAD, (out RedDotStatus s, out int n) =>
+            sys.RegLogic(RedDotDemoLogicIds.Unread, (out RedDotStatus s, out int n) =>
             {
                 int count = MailDemoData.Instance.UnreadCount;
                 s = count > 0 ? RedDotStatus.Number : RedDotStatus.Null;
@@ -97,14 +96,14 @@ namespace Procedure
             });
 
             // 注册叶子逻辑 2：系统公告开关（布尔型 → Normal 红点）
-            sys.RegLogic(LOGIC_ANNOUNCE, (out RedDotStatus s, out int n) =>
+            sys.RegLogic(RedDotDemoLogicIds.Announce, (out RedDotStatus s, out int n) =>
             {
                 s = MailDemoData.Instance.HasAnnounce ? RedDotStatus.Normal : RedDotStatus.Null;
                 n = 0;
             });
 
             // 注册叶子逻辑 3：新功能邮件（带 id，每个 id 一个 New 红点）
-            sys.RegLogic(LOGIC_NEW_MAIL, (uint id, out RedDotStatus s, out int n) =>
+            sys.RegLogic(RedDotDemoLogicIds.NewMail, (uint id, out RedDotStatus s, out int n) =>
             {
                 s = RedDotStatus.New;
                 n = 0;

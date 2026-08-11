@@ -40,27 +40,26 @@ namespace GameLogic.RedDotDemo
         private const int MAX_LOG_LINES = 8;
 
         private int _newMailCounter;
-        private const int LOGIC_NEW_MAIL = 3;
 
         // ── 节点绑定 ──
         protected override void ScriptGenerator()
         {
-            // 4 行红点节点：每行有 DotObj + NumText 子节点
-            _rootDotObj = FindChild("DisplayArea/RowRoot/RedDotContainer/DotObj")?.gameObject;
-            _rootNumText = FindChildComponent<Text>("DisplayArea/RowRoot/RedDotContainer/DotObj/NumText");
-            _mailDotObj = FindChild("DisplayArea/RowMail/RedDotContainer/DotObj")?.gameObject;
-            _mailNumText = FindChildComponent<Text>("DisplayArea/RowMail/RedDotContainer/DotObj/NumText");
-            _unreadDotObj = FindChild("DisplayArea/RowUnread/RedDotContainer/DotObj")?.gameObject;
-            _unreadNumText = FindChildComponent<Text>("DisplayArea/RowUnread/RedDotContainer/DotObj/NumText");
-            _announceDotObj = FindChild("DisplayArea/RowAnnounce/RedDotContainer/DotObj")?.gameObject;
-            _announceNumText = FindChildComponent<Text>("DisplayArea/RowAnnounce/RedDotContainer/DotObj/NumText");
+            // 4 行红点节点：每行有 m_go_Dot + m_text_Num 子节点
+            _rootDotObj = FindChild("DisplayArea/RowRoot/RedDotContainer/m_go_Dot")?.gameObject;
+            _rootNumText = FindChildComponent<Text>("DisplayArea/RowRoot/RedDotContainer/m_go_Dot/m_text_Num");
+            _mailDotObj = FindChild("DisplayArea/RowMail/RedDotContainer/m_go_Dot")?.gameObject;
+            _mailNumText = FindChildComponent<Text>("DisplayArea/RowMail/RedDotContainer/m_go_Dot/m_text_Num");
+            _unreadDotObj = FindChild("DisplayArea/RowUnread/RedDotContainer/m_go_Dot")?.gameObject;
+            _unreadNumText = FindChildComponent<Text>("DisplayArea/RowUnread/RedDotContainer/m_go_Dot/m_text_Num");
+            _announceDotObj = FindChild("DisplayArea/RowAnnounce/RedDotContainer/m_go_Dot")?.gameObject;
+            _announceNumText = FindChildComponent<Text>("DisplayArea/RowAnnounce/RedDotContainer/m_go_Dot/m_text_Num");
 
-            _btnAddUnread = FindChildComponent<Button>("BtnArea/BtnAddUnread");
-            _btnReadOne = FindChildComponent<Button>("BtnArea/BtnReadOne");
-            _btnAddNewMail = FindChildComponent<Button>("BtnArea/BtnAddNewMail");
-            _btnClearNewMail = FindChildComponent<Button>("BtnArea/BtnClearNewMail");
-            _btnToggleAnnounce = FindChildComponent<Button>("BtnArea/BtnToggleAnnounce");
-            _textLog = FindChildComponent<Text>("TextLog");
+            _btnAddUnread = FindChildComponent<Button>("BtnArea/m_btn_AddUnread");
+            _btnReadOne = FindChildComponent<Button>("BtnArea/m_btn_ReadOne");
+            _btnAddNewMail = FindChildComponent<Button>("BtnArea/m_btn_AddNewMail");
+            _btnClearNewMail = FindChildComponent<Button>("BtnArea/m_btn_ClearNewMail");
+            _btnToggleAnnounce = FindChildComponent<Button>("BtnArea/m_btn_ToggleAnnounce");
+            _textLog = FindChildComponent<Text>("TextLogContainer/m_text_Log");
         }
 
         protected override void SetupBindings()
@@ -147,7 +146,7 @@ namespace GameLogic.RedDotDemo
             int id = MailDemoData.Instance.AddNewMail();
             _newMailCounter++;
             string key = $"Mail.Item.{id}";
-            RedDotSystem.Instance.AddLeaf(key, "Mail", LOGIC_NEW_MAIL, RedDotStatus.New);
+            RedDotSystem.Instance.AddLeaf(key, "Mail", RedDotDemoLogicIds.NewMail, RedDotStatus.New);
             AppendLog($"新增 New 邮件 #{_newMailCounter}（{key}），Mail 应显示 New 优先级");
         }
 

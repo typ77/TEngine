@@ -10,7 +10,7 @@ namespace GameLogic.RedDot.Editor.DemoBuilder
     /// <summary>
     /// 红点 Demo 一键构建工具。
     /// 菜单：TEngine/RedDot/Build Demo Scene
-    /// 自动生成 RedDotDemoUI.prefab + RedDotDemoScene.unity + 挂载 RedDotWidget。
+    /// 自动生成 RedDotDemoUI.prefab + RedDotDemoScene.unity。
     /// </summary>
     public static class RedDotDemoBuilder
     {
@@ -78,11 +78,11 @@ namespace GameLogic.RedDot.Editor.DemoBuilder
             btnRect.anchorMax = new Vector2(0.98f, 0.95f);
             btnRect.offsetMin = btnRect.offsetMax = Vector2.zero;
 
-            CreateButton(btnArea.transform, "BtnAddUnread", "+1 未读邮件", 0);
-            CreateButton(btnArea.transform, "BtnReadOne", "读取一封", -50);
-            CreateButton(btnArea.transform, "BtnAddNewMail", "新增 New 邮件", -100);
-            CreateButton(btnArea.transform, "BtnClearNewMail", "清空 New 邮件", -150);
-            CreateButton(btnArea.transform, "BtnToggleAnnounce", "切换公告", -200);
+            CreateButton(btnArea.transform, "m_btn_AddUnread", "+1 未读邮件", 0);
+            CreateButton(btnArea.transform, "m_btn_ReadOne", "读取一封", -50);
+            CreateButton(btnArea.transform, "m_btn_AddNewMail", "新增 New 邮件", -100);
+            CreateButton(btnArea.transform, "m_btn_ClearNewMail", "清空 New 邮件", -150);
+            CreateButton(btnArea.transform, "m_btn_ToggleAnnounce", "切换公告", -200);
 
             // 日志区（用容器+子Text结构，避免Text与Image同节点冲突）
             var logContainer = new GameObject("TextLogContainer", typeof(RectTransform));
@@ -90,7 +90,7 @@ namespace GameLogic.RedDot.Editor.DemoBuilder
             SetRect(logContainer, 0.02f, 0.02f, 0.52f, 0.35f, Vector2.zero, Vector2.zero, Vector2.zero);
             var logBg = logContainer.AddComponent<Image>();
             logBg.color = new Color(0, 0, 0, 0.4f);
-            var logText = CreateText(logContainer.transform, "TextLog", "", 14, TextAnchor.UpperLeft);
+            var logText = CreateText(logContainer.transform, "m_text_Log", "", 14, TextAnchor.UpperLeft);
             var logTextRect = logText.GetComponent<RectTransform>();
             logTextRect.anchorMin = Vector2.zero;
             logTextRect.anchorMax = Vector2.one;
@@ -139,7 +139,7 @@ namespace GameLogic.RedDot.Editor.DemoBuilder
             containerRect.offsetMin = containerRect.offsetMax = Vector2.zero;
 
             // 红点 GameObject（红圆点 Image）
-            var dotObj = new GameObject("DotObj");
+            var dotObj = new GameObject("m_go_Dot");
             dotObj.transform.SetParent(dotContainer.transform, false);
             var dotRect = dotObj.AddComponent<RectTransform>();
             dotRect.anchorMin = dotRect.anchorMax = new Vector2(0.3f, 0.5f);
@@ -151,7 +151,7 @@ namespace GameLogic.RedDot.Editor.DemoBuilder
             dotObj.SetActive(false); // 默认隐藏
 
             // 数字文本（UGUI Legacy Text，与标题/日志保持一致）
-            var numObj = new GameObject("NumText");
+            var numObj = new GameObject("m_text_Num");
             numObj.transform.SetParent(dotObj.transform, false);
             var numRect = numObj.AddComponent<RectTransform>();
             numRect.anchorMin = numRect.anchorMax = new Vector2(0.5f, 0.5f);
@@ -166,10 +166,8 @@ namespace GameLogic.RedDot.Editor.DemoBuilder
             numText.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
             numObj.SetActive(false);
 
-            // 注：不再挂 RedDotWidget 组件。RedDotDemoUI 在 SetupBindings 里
-            // 直接通过 FindChild 找到 DotObj/NumText 并用 Bind(node.State,...) 绑定。
-            // （RedDotWidget 作为独立 UIWidget 需要 UIModule 的 widget 创建流程，
-            //  在 UIWindow 子节点直接挂载不会被自动激活。）
+            // 红点显隐由 RedDotDemoUI.SetupBindings 里 Bind(node.State,...) 直接驱动，
+            // 节点引用通过 FindChild 按路径查找（m_go_Dot / m_text_Num）。
         }
 
         private static GameObject CreateButton(Transform parent, string name, string text, float yOffset)

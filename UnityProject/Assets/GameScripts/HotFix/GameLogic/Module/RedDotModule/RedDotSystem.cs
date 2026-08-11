@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using Cysharp.Threading.Tasks;
 using GameLogic.RedDot.Core;
 using UnityEngine;
 using TEngine;
@@ -110,24 +111,11 @@ namespace GameLogic.RedDot
         }
 
         /// <summary>
-        /// 从资源系统加载红点树 JSON 配置（同步）。
-        /// <para>资源需是 TextAsset，location 为资源路径（如 "Assets/AssetRaw/Config/reddot"）。</para>
-        /// </summary>
-        public void LoadJsonAsset(string location, bool checkVisitor = true)
-        {
-            var asset = GameModule.Resource.LoadAsset<TextAsset>(location);
-            if (asset == null)
-            {
-                Log.Error($"[RedDotSystem] 加载红点配置资源失败：{location}");
-                return;
-            }
-            LoadJsonText(asset.text, checkVisitor);
-        }
-
-        /// <summary>
         /// 从资源系统异步加载红点树 JSON 配置。
+        /// <para>资源需是 TextAsset，location 为资源路径（如 "Assets/AssetRaw/Config/reddot"）。</para>
+        /// <para>遵循异步优先红线：资源加载必须用 UniTask，禁止同步 LoadAsset。</para>
         /// </summary>
-        public async void LoadJsonAssetAsync(string location, bool checkVisitor = true)
+        public async UniTask LoadJsonAssetAsync(string location, bool checkVisitor = true)
         {
             var asset = await GameModule.Resource.LoadAssetAsync<TextAsset>(location);
             if (asset == null)
@@ -341,6 +329,9 @@ namespace GameLogic.RedDot
 
         /// <summary>
         /// 标记某红点（带业务 id）数据已变更。
+        /// <para>带 id 的列表项红点变化时，会同时标脏该 key 的全局维度（id=0），
+        /// 让父节点的全局聚合（如 Mail 的总未读数）也重算。
+        /// 这与原 fermsi RedDotManager.DataChange(key,id) 末尾联动 DataChange(key) 的行为一致。</para>
         /// </summary>
         public void MarkDirty(string key, uint id)
         {
@@ -349,10 +340,14 @@ namespace GameLogic.RedDot
             {
                 _dirtyKeys.Add(k);
             }
+            // 联动全局维度：带 id 的列表项变化也要触发父节点的全局（id=0）聚合重算
             if (id != 0)
             {
-                // 同时标脏无 id 维度（因 DataChange(key,id) 内部会再触发 DataChange(key)）
-                // 这里幂等加入即可
+                var globalChanged = _graph.RedDotDataChange(key);
+                foreach (var k in globalChanged)
+                {
+                    _dirtyKeys.Add(k);
+                }
             }
         }
 
@@ -411,9 +406,15 @@ namespace GameLogic.RedDot
         /// <summary>
         /// 订阅带业务 id 的红点状态变化（列表项红点）。
         /// <para>回调签名：<c>(status, value) =&gt; ...</c>。订阅时立即推送一次当前状态。</para>
+        /// <para>注意：同一 (key, id) 重复订阅会覆盖旧回调（并打 Warning）。
+        /// UI 销毁前务必调用 <see cref="RemoveIdListener"/> 解绑，避免回调持有已销毁 UI 导致泄漏。</para>
         /// </summary>
         public void AddIdListener(string key, uint id, Action<RedDotStatus, int> callback)
         {
+            if (_idCallbacks.ContainsKey((key, id)))
+            {
+                Log.Warning($"[RedDotSystem] AddIdListener 覆盖已有订阅：key={key}, id={id}（旧回调被丢弃，确认是否忘记 RemoveIdListener）");
+            }
             _idCallbacks[(key, id)] = callback;
             // 立即推送一次当前状态：先标脏确保 visitor 被调用（首次订阅时节点可能未脏）
             _graph.RedDotDataChange(key, id);

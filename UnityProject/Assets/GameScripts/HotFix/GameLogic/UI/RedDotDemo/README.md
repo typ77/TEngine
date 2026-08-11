@@ -33,7 +33,7 @@ Root (聚合, Number)                              ← 总未读数
 |------|------|-------------|
 | **+1 未读邮件** | `UnreadCount++` + `MarkDirty("Mail.Unread")` | Root/Mail/Mail.Unread 数字 +1 |
 | **读取一封** | `UnreadCount--` + `MarkDirty("Mail.Unread")` | 数字 -1（到 0 红点消失）|
-| **新增 New 邮件** | `AddLeaf("Mail.Item.N","Mail",3,New)` | Mail 切换为 **New** 状态（红点无数字）|
+| **新增 New 邮件** | `AddLeaf("Mail.Item.N","Mail",RedDotDemoLogicIds.NewMail,New)` | Mail 切换为 **New** 状态（红点无数字）|
 | **清空 New 邮件** | `ClearLeavesUnder("Mail")` | Mail 回到 Number 状态 |
 | **切换公告** | `HasAnnounce` toggle + `MarkDirty("Mail.Announce")` | Mail.Announce 红点显隐 |
 
@@ -49,7 +49,7 @@ Assets/
     └── HotFix/GameLogic/UI/RedDotDemo/
         ├── MailDemoData.cs                # 模拟邮件数据（Singleton）
         ├── RedDotDemoUI.cs                # 主界面（[Window]，4 红点绑定 + 5 按钮）
-        ├── RedDotDemoBoot.cs              # MonoBehaviour 入口（备选方案，未使用）
+        ├── RedDotDemoLogicIds.cs          # 叶子逻辑 ID 共享常量（Unread/Announce/NewMail）
         └── README.md                      # 本文档
 
 Assets/GameScripts/HotFix/GameLogic/Module/RedDotModule/Editor/DemoBuilder/
@@ -65,13 +65,13 @@ Assets/GameScripts/HotFix/GameLogic/Module/RedDotModule/Editor/DemoBuilder/
 ```
 场景加载 → GameEntry 启动 → ProcedureSystem 用 ProcedureSetting_RedDot
   → ProcedureRedDotDemo.OnEnter
-    → 初始化 YooAsset 资源包
+    → 初始化 YooAsset 资源包（InitPackage + 版本 + 清单）
     → RedDotSystem.Instance
-      → LoadJsonText(内嵌JSON)
-      → RegLogic(3个叶子逻辑)
-      → RefreshAll()           ← 计算初始红点状态
+      → LoadJsonText(内嵌JSON)           ← 加载红点树结构
+      → RegLogic(Unread/Announce/NewMail) ← 注册 3 个叶子逻辑（用 RedDotDemoLogicIds）
+      → RefreshAll()                     ← 计算初始红点状态
     → ShowUIAsync<RedDotDemoUI>()
-      → RedDotDemoUI.SetupBindings  ← Bind(node.State,...) 订阅 4 个红点节点
+      → RedDotDemoUI.SetupBindings       ← Bind(node.State,...) 订阅 4 个红点节点
       → MVE 自动刷新 UI 显隐
 ```
 
