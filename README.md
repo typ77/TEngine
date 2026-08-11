@@ -36,12 +36,13 @@
 | 1 | Timer 模块重写 | 🔄 重写 | 线性遍历→最小堆，解决多定时器性能瓶颈 |
 | 2 | UI 数据绑定 | 🆕 新增 | 手动 OnRefresh→响应式自动刷新，零外部依赖 |
 | 3 | 框架质量加固 | 🔧 修复 | 事件异常隔离+资源泄漏防护+线程安全 |
-| 4 | 测试体系 | 🆕 新增 | 124 个 EditMode 用例覆盖五大模块 |
+| 4 | 测试体系 | 🆕 新增 | 167 个 EditMode 用例覆盖六大模块 |
 | 5 | FancyScrollView 列表系统 | 🔄 重写 | 开源列表组件 UIWidget/MVE 化 + ScriptGenerator 自动生成 |
+| 6 | 红点系统 | 🆕 新增 | DAG 架构红点提示，MVE 自动刷新 + 可视化图编辑器 |
 
 📖 **详细说明**：[二次修改说明](Books/4-二次修改说明.md)
 
-**现状**：✅ 完成，124 个 EditMode 用例
+**现状**：✅ 完成，167 个 EditMode 用例
 
 ---
 
@@ -324,6 +325,7 @@ sequenceDiagram
 | 📊 **配置表模块** | [3-6-配置表模块](Books/3-6-配置表模块.md) | Luban 配置表系统 |
 | 🔄 **流程模块** | [3-7-流程模块](Books/3-7-流程模块.md) | 商业化启动流程 |
 | 🌐 **网络模块** | [3-8-网络模块](Books/3-8-网络模块.md) | 网络通信模块 |
+| 🔴 **红点模块** | [3-9-红点模块](Books/3-9-红点模块.md) | DAG 架构红点提示系统，MVE 自动刷新（新增）|
 
 ---
 
@@ -382,6 +384,15 @@ sequenceDiagram
 - ✅ MVE 四层架构：Model → Service → DataContext → View
 - ✅ 零外部依赖，纯 C# 实现，与现有 OnRefresh / GameEvent 共存
 
+### 红点模块 (RedDotModule) 🆕
+
+- ✅ DAG（有向无环图）架构，支持多父节点（菱形依赖），内置环检测
+- ✅ 多状态红点（普通/数量/新/满）+ 优先级自动取最高
+- ✅ MVE 接入：每个节点一个 `BindableProperty<RedDotNodeState>`，UIWindow `Bind()` 自动刷新
+- ✅ 标脏 BFS 传播 + ILateUpdate 帧末批处理，避免中间态抖动
+- ✅ 动态叶子增删（列表项红点），软删除 + 对象池，不触发全图重映射
+- ✅ GraphView 可视化图编辑器，JSON 配置驱动
+
 ---
 
 ## 📁 项目结构
@@ -414,6 +425,7 @@ Assets/
             ├── GameApp.cs                  # 热更主入口
             ├── GameApp_RegisterSystem.cs   # 热更主入口注册系统
             ├── Module/DataBinding/         # 数据绑定模块 🆕
+            ├── Module/RedDotModule/        # 红点系统模块 🆕
             └── UI/LoginUI/                 # MVE 四层架构示例 🆕
                 ├── LoginModel.cs           # 纯数据层
                 ├── LoginService.cs         # 业务操作层
