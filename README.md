@@ -38,7 +38,7 @@
 | 3 | 框架质量加固 | 🔧 修复 | 事件异常隔离+资源泄漏防护+线程安全 |
 | 4 | 测试体系 | 🆕 新增 | 167 个 EditMode 用例覆盖六大模块 |
 | 5 | FancyScrollView 列表系统 | 🔄 重写 | 开源列表组件 UIWidget/MVE 化 + ScriptGenerator 自动生成 |
-| 6 | 红点系统 | 🆕 新增 | DAG 架构红点提示，MVE 自动刷新 + 可视化图编辑器 |
+| 6 | 红点系统 | 🆕 新增 | DAG 架构六态红点（RedDotGraph），帧绑定回调 + 动态节点 + 可视化图编辑器 |
 
 📖 **详细说明**：[二次修改说明](Books/4-二次修改说明.md)
 
@@ -57,7 +57,7 @@
 - 🧩 **高内聚低耦合** - 模块化设计，可轻松移除或替换不需要的模块
 - 🔄 **热更新支持** - 集成 HybridCLR，全平台热更新流程已跑通
 - 📦 **资源管理** - 集成 YooAsset，支持 LRU、ARC 缓存策略，自动资源释放
-- 📊 **配置表系统** - 集成 Luban，支持懒加载、异步加载、同步加载
+- 📊 **配置表系统** - 自研 Excel 导表（Custom Config），行级懒加载、共享缓存去重、多语言一体化
 - 🎨 **UI 框架** - 商业化 UI 开发流程，支持代码自动生成 + 响应式数据绑定
 - 🌍 **全平台支持** - Windows、Android、iOS、WebGL、微信小游戏等
 
@@ -322,10 +322,10 @@ sequenceDiagram
 | 🎮 **对象池模块** | [3-4-对象池模块](Books/3-4-对象池模块.md) | 游戏对象池管理 |
 | 🎨 **UI 模块** | [3-5-UI模块](Books/3-5-UI模块.md) | 商业化 UI 框架，支持代码生成 |
 | 🔗 **UI 数据绑定** | [UI数据绑定](UnityProject/repowiki/zh/content/UI系统/UI数据绑定.md) | 响应式数据绑定系统（新增） |
-| 📊 **配置表模块** | [3-6-配置表模块](Books/3-6-配置表模块.md) | Luban 配置表系统 |
+| 📊 **配置表模块** | [3-6-配置表模块](Books/3-6-配置表模块.md) | 自研 Excel 配置表（含 Custom 与 Luban 横向对比） |
 | 🔄 **流程模块** | [3-7-流程模块](Books/3-7-流程模块.md) | 商业化启动流程 |
 | 🌐 **网络模块** | [3-8-网络模块](Books/3-8-网络模块.md) | 网络通信模块 |
-| 🔴 **红点模块** | [3-9-红点模块](Books/3-9-红点模块.md) | DAG 架构红点提示系统，MVE 自动刷新（新增）|
+| 🔴 **红点模块** | [3-9-红点模块](Books/3-9-红点模块.md) | DAG 架构六态红点提示系统，帧绑定回调 + 动态节点（新增）|
 
 ---
 
@@ -360,10 +360,12 @@ sequenceDiagram
 
 ### 配置表模块 (ConfigSystem)
 
-- ✅ 集成 Luban 配置表解决方案
-- ✅ 支持懒加载、异步加载、同步加载
-- ✅ 强大的数据校验能力
-- ✅ 完善的本地化支持
+- ✅ 自研 Excel 导表方案（Custom Config）：Excel → C# 代码 + 自定义二进制，零第三方工具依赖
+- ✅ 行级懒加载 + miss 负缓存：启动只建索引，单行查询 O(1) 零 GC
+- ✅ 共享缓存去重：字段重复率 ≥8% 自动启用，大表内存占用显著降低
+- ✅ 多语言一体化：列级 `l` 标记自动收集 → 多语言表 → `GetLanguageString` 还原
+- ✅ 免反射建表注册 + 组合索引 + Bytes 调试查看器
+- ✅ 数据校验：类型/主键/标识符/复合对象格式，错误定位到行列
 
 ### 流程模块 (ProcedureModule)
 
@@ -384,14 +386,14 @@ sequenceDiagram
 - ✅ MVE 四层架构：Model → Service → DataContext → View
 - ✅ 零外部依赖，纯 C# 实现，与现有 OnRefresh / GameEvent 共存
 
-### 红点模块 (RedDotModule) 🆕
+### 红点模块 (RedDotGraph) 🆕
 
 - ✅ DAG（有向无环图）架构，支持多父节点（菱形依赖），内置环检测
-- ✅ 多状态红点（普通/数量/新/满）+ 优先级自动取最高
-- ✅ MVE 接入：每个节点一个 `BindableProperty<RedDotNodeState>`，UIWindow `Bind()` 自动刷新
-- ✅ 标脏 BFS 传播 + ILateUpdate 帧末批处理，避免中间态抖动
-- ✅ 动态叶子增删（列表项红点），软删除 + 对象池，不触发全图重映射
-- ✅ GraphView 可视化图编辑器，JSON 配置驱动
+- ✅ 六态红点（红点/蓝点/红数字/蓝数字/新/满），覆盖优先级（满>红点>蓝点>红数字>蓝数字>新）权威集中在 RedDotStatusRules
+- ✅ 帧绑定回调模型：AddFrame/ChangeToFrame + AddUI 注册即回放，Immediate/Batched 双刷新模式（Batched 帧驱动削峰）
+- ✅ 业务接入收口：RedDotKeys 常量表（生成物）+ RedDotGraphModule（checker 注册/报脏/UI 绑定/门控），RedDotWidget 六态渲染组件
+- ✅ 动态节点（活动期次等列表项红点，幂等注册/挂父重放/父链补发）、SetNodeEnabled 门控、配置未就绪缓冲重放
+- ✅ GraphView 可视化图编辑器（分组子图/双轴校验/Keys 生成器/导出门禁），JSON 配置驱动
 
 ---
 
@@ -409,6 +411,7 @@ Assets/
 │   ├── Effects/          # 特效资源
 │   └── Scenes/           # 场景资源
 ├── Editor/               # 编辑器脚本目录
+│   └── RedDotGraph/      # 红点图编辑器（GraphView/分组子图/Keys 生成器/DemoBuilder）🆕
 ├── HybridCLRData/        # HybridCLR 相关目录
 ├── Scenes/               # 主场景目录
 ├── TEngine/              # 框架核心目录
@@ -425,7 +428,8 @@ Assets/
             ├── GameApp.cs                  # 热更主入口
             ├── GameApp_RegisterSystem.cs   # 热更主入口注册系统
             ├── Module/DataBinding/         # 数据绑定模块 🆕
-            ├── Module/RedDotModule/        # 红点系统模块 🆕
+            ├── Module/RedDotGraph/         # 红点系统模块 🆕（Runtime/RedDot + RedDotGraphModule）
+            ├── System/Common/              # RedDotWidget/RedDotKeyBinder 红点业务组件 🆕
             └── UI/LoginUI/                 # MVE 四层架构示例 🆕
                 ├── LoginModel.cs           # 纯数据层
                 ├── LoginService.cs         # 业务操作层
@@ -467,7 +471,7 @@ Assets/
 
 ### 2. 商业级解决方案
 - ✅ 严格按照商业要求使用次世代的 **HybridCLR** 进行热更新
-- ✅ 最佳的 **Luban** 配置表（支持懒加载、异步加载、同步加载）
+- ✅ 最佳的 **自研 Excel 配置表**（行级懒加载、共享缓存去重、多语言一体化，含与 Luban 的选型对比）
 - ✅ 百万 DAU 游戏验证过的 **YooAsset** 资源框架
 - ✅ 全平台热更新流程已跑通
 
