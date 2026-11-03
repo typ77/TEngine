@@ -14,6 +14,10 @@
 # Asset meta data should only be ignored when the corresponding asset is also ignored
 !/[Aa]ssets/**/*.meta
 
+#截图目录（本地临时）连同其 meta 一并忽略
+/[Aa]ssets/Screenshots
+/[Aa]ssets/Screenshots.meta
+
 # Uncomment this line if you wish to ignore the asset store tools plugin
 # /[Aa]ssets/AssetStoreTools*
 
