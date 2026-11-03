@@ -40,6 +40,8 @@ public partial class GameApp
         await ConfigSystem.Instance.InitLanguage();
         //配置初始化
         await ConfigSystem.Instance.InitConfig(null);
+        //红点图初始化（EnsureStarted 幂等：首启激活；重登/切号再调即全量重建）
+        RedDotGraphModule.Instance.EnsureStarted();
         // GameEvent.Get<ILoginUI>().ShowLoginUI();
         GameModule.UI.ShowUIAsync<LoginUI>();
     }

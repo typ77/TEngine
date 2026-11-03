@@ -727,7 +727,7 @@ namespace RedDot.Runtime.RedDot
         /// (状态按全序取高、数字态 Value 累加、mask 过滤)。业务一行接入,替代隐式 WithId delegate 契约。
         /// 路由(P6 审核 I-1):节点配置了 externalId 时,聚合 checker 注册到该 externalId 的无 id 槽位——
         /// Visit 对 id=0 优先查无 id 表、id≠0 走业务 WithId 表,per-id 路由不受影响;
-        /// externalId=-1 的节点分配系统段 id(负数段自 -1000001 递减,见 integration-guide §6),该类节点不可再挂 per-id checker。
+        /// externalId=-1 的节点分配系统段 id(负数段自 -1000001 递减),该类节点不可再挂 per-id checker。
         /// R1(审查 2026-09-12):cell 态获取分两路——有业务 WithId checker 的节点逐 cell 现算
         /// (读缓存会因 per-id 只在被读/绑定时刷新而读到陈旧 Null,"列表未打开时新邮件角标不亮");
         /// externalId=-1 系统段直写节点保持读 runtime info 缓存契约。单 cell checker 异常隔离为该 cell 记 Null。
@@ -756,7 +756,7 @@ namespace RedDot.Runtime.RedDot
                 {
                     //无配置节点:分配系统段 id 并覆写 ExternalId(刷新路由门控在 ExternalId != -1),
                     //该类节点不可再挂 per-id checker,cell 态须业务直写 runtime info。
-                    //K批2:系统段=负数段自 -1000001 递减,与正数配置空间结构性隔离(原 95000 正数段已废,见 integration-guide §6)
+                    //K批2:系统段=负数段自 -1000001 递减,与正数配置空间结构性隔离(原 95000 正数段已废)
                     extId = --s_summarizeExtIdSeed;
                     v.ExternalId = extId;
                 }

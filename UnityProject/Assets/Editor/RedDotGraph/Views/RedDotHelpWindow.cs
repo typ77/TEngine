@@ -6,7 +6,7 @@ using UnityEngine;
 namespace RedDot.Editor.Views
 {
     /// <summary>
-    /// 红点编辑器使用说明窗(K批9 2026-09-17):工具栏"使用说明"或菜单 Tools/红点系统/使用说明 打开。
+    /// 红点编辑器使用说明窗(K批9 2026-09-17):由红点编辑器工具栏"使用说明"按钮打开。
     /// 纯静态富文本文档,与图数据无交互;内容改这里一处即可。
     /// </summary>
     public class RedDotHelpWindow : EditorWindow

@@ -253,6 +253,30 @@ namespace TEngine.Editor.ExcelTool
                         }
                     }
                     break;
+                case SupportType.Vector4:
+                case SupportType.Vector4Full:
+                    {
+                        if (value == null)
+                            byteBuf.WriteVector4(default(System.Numerics.Vector4));
+                        else
+                        {
+                            var v = (Vector4)value;
+                            byteBuf.WriteVector4(new System.Numerics.Vector4(v.x, v.y, v.z, v.w));
+                        }
+                    }
+                    break;
+                case SupportType.Quaternion:
+                case SupportType.QuaternionFull:
+                    {
+                        if (value == null)
+                            byteBuf.WriteQuaternion(default(System.Numerics.Quaternion));
+                        else
+                        {
+                            var q = (Quaternion)value;
+                            byteBuf.WriteQuaternion(new System.Numerics.Quaternion(q.x, q.y, q.z, q.w));
+                        }
+                    }
+                    break;
                 default:
                     if (value == null)
                     {

@@ -73,6 +73,13 @@ public class ConfigSystem
                 {
                     continue;
                 }
+                // Configs tag 下可能混入非配置表资产（如红点图 RedDotGraphConfig.json，由红点模块按地址自行加载），
+                // 配置表产物固定为 *.bytes，非 bytes 直接跳过，避免误扫与"未找到配置表类型"噪音告警
+                if (string.IsNullOrEmpty(info.AssetPath) ||
+                    !info.AssetPath.EndsWith(".bytes", StringComparison.OrdinalIgnoreCase))
+                {
+                    continue;
+                }
                 handles.Add(ResourceModule.LoadAssetAsync<TextAsset>(info.Address));
             }
         }

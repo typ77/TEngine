@@ -36,42 +36,6 @@ namespace TEngine.Editor.ExcelTool
             _compoundIndexes = compoundIndexes;
         }
 
-        public ScriptGenerator(string inputPath, TableDefinition tableDef,
-                               List<FieldSharedCacheInfo> sharedCacheInfos)
-            : this(inputPath, tableDef.ClassName, ConvertToConfigDataList(tableDef.Rows, tableDef.PrimaryKey?.Type?.PrimitiveName ?? "int"),
-                   sharedCacheInfos, tableDef.PrimaryKey?.Type?.PrimitiveName ?? "int",
-                   tableDef.CompoundIndexes)
-        {
-        }
-
-        private static List<ConfigData[]> ConvertToConfigDataList(List<TableRow> rows, string primaryKeyType)
-        {
-            var result = new List<ConfigData[]>();
-            foreach (var row in rows)
-            {
-                var configs = new List<ConfigData>();
-                // 首先添加主键
-                configs.Add(new ConfigData
-                {
-                    Type = primaryKeyType,
-                    Name = "Id",
-                    Data = row.PrimaryKey
-                });
-                // 添加其余字段
-                foreach (var (fieldName, fieldValue) in row.Fields)
-                {
-                    configs.Add(new ConfigData
-                    {
-                        Type = fieldValue.TypeDescriptor?.PrimitiveName ?? "str",
-                        Name = fieldName,
-                        Data = fieldValue.RawText
-                    });
-                }
-                result.Add(configs.ToArray());
-            }
-            return result;
-        }
-
         public string CreateCodeV2(string templateContent)
         {
             // 1. Process key type (##TKey##)
@@ -342,6 +306,10 @@ namespace TEngine.Editor.ExcelTool
             {
                 case SupportType.Bool:
                     return "byteBuf.ReadBool()";
+                case SupportType.Byte:
+                    return "byteBuf.ReadByte()";
+                case SupportType.UShort:
+                    return "(ushort)byteBuf.ReadShort()";
                 case SupportType.Int:
                 case SupportType.LanguageType:
                     return "byteBuf.ReadInt()";

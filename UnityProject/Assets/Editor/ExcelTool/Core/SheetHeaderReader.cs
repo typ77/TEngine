@@ -98,6 +98,12 @@ namespace TEngine.Editor.ExcelTool
                     else
                     {
                         string cleanedValue = value.Replace(" ", "").Replace("\r", "").Replace("\n", "");
+                        if (cleanedValue != value)
+                        {
+                            // 字段名红线：含空格/换行视为书写错误，剥离后仍可用但必须大声告警，避免 Excel 侧无感知
+                            UnityEngine.Debug.LogError(
+                                $"字段名 '{value}' 含空格/换行，已自动剥离为 '{cleanedValue}'，请修正表头。File: {filePath}, Sheet: {sheetName}, Col: {col}");
+                        }
                         header.NameMap[col] = cleanedValue;
                     }
                 }
@@ -136,9 +142,12 @@ namespace TEngine.Editor.ExcelTool
                 var value = data.GetCell(row, col);
                 if (!string.IsNullOrEmpty(value))
                 {
-                    if (value.ToLower().Contains(Label_Language))
+                    var target = value.Trim().ToLower();
+                    if (target.Contains(Label_Language))
                         header.TypeMap[col] = Label_Language;
-                    if (value.ToLower().Contains(Label_Server) || BracketUtils.CheckIgnore(value))
+                    // target 语义：c=客户端、s=服务端、cs=双端；服务端专用判定必须精确匹配 s，
+                    // 不能 Contains("s")——会把双端列 cs 误判为服务端列而整列丢弃
+                    else if (target == Label_Server || BracketUtils.CheckIgnore(value))
                         header.IgnoreRows[col] = true;
                 }
             }

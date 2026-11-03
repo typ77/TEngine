@@ -7,10 +7,10 @@ using RedDot.Runtime.RedDot;
 namespace GameLogic
 {
     /// <summary>
-    /// RedDotGraph 新红点库 TEngine 集成模块(P6-1/T1)。
+    /// RedDotGraph 红点库 TEngine 集成模块(P6-1/T1)。
     /// 职责:配置加载(YooAsset TextAsset→AddJsonStr)/Provider 注册事件/单帧全局模式(P6-3/T4)/
     /// Batched 刷新帧驱动(P6-2/T9)/Release 时 Reset(P4-1)。
-    /// 与旧红点系统(RedDotSingleton)并存期互不干扰;业务迁移完成后旧系统下线。
+    /// 启动链由 GameApp.StartGameLogic 调 EnsureStarted(首启激活;重登/切号再调即全量重建)。
     /// 配置约定:编辑器导出的红点 JSON 以 YooAsset 地址 <see cref="ConfigAssetAddress"/> 入库。
     /// </summary>
     public class RedDotGraphModule : Singleton<RedDotGraphModule>, ILateUpdate
