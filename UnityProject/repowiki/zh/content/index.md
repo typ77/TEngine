@@ -44,6 +44,9 @@
 - [UI系统/UI数据绑定.md](repowiki/zh/content/UI系统/UI数据绑定.md) - MVE 数据绑定
 - [UI系统/FancyScrollView列表系统.md](repowiki/zh/content/UI系统/FancyScrollView列表系统.md) - 虚拟化列表（Cell 自动生成）
 
+**红点系统**：
+- [红点系统/红点系统.md](repowiki/zh/content/红点系统/红点系统.md) - RedDotGraph 红点系统（六态/帧绑定/分组子图/动态节点）🆕
+
 **音频系统**：
 - [音频系统/](repowiki/zh/content/音频系统/) - 音频系统
 

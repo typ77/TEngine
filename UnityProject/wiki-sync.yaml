@@ -28,6 +28,10 @@ mappings:
     wiki_path: "zh/content/核心系统/单例系统"
   - source_pattern: "Assets/GameScripts/HotFix/GameLogic/GameModule.cs"
     wiki_path: "zh/content/API参考/核心API.md"
+  - source_pattern: "Assets/GameScripts/HotFix/GameLogic/Module/RedDotGraph/**"
+    wiki_path: "zh/content/红点系统"
+  - source_pattern: "Assets/GameScripts/HotFix/GameLogic/System/Common/RedDot*"
+    wiki_path: "zh/content/红点系统"
   - source_pattern: "Assets/TEngine/Tests/**"
     wiki_path: "zh/content/开发者指南"
 

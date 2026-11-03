@@ -1,6 +1,6 @@
 ---
 name: tengine-dev
-description: TEngine Unity 游戏框架开发指导。触发词：TEngine, UIWindow, UIWidget, GameEvent, AddUIEvent, LoadAssetAsync, SetSprite, HybridCLR, YooAsset, GameModule, 热更, 资源加载, UI开发, 事件系统, 配置表, BindableProperty, DataContext, MapProperty, 数据绑定, MVE, FancyScrollView, FancySelectionContext, carrier。配置表专题见 custom-config skill（自研 Excel 导表，非 Luban）。
+description: TEngine Unity 游戏框架开发指导。触发词：TEngine, UIWindow, UIWidget, GameEvent, AddUIEvent, LoadAssetAsync, SetSprite, HybridCLR, YooAsset, GameModule, 热更, 资源加载, UI开发, 事件系统, 配置表, BindableProperty, DataContext, MapProperty, 数据绑定, MVE, FancyScrollView, FancySelectionContext, carrier, 红点, RedDot, RedDotKeys, RedDotGraphModule, RedDotWidget, checker。配置表专题见 custom-config skill（自研 Excel 导表，非 Luban）。
 ---
 
 # TEngine 开发指导
@@ -23,6 +23,7 @@ TEngine 是基于 HybridCLR + YooAsset + UniTask + 自研 Excel 配置表（Cust
 | 任务类型 | 必读文档 | 进阶文档 | 优先级 |
 |---------|---------|---------|--------|
 | UI 开发 | [ui-lifecycle.md](references/ui-lifecycle.md) | [ui-patterns.md](references/ui-patterns.md) | P0 |
+| 红点系统 | [reddot-system.md](references/reddot-system.md) | — | P0 |
 | 事件系统 | [event-system.md](references/event-system.md) | [event-antipatterns.md](references/event-antipatterns.md) | P0 |
 | MVE 数据绑定 | [mve-patterns.md](references/mve-patterns.md) | [mve-antipatterns.md](references/mve-antipatterns.md) | P0 |
 | 资源加载 | [resource-api.md](references/resource-api.md) | [resource-patterns.md](references/resource-patterns.md) | P0 |
