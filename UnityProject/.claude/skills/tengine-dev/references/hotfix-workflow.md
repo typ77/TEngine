@@ -8,10 +8,10 @@
 
 ```
 GameScripts/HotFix/
-├── GameProto/          # Luban 生成（勿手改）
+├── GameProto/          # 配置表运行时（勿手改生成物）
 │   ├── LubanLib/       # ByteBuf 等序列化库
-│   ├── GameConfig/     # Tables + 配置类
-│   └── ConfigSystem.cs # 配置加载器（需从 Luban 模板生成）
+│   ├── GameConfig/     # 导表自动生成的表类 + ConfigTableRegistry（勿手改）
+│   └── ConfigSystem.cs # 配置加载器（手写，已就位）
 │
 └── GameLogic/          # 业务逻辑（主开发区域）
     ├── GameApp.cs                  # 热更主入口（partial class）

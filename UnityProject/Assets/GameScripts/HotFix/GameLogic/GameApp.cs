@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.Reflection;
+using Cysharp.Threading.Tasks;
 using GameLogic;
 #if ENABLE_OBFUZ
 using Obfuz;
@@ -30,11 +31,15 @@ public partial class GameApp
         Log.Warning("======= Entrance GameApp =======");
         Utility.Unity.AddDestroyListener(Release);
         Log.Warning("======= StartGameLogic =======");
-        StartGameLogic();
+        StartGameLogic().Forget();
     }
-    
-    private static void StartGameLogic()
+
+    private static async UniTask StartGameLogic()
     {
+        //多语言初始化（LoginUI 等界面依赖配置表与多语言数据，需先于 UI 初始化）
+        await ConfigSystem.Instance.InitLanguage();
+        //配置初始化
+        await ConfigSystem.Instance.InitConfig(null);
         // GameEvent.Get<ILoginUI>().ShowLoginUI();
         GameModule.UI.ShowUIAsync<LoginUI>();
     }

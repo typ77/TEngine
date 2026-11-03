@@ -2,11 +2,11 @@
 UnityProject/UserSettings/Layouts/default-2021.dwlt
 UnityProject/UserSettings/Search.settings
 
-#Luban
-Tools/Luban/
-Tools/Luban.ClientServer/
-Configs/.cache.meta
-GenerateDatas/
+#ExcelTool（配置表导出工具）
+#Editor 诊断用非压缩 bytes 对比产物，不入库（Report/Generated 无缓存版类为生成物，随仓库提交）
+UnityProject/Assets/Editor/ExcelTool/Report/GeneratedBytes/
+UnityProject/Assets/**/*.tmp
+Configs/Language/*.bak
 
 #FileServer
 Tools/FileServer/AssetRoot

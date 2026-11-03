@@ -106,20 +106,18 @@
     },
     {
       "id": 7,
-      "name": "luban-config-access",
-      "description": "验证 AI 能正确通过 ConfigSystem.Instance.Tables 访问 Luban 配置，使用 Get(id) 查询和 DataList 遍历，不使用 GameModule.Resource/Resources.Load/new Tables 直接加载。",
-      "prompt": "我需要在热更代码中查询道具表（TbItem）中 id=1001 的道具配置，以及遍历所有稀有度为 Rare 的道具。请给出完整代码。",
+      "name": "custom-config-access",
+      "description": "验证 AI 能正确通过 ConfigSystem.Instance.GetConfig<T>() 访问自研 Excel 配置表，使用 GetItem(id) 单点查询，不使用 GameModule.Resource/Resources.Load/Tables 属性直接加载。",
+      "prompt": "我需要在热更代码中查询商品表（GoodsConfig）中 id=1001 的商品配置。请给出完整代码。",
       "expected_patterns": [
         "ConfigSystem.Instance",
-        "Tables",
-        "TbItem",
-        "Get(1001)",
-        "DataList"
+        "GetConfig<GoodsConfig>",
+        "GetItem(1001)"
       ],
       "forbidden_patterns": [
         "GameModule.Resource",
         "Resources.Load",
-        "new Tables"
+        "ConfigSystem.Instance.Tables"
       ]
     },
     {

@@ -1,6 +1,6 @@
 # TEngine 常见问题排障
 
-> **适用场景**：编译报错/热更失败/资源加载失败/UI 不显示/事件无响应/性能问题/Luban 配置问题排查 | **关联文档**：[resource-api.md](resource-api.md)、[event-system.md](event-system.md)、[hotfix-workflow.md](hotfix-workflow.md)
+> **适用场景**：编译报错/热更失败/资源加载失败/UI 不显示/事件无响应/性能问题/配置表问题排查 | **关联文档**：[resource-api.md](resource-api.md)、[event-system.md](event-system.md)、[hotfix-workflow.md](hotfix-workflow.md)
 
 > 解决新问题后记录到 `.claude/memory/problem_YYYY-MM-DD.md`
 
@@ -15,7 +15,7 @@
 | UI | 界面空白、Widget 复用异常、事件销毁后触发、生命周期签名错误 |
 | 事件 | 接口事件无响应、监听收不到、UnRegisterAll 不存在 |
 | 内存/性能 | GC 频繁、启动慢、DrawCall 高 |
-| Luban | 生成报错、Tables 为 null、ConfigSystem 找不到 |
+| 配置表 | 导表失败、GetConfig/GetItem 为 null、多语言读空 |
 | UniTask | 异常被吞、await 后对象为 null |
 
 ---
@@ -117,21 +117,22 @@ Frame Debugger 查看合批。UI 同 Atlas 同 Canvas、3D 用 GPU Instancing/St
 
 ---
 
-### Luban 问题
+### 配置表问题（Custom 导表）
 
-#### 生成报错
+#### 导表失败 / 生成报错
 
-Excel 第2行类型拼写正确（`int`/`string`/`float`，区分大小写）；数组用英文逗号；Bean 先在 `__beans__.xlsx` 定义；`value_type` 与 Bean 类型名一致。
+弹窗提示失败时详情看 Console：单元格类型与 `##lb-keys##` 声明不符、字段名含空格/特殊字符、RewardObject 等复合对象元素数不满足。表头规范见 custom-config skill。
 
-#### Tables 为 null
+#### GetConfig 返回 null
 
-1. `ConfigSystem.Instance.Load()` 已在 `ProcedurePreload` 后调用
-2. `.bytes` 在 `AssetRaw/Configs/bytes/` 且 YooAsset 已收集
-3. 数据文件有 `PRELOAD` 标签
+1. `ConfigSystem.Instance.InitConfig` 已在 `GameApp.StartGameLogic` 执行且完成（`m_tableCache` 就绪前返回 null 属正常时序）
+2. `.bytes` 在 `AssetRaw/Configs/Bytes/` 且被 YooAsset Configs 组收集（tag `Configs`）
+3. 表类名 = `{sheet}Config`，与 bytes 文件名一致；新表需重新导表更新 `ConfigTableRegistry.cs`
 
-#### ConfigSystem.cs 找不到
+#### GetItem 返回 null / 多语言读空
 
-`ConfigSystem.cs` 不在 Assets 默认目录中，需从 Luban CustomTemplate 模板生成。详见 [luban-config.md](luban-config.md)。
+- key 确实缺失（首次会 Log.Error，之后走负缓存）
+- 多语言为空：`Language_*.bytes` 未生成或语言枚举名不匹配（`Language_{枚举名}`），见 custom-config skill 排障表
 
 ---
 
@@ -208,5 +209,5 @@ GameEvent.UnRegisterAll();    // 编译错误：GameEvent 无此方法
 - 事件系统见 [event-system.md](event-system.md)
 - 资源加载见 [resource-api.md](resource-api.md)
 - 热更开发见 [hotfix-workflow.md](hotfix-workflow.md)
-- Luban 配置见 [luban-config.md](luban-config.md)
+- 配置表见 custom-config skill（`../custom-config/SKILL.md`）
 - 架构总览见 [architecture.md](architecture.md)

@@ -58,7 +58,11 @@
 - [流程管理/自定义流程开发.md](repowiki/zh/content/流程管理/自定义流程开发.md) - 自定义流程
 
 **配置系统**：
-- [配置系统/](repowiki/zh/content/配置系统/) - 配置系统（Luban）
+- [配置系统/配置系统.md](repowiki/zh/content/配置系统/配置系统.md) - 配置系统总览（自研 Excel 方案）
+- [配置系统/配置表定义规范.md](repowiki/zh/content/配置系统/配置表定义规范.md) - 表定义规范（标签行/类型/复合对象）
+- [配置系统/导表工具与流程.md](repowiki/zh/content/配置系统/导表工具与流程.md) - 导表工具、产物与新增表流程
+- [配置系统/配置加载机制.md](repowiki/zh/content/配置系统/配置加载机制.md) - ConfigSystem 加载与懒加载原理
+- [配置系统/配置使用指南.md](repowiki/zh/content/配置系统/配置使用指南.md) - 访问范式与性能治理
 
 **内存管理**：
 - [内存管理/内存管理.md](repowiki/zh/content/内存管理/内存管理.md) - 内存管理

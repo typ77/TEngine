@@ -106,6 +106,14 @@ namespace TEngine
         [SerializeField]
         private string FallbackResDownLoadPath = "http://127.0.0.1:8082";
 
+        [Header("配置表设置")]
+        [Tooltip("配置表路径-相对路径")]
+        public string ConfigTablePath = "ConfigTable";
+        [Tooltip("配置表导出路径(bytes)-相对路径")]
+        public string ConfigOutPutPath = "ConfigOutPutPath";
+        [Tooltip("多语言总表-相对路径")]
+        public string ConfigLanguagePath = "Language";
+
         /// <summary>
         /// WebGL平台加载本地资源/加载远程资源。
         /// </summary>

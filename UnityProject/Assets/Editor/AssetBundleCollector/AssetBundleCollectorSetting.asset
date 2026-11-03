@@ -56,13 +56,29 @@ MonoBehaviour:
       AssetTags: 
       ActiveRuleName: EnableGroup
       Collectors:
-      - CollectPath: Assets/AssetRaw/Configs
-        CollectorGUID: dd2928019aef34248af368b99bc53bea
+      - CollectPath: Assets/AssetRaw/Configs/Bytes
+        CollectorGUID: a329b1daa92228347b6bf50dc28ec120
+        CollectorType: 0
+        AddressRuleName: AddressByFileName
+        PackRuleName: PackDirectory
+        FilterRuleName: CollectAll
+        AssetTags: Configs
+        UserData: 
+      - CollectPath: Assets/AssetRaw/Configs/LanguageBytes
+        CollectorGUID: 506e58e90926bec47b587aaa2bd059ce
         CollectorType: 0
         AddressRuleName: AddressByFileName
         PackRuleName: PackDirectory
         FilterRuleName: CollectAll
         AssetTags: 
+        UserData: 
+      - CollectPath: Assets/AssetRaw/Configs/Other
+        CollectorGUID: f6796b28e849155fce5cdae2b6231f76
+        CollectorType: 0
+        AddressRuleName: AddressByFileName
+        PackRuleName: PackDirectory
+        FilterRuleName: CollectAll
+        AssetTags: Configs
         UserData: 
     - GroupName: DLL
       GroupDesc: 

@@ -187,8 +187,8 @@ _imgIcon.SetSprite($"icon_{itemCfg.IconId}");
 ### 模式：共享配置数据通过 ConfigSystem
 
 ```csharp
-// ✅ 正确：Luban 配置数据通过 ConfigSystem 统一管理
-var itemCfg = ConfigSystem.Instance.Tables.TbItem.Get(itemId);
+// ✅ 正确：配置数据通过 ConfigSystem 统一管理（复杂模块封装 XxxConfigMgr）
+var itemCfg = ConfigSystem.Instance.GetConfig<GoodsConfig>().GetItem(itemId);
 
 // 不要将配置数据缓存到自己的静态变量中
 // 配置数据由 ConfigSystem 统一持有和释放
@@ -324,5 +324,5 @@ var rareAsset = await GameModule.Resource.LoadAssetAsync<TextAsset>("rare_boss_c
 | 资源加载核心 API（SetSprite/LoadGameObjectAsync/LoadAssetAsync）| [resource-api.md](resource-api.md) |
 | UIWindow 生命周期（OnCreate/OnRefresh/OnDestroy）| [ui-lifecycle.md](ui-lifecycle.md) |
 | UIWidget 创建与列表管理 | [ui-patterns.md](ui-patterns.md) |
-| Luban 配置数据访问 | [luban-config.md](luban-config.md) |
+| 配置表数据访问 | custom-config skill（`../custom-config/references/custom-config.md`） |
 | 问题排查（内存增长、location 无效）| [troubleshooting.md](troubleshooting.md) |

@@ -31,6 +31,9 @@ MonoBehaviour:
   UpdateNotice: 1
   ResDownLoadPath: http://127.0.0.1:8081
   FallbackResDownLoadPath: http://127.0.0.1:8082
+  ConfigTablePath: ../../Configs/Tables
+  ConfigOutPutPath: AssetRaw/Configs/Bytes
+  ConfigLanguagePath: ../../Configs/Language
   LoadResWayWebGL: 0
   isAutoAssetCopeToBuildAddress: 0
   BuildAddress: ../../Builds/Unity_Data/StreamingAssets

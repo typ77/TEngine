@@ -1,11 +1,11 @@
 ---
 name: tengine-dev
-description: TEngine Unity 游戏框架开发指导。触发词：TEngine, UIWindow, UIWidget, GameEvent, AddUIEvent, LoadAssetAsync, SetSprite, HybridCLR, YooAsset, Luban, GameModule, 热更, 资源加载, UI开发, 事件系统, 配置表, BindableProperty, DataContext, MapProperty, 数据绑定, MVE, FancyScrollView, FancySelectionContext, carrier
+description: TEngine Unity 游戏框架开发指导。触发词：TEngine, UIWindow, UIWidget, GameEvent, AddUIEvent, LoadAssetAsync, SetSprite, HybridCLR, YooAsset, GameModule, 热更, 资源加载, UI开发, 事件系统, 配置表, BindableProperty, DataContext, MapProperty, 数据绑定, MVE, FancyScrollView, FancySelectionContext, carrier。配置表专题见 custom-config skill（自研 Excel 导表，非 Luban）。
 ---
 
 # TEngine 开发指导
 
-TEngine 是基于 HybridCLR + YooAsset + UniTask + Luban 的 Unity 游戏框架。
+TEngine 是基于 HybridCLR + YooAsset + UniTask + 自研 Excel 配置表（Custom Config）的 Unity 游戏框架。
 本 skill 提供 AI 专用的精炼参考文档，确保生成的代码与框架 API 完全一致。
 
 ## 核心红线
@@ -29,7 +29,7 @@ TEngine 是基于 HybridCLR + YooAsset + UniTask + Luban 的 Unity 游戏框架�
 | 模块使用 | [modules.md](references/modules.md) | — | P0 |
 | 热更代码 | [hotfix-workflow.md](references/hotfix-workflow.md) | — | P1 |
 | 代码规范 | [naming-rules.md](references/naming-rules.md) | — | P1 |
-| Luban 配置 | [luban-config.md](references/luban-config.md) | — | P1 |
+| 配置表 | [custom-config skill](../custom-config/SKILL.md)（专有 skill） | — | P1 |
 | 项目结构 | [architecture.md](references/architecture.md) | — | P2 |
 | 问题排查 | [troubleshooting.md](references/troubleshooting.md) | — | P2 |
 | MCP 场景/GO/UI/脚本/Editor | [mcp-tools.md](references/mcp-tools.md) | — | P1 |

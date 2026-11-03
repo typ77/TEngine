@@ -359,7 +359,7 @@ UIWindow/UIWidget 骨架模板见 [ui-patterns.md](ui-patterns.md)。
 | 生成代码（绑定） | `Assets/GameScripts/HotFix/GameLogic/UI/Gen/` |
 | 模块代码 | `Assets/GameScripts/HotFix/GameLogic/Module/<ModuleName>/` |
 | 事件接口 | `Assets/GameScripts/HotFix/GameLogic/Event/` |
-| GameProto（Luban） | `Assets/GameScripts/HotFix/GameProto/`（自动生成，勿手改） |
+| GameProto（配置表） | `Assets/GameScripts/HotFix/GameProto/`（GameConfig/ 下为导表生成，勿手改） |
 
 ---
 
@@ -390,7 +390,7 @@ TEngine 常用菜单：
 | 保存项目 | `File/Save Project` |
 | 清理缓存 | `Tools/YooAsset/Clear Build Cache` |
 | 生成 UI 脚本 | `Tools/UIScriptGenerator/Generate Selected` |
-| Luban 配置生成 | `Tools/Luban/Generate` |
+| 配置表导出 | `Tools/配置表工具/生成全部数据(数据压缩)`（custom-config skill） |
 | HybridCLR 生成 | `HybridCLR/Generate/All` |
 
 ### run_tests / get_test_job：自动化测试

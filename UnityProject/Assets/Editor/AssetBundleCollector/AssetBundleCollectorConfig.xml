@@ -9,7 +9,9 @@
       <Collector CollectPath="Assets/AssetRaw/Audios" CollectGUID="8ef7a411b66e70f4cb65c2233c9a0868" CollectType="MainAssetCollector" AddressRule="AddressByFileName" PackRule="PackDirectory" FilterRule="CollectAll" UserData="" AssetTags="" />
     </Group>
     <Group GroupActiveRule="EnableGroup" GroupName="Configs" GroupDesc="" AssetTags="">
-      <Collector CollectPath="Assets/AssetRaw/Configs" CollectGUID="dd2928019aef34248af368b99bc53bea" CollectType="MainAssetCollector" AddressRule="AddressByFileName" PackRule="PackDirectory" FilterRule="CollectAll" UserData="" AssetTags="" />
+      <Collector CollectPath="Assets/AssetRaw/Configs/Bytes" CollectGUID="a329b1daa92228347b6bf50dc28ec120" CollectType="MainAssetCollector" AddressRule="AddressByFileName" PackRule="PackDirectory" FilterRule="CollectAll" UserData="" AssetTags="Configs" />
+      <Collector CollectPath="Assets/AssetRaw/Configs/LanguageBytes" CollectGUID="506e58e90926bec47b587aaa2bd059ce" CollectType="MainAssetCollector" AddressRule="AddressByFileName" PackRule="PackDirectory" FilterRule="CollectAll" UserData="" AssetTags="" />
+      <Collector CollectPath="Assets/AssetRaw/Configs/Other" CollectGUID="f6796b28e849155fce5cdae2b6231f76" CollectType="MainAssetCollector" AddressRule="AddressByFileName" PackRule="PackDirectory" FilterRule="CollectAll" UserData="" AssetTags="Configs" />
     </Group>
     <Group GroupActiveRule="EnableGroup" GroupName="DLL" GroupDesc="" AssetTags="">
       <Collector CollectPath="Assets/AssetRaw/DLL" CollectGUID="3aad79ec1ea08c24c891bd3c669d4125" CollectType="MainAssetCollector" AddressRule="AddressByFileName" PackRule="PackDirectory" FilterRule="CollectAll" UserData="" AssetTags="" />

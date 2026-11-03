@@ -3,7 +3,7 @@
 请使用中文写提案和回答
 这个文件为 Claude Code (claude.ai/code) 提供指导，用于处理此代码库中的代码。
 
-TEngine 基于 HybridCLR + YooAsset + UniTask + Luban 构建。
+TEngine 基于 HybridCLR + YooAsset + UniTask + 自研 Excel 配置表（Custom Config）构建。
 
 ---
 
@@ -57,7 +57,7 @@ TEngine 基于 HybridCLR + YooAsset + UniTask + Luban 构建。
 | 热更代码 | hotfix-workflow.md — 程序集划分、GameApp 入口、热更边界 |
 | 事件系统 | event-system.md — GameEvent 用法、AddUIEvent 规范 |
 | 模块使用 | modules.md — GameModule.XXX API、模块生命周期 |
-| Luban 配置 | luban-config.md — 配置表生成流程、访问方式 |
+| 配置表 | custom-config skill — Excel 导表流程、ConfigSystem 访问方式、多语言 |
 | 代码规范 | naming-rules.md — 命名约定、节点前缀、设计模式 |
 
 ---
@@ -95,7 +95,7 @@ TEngine 基于 HybridCLR + YooAsset + UniTask + Luban 构建。
 | event-system.md | 事件系统（两种模式/核心接口）| 核心 |
 | resource-api.md | 资源加载/卸载 | 核心 |
 | hotfix-workflow.md | 热更代码（HybridCLR/程序集划分/热更包）| 核心 |
-| luban-config.md | 配置表 | 核心 |
+| custom-config（独立 skill） | 配置表 | 核心 |
 | naming-rules.md | 代码规范/命名约定/节点前缀 | 核心 |
 | ui-patterns.md | UI 进阶（Widget 模板/节点绑定/FancyScrollView 列表）| 进阶 |
 | mve-patterns.md | MVE 数据绑定（四层架构/BindableProperty/DataContext/MapProperty/carrier 列表模式）| 核心 |

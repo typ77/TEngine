@@ -27,7 +27,7 @@
                      ↓ 依赖
 ┌─────────────────────────────────────────────┐
 │         基础设施层 (Unity + 第三方)           │
-│  YooAsset / HybridCLR / UniTask / Luban     │
+│  YooAsset / HybridCLR / UniTask / ExcelTool │
 └─────────────────────────────────────────────┘
 ```
 
@@ -43,7 +43,7 @@
 | `TEngine.Editor` | Assets/TEngine/Editor/ | 否 | 编辑器工具 |
 | `Launcher` | Assets/Launcher/ | 否 | 启动器 UI（LoadUpdateUI、LoadTipsUI 等） |
 | Assembly-CSharp | Assets/GameScripts/ | 否 | GameEntry 启动入口、主包流程 |
-| `GameProto` | Assets/GameScripts/HotFix/GameProto/ | 是 | Luban 配置代码 |
+| `GameProto` | Assets/GameScripts/HotFix/GameProto/ | 是 | 配置表运行时（ConfigSystem/生成代码） |
 | `GameLogic` | Assets/GameScripts/HotFix/GameLogic/ | 是 | 业务逻辑，热更主入口 |
 
 **约束**：
@@ -57,9 +57,8 @@
 
 ```
 TEngine/
-├── Configs/GameConfig/           # Luban 配置表工程
-│   ├── Datas/                    # Excel 数据源
-│   └── gen_code_bin_to_project.bat
+├── Configs/Tables/               # 配置表 Excel 数据源（Custom 配置系统）
+├── Configs/Language/             # 多语言工作簿（导表工具维护）
 │
 └── UnityProject/Assets/
     ├── AssetRaw/                 # 热更资源目录（YooAsset 打包来源）
@@ -75,7 +74,7 @@ TEngine/
         ├── GameEntry.cs          # 游戏启动入口
         ├── Procedure/            # 主包流程状态机
         └── HotFix/               # 热更代码
-            ├── GameProto/        # Luban 生成代码
+            ├── GameProto/        # 配置表运行时 + GameConfig/ 生成代码（勿手改）
             └── GameLogic/        # 业务逻辑主开发区域
 ```
 
@@ -115,7 +114,7 @@ ProcedureLaunch → ProcedureSplash → ProcedureInitResources → ProcedureInit
 Assets/AssetRaw/              # 所有热更资源的根目录
 ├── Actor/                    # 角色 Prefab
 ├── Audios/BGM/ SFX/          # 音频
-├── Configs/bytes/            # Luban 生成数据
+├── Configs/Bytes/            # 配置表二进制数据（Custom 导表产物，tag Configs）
 ├── Effects/                  # 粒子特效
 ├── Scenes/                   # 场景
 ├── UI/Atlas/ Prefabs/        # UI 资源

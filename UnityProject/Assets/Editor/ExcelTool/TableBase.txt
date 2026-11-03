@@ -1,0 +1,39 @@
+﻿/*Auto create
+Don't Edit it
+SheetName: ##fileName##
+*/
+
+using System;
+using System.Collections.Generic;
+using UnityEngine.Scripting;
+using UnityEngine;
+using Luban;
+
+namespace TEngine
+{
+	[Preserve]
+	public class ##ClassName##Item
+	{
+##StructVariables##
+		public ##ClassName##Item (ByteBuf byteBuf)
+		{
+##ReadData##
+		}
+	}
+
+	[Preserve]
+	public class ##ClassName##Config : TableBaseTemp<##TKey##, ##ClassName##Item>
+	{
+##SharedCacheFields##
+##CompoundIndexMembers##
+##ReadHeadDeclaration##
+	    protected override ##TKey## ReadKey(ByteBuf byteBuf)
+	    {
+##ReadKey##
+	    }
+        protected override ##ClassName##Item CreateItem(ByteBuf byteBuf)
+        {
+##ReadItem##
+        }
+	}
+}
