@@ -562,6 +562,7 @@ namespace TEngine.Editor.ExcelTool
                     if (memberPosSet.ContainsKey(i) && isSharedString)
                     {
                         // 共享 string 成员：item 数据段存 int 索引，读索引后查 SharedCache 拿 string（复用共享实例）
+                        // 注意：v2「槽0空值」布局下空引用索引为 0，会正常命中 cache[0]（空串）不再抛异常——语义见 w4 方案文档风险 R8；当前无表启用该路径。
                         sb.AppendLine($"\t\t\t\tint {f.Name}_idx = m_byteBuf.ReadInt();");
                         sb.AppendLine($"\t\t\t\tif (!_{f.Name.ToLower()}SharedCache.TryGetValue({f.Name}_idx, out string {f.Name}))");
                         sb.AppendLine($"\t\t\t\t\tthrow new InvalidOperationException($\"[组合索引 {ci.GroupName}] 共享缓存未命中: 字段 '{f.Name}', idx={{{f.Name}_idx}} (表 {_className})\");");
@@ -733,6 +734,9 @@ namespace TEngine.Editor.ExcelTool
                     string fieldNameLower = propertyName.ToLower();
 
                     // 生成静态空实例（用于 index = -1）
+                    // 注意：下方发射的 `_xxxIndex < 0` 分支是 v1 布局（空引用 -1）的兼容路径。
+                    // v2「槽0空值」布局下这个分支不会被走到（空引用写 0 命中 cache[0]），
+                    // 但必须永久保留：玩家本地缓存、服务端副本、局部导出的表仍可能是 v1。不要当作死代码清理。
                     if (string.Equals(type, SupportType.RewardObject, StringComparison.OrdinalIgnoreCase) ||
                         string.Equals(type, SupportType.ConditionObject, StringComparison.OrdinalIgnoreCase) ||
                         string.Equals(type, SupportType.EffectCfgObject, StringComparison.OrdinalIgnoreCase) ||

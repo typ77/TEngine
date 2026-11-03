@@ -63,6 +63,12 @@ namespace TEngine.Editor.ExcelTool
             var indexMap = new Dictionary<string, int>();
             var dataStartOffset = 0;
 
+            // v2 槽0空值：须在写行数据之前确定各字段布局（行内索引是否整体 +1）
+            if (ctx.SharedCacheInfos.TryGetValue(className, out var tableCacheInfos))
+            {
+                PrepareEmptySlots(className, tableCacheInfos, dataList);
+            }
+
             // 3. 写入实际内容并记录索引
             foreach (var dataRow in dataList)
             {
@@ -125,8 +131,12 @@ namespace TEngine.Editor.ExcelTool
                     // 写入字段名
                     headByteBuf.WriteString(cacheInfo.FieldName);
 
-                    // 写入缓存条目数量
-                    headByteBuf.WriteInt(cacheInfo.UniqueCount);
+                    // v2：存在空引用行的字段在槽0预置空值，条目数 +1；读端按普通缓存值读入 cache[0]
+                    headByteBuf.WriteInt(cacheInfo.UniqueCount + (cacheInfo.ReserveEmptySlot ? 1 : 0));
+                    if (cacheInfo.ReserveEmptySlot)
+                    {
+                        WriteValue(headByteBuf, cacheInfo.FieldType, CreateEmptyCacheValue(cacheInfo.FieldType));
+                    }
 
                     // 逐个写入缓存值（已在分析阶段完成解析）
                     foreach (object parsedValue in cacheInfo.IndexToValue)
@@ -366,6 +376,127 @@ namespace TEngine.Editor.ExcelTool
             headBuf.WriteInt(offset);
         }
 
+        #region 共享缓存 v2「槽0空值」布局
+
+        private const int EmptySlotIndex = 0;
+        private const int LegacyNullIndex = -1;
+
+        /// <summary>
+        /// 预扫描本表各共享缓存字段是否存在空引用行；存在且类型支持时启用 v2「槽0空值」布局。
+        /// 判定与行写入共用 TryGetSharedCacheIndex，保证表头与行编码一致。
+        /// 主键重复的行在主循环里会被丢弃，本预扫描不排除这些行，可能多判一次"存在空引用"，
+        /// 后果只是多写 1 字节的槽 0，读端仍然正确，属可接受的保守方向。
+        /// </summary>
+        private static void PrepareEmptySlots(string className, List<FieldSharedCacheInfo> cacheInfos, List<ConfigData[]> dataList)
+        {
+            foreach (var cacheInfo in cacheInfos)
+            {
+                cacheInfo.ReserveEmptySlot = false;
+                if (!cacheInfo.EnableSharedCache || !SupportsEmptySlot(cacheInfo.FieldType))
+                    continue;
+
+                foreach (var row in dataList)
+                {
+                    var data = FindField(row, cacheInfo.FieldName);
+                    if (data != null && !TryGetSharedCacheIndex(cacheInfo, data.Data, out _))
+                    {
+                        cacheInfo.ReserveEmptySlot = true;
+                        Log.Info("[共享缓存] 表:{0} 字段:{1} 启用槽0空值(v2)", className, cacheInfo.FieldName);
+                        break;
+                    }
+                }
+            }
+        }
+
+        private static ConfigData FindField(ConfigData[] row, string fieldName)
+        {
+            foreach (var d in row)
+            {
+                if (d.Name == fieldName)
+                    return d;
+            }
+            return null;
+        }
+
+        /// <summary>
+        /// 写共享缓存行内索引。v2（ReserveEmptySlot）：空引用写 0（1 字节），有效值写 index + 1；
+        /// v1：空引用写 -1、有效值写 index。读端 `idx &lt; 0 ? 空实例 : cache[idx]` 对两种布局均正确。
+        /// </summary>
+        private static void WriteSharedCacheIndex(ByteBuf byteBuf, FieldSharedCacheInfo cacheInfo, string rawData)
+        {
+            if (TryGetSharedCacheIndex(cacheInfo, rawData, out var index))
+            {
+                byteBuf.WriteInt(cacheInfo.ReserveEmptySlot ? index + 1 : index);
+                return;
+            }
+
+            // 空引用：空单元格，或 analyzer 判为空数据未入缓存（如 RewardObject 的 []）——读端固定读一个 int
+            byteBuf.WriteInt(cacheInfo.ReserveEmptySlot ? EmptySlotIndex : LegacyNullIndex);
+        }
+
+        private static bool TryGetSharedCacheIndex(FieldSharedCacheInfo cacheInfo, string rawData, out int index)
+        {
+            index = LegacyNullIndex;
+            return !string.IsNullOrEmpty(rawData) && cacheInfo.ValueToIndex.TryGetValue(rawData, out index);
+        }
+
+        /// <summary>
+        /// 槽0空值仅对「空值序列化为单个 WriteSize(0)，且反序列化结果与读端静态空实例等价」的类型启用：
+        /// str/string、list&lt;&gt;、dict&lt;&gt;/dictionary&lt;&gt;、RewardObject/ConditionObject/EffectCfgObject/GradedPriceObject。
+        /// ValueTuple 等其它类型（读端为 default(T)）沿用 v1（-1）编码。
+        /// </summary>
+        private static bool SupportsEmptySlot(string fieldType)
+        {
+            if (string.IsNullOrEmpty(fieldType))
+                return false;
+
+            // string / stringfull
+            if (string.Equals(fieldType, SupportType.String, StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(fieldType, SupportType.StringFull, StringComparison.OrdinalIgnoreCase))
+                return true;
+
+            // List<T>
+            if (fieldType.StartsWith(SupportType.List, StringComparison.OrdinalIgnoreCase) && fieldType.EndsWith(">"))
+                return true;
+
+            // Dictionary<TKey, TValue>
+            if ((fieldType.StartsWith(SupportType.Dictionary, StringComparison.OrdinalIgnoreCase) ||
+                 fieldType.StartsWith(SupportType.DictionaryFull, StringComparison.OrdinalIgnoreCase)) && fieldType.EndsWith(">"))
+                return true;
+
+            // 四种自定义对象
+            if (string.Equals(fieldType, SupportType.RewardObject, StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(fieldType, SupportType.ConditionObject, StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(fieldType, SupportType.EffectCfgObject, StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(fieldType, SupportType.GradedPriceObject, StringComparison.OrdinalIgnoreCase))
+                return true;
+
+            return false;
+        }
+
+        /// <summary>
+        /// 生成槽0空值。经 WriteValue 序列化后均为单字节（WriteSize(0) / WriteString("")），
+        /// 读端反序列化结果与各生成类的 `_{x}Empty` 静态空实例值等价（见 w4 方案文档 2.1.5/2.2.1）。
+        /// </summary>
+        private static object CreateEmptyCacheValue(string fieldType)
+        {
+            var t = fieldType.ToLower();
+
+            // str/string：WriteString(string.Empty) → WriteSize(0) 单字节；读端 ReadString 返回 string.Empty
+            if (t == SupportType.String || t == SupportType.StringFull)
+                return string.Empty;
+
+            // dict/dictionary：空 IDictionary → WriteSize(0)；读端 new Dictionary 后添加 0 个元素
+            if (t.StartsWith(SupportType.Dictionary, StringComparison.OrdinalIgnoreCase) ||
+                t.StartsWith(SupportType.DictionaryFull, StringComparison.OrdinalIgnoreCase))
+                return new Hashtable();
+
+            // list<> 与四种自定义对象（WriteValue 均按 list<list<…>> 写）→ 空 IList → WriteSize(0)
+            return Array.Empty<object>();
+        }
+
+        #endregion
+
         // 写入普通数据
         private static void WritePrimitiveData(ByteBuf byteBuf, List<ConfigData> primitiveData, string className, string id, Dictionary<string, List<FieldSharedCacheInfo>> sharedCacheInfos)
         {
@@ -382,23 +513,8 @@ namespace TEngine.Editor.ExcelTool
 
                     if (cacheInfo != null && cacheInfo.EnableSharedCache)
                     {
-                        // 共享缓存模式：只写入索引
-                        if (string.IsNullOrEmpty(data.Data))
-                        {
-                            // 空字符串，索引设为 -1
-                            byteBuf.WriteInt(-1);
-                        }
-                        else if (cacheInfo.ValueToIndex.TryGetValue(data.Data, out int index))
-                        {
-                            byteBuf.WriteInt(index);
-                        }
-                        else
-                        {
-                            // 值不在缓存中：说明 analyzer 把它当空数据跳过了（如 RewardObject 的 []、ConditionObject 的 [[]] 等，
-                            // ValidateRewardObjectFormat 等返回 false 不收集）。读取端(ctor)对共享缓存字段固定读 ReadInt，
-                            // 这里必须和空值一样写 -1，否则写完整对象会让读取端字节错位。
-                            byteBuf.WriteInt(-1);
-                        }
+                        // 共享缓存模式：只写入索引（布局见 WriteSharedCacheIndex）
+                        WriteSharedCacheIndex(byteBuf, cacheInfo, data.Data);
                     }
                     else
                     {
@@ -432,23 +548,9 @@ namespace TEngine.Editor.ExcelTool
 
                     if (cacheInfo != null && cacheInfo.EnableSharedCache)
                     {
-                        // 共享缓存模式：只写入索引
-                        if (string.IsNullOrEmpty(data.Data))
-                        {
-                            // 空值，索引设为 -1
-                            byteBuf.WriteInt(-1);
-                        }
-                        else if (cacheInfo.ValueToIndex.TryGetValue(data.Data, out int index))
-                        {
-                            byteBuf.WriteInt(index);
-                        }
-                        else
-                        {
-                            // 值不在缓存中：说明 analyzer 把它当空数据跳过了（如 RewardObject 的 []、ConditionObject 的 [[]] 等，
-                            // ValidateRewardObjectFormat 等返回 false 不收集）。读取端(ctor)对共享缓存字段固定读 ReadInt，
-                            // 这里必须和空值一样写 -1，否则写完整对象会让读取端字节错位。
-                            byteBuf.WriteInt(-1);
-                        }
+                        // 共享缓存模式：只写入索引（布局见 WriteSharedCacheIndex）。
+                        // 注：SeparateDataTypes 已把启用缓存的字段全部归入 primitive 区，此分支实际不可达，仅保持行为对称。
+                        WriteSharedCacheIndex(byteBuf, cacheInfo, data.Data);
                     }
                     else
                     {
