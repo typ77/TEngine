@@ -1,11 +1,14 @@
-using GameLogic.RedDot.Core;
 using NUnit.Framework;
+using RedDot.Runtime.RedDot;
 
 namespace TEngine.Tests.RedDot
 {
     /// <summary>
-    /// RedDotExternalLogicVisitor 单元测试。
-    /// 重点验证修复后的 CheckHasExternalId 同时查两个字典。
+    /// RedDotExternalLogicVisitor 单元测试(新 API)。
+    /// 覆盖:RegExternalLogic/Visit(无 id 与带 id 两张委托表)、id=0 回退带 id 表、
+    /// 重复注册覆盖、CheckHasExternalId、UnregisterExternalLogic、Clear。
+    /// 注:聚合节点拒绝注册的守卫在 RedDotGraphModule.ValidateKeyArg(internal)与模块收口层,
+    /// 聚合节点"无 checker"的可见契约在 RedDotGraphAggregationTests 的 checkVisitor 用例覆盖。
     /// </summary>
     [TestFixture]
     public class RedDotExternalLogicVisitorTests
@@ -15,7 +18,16 @@ namespace TEngine.Tests.RedDot
         [SetUp]
         public void SetUp()
         {
-            _visitor = new RedDotExternalLogicVisitor();
+            RedDotManager.Ins().Reset();
+            RedDotExternalLogicVisitor.Ins().Clear();
+            _visitor = RedDotExternalLogicVisitor.Ins();
+        }
+
+        [TearDown]
+        public void TearDown()
+        {
+            RedDotManager.Ins().Reset();
+            _visitor = null;
         }
 
         [Test]
@@ -23,13 +35,12 @@ namespace TEngine.Tests.RedDot
         {
             _visitor.RegExternalLogic(100, (out RedDotStatus s, out int n) =>
             {
-                s = RedDotStatus.New;
+                s = RedDotStatus.RedDotStatusRedNumber;
                 n = 3;
             });
 
             _visitor.Visit(100, 0, out var status, out var num);
-
-            Assert.AreEqual(RedDotStatus.New, status);
+            Assert.AreEqual(RedDotStatus.RedDotStatusRedNumber, status);
             Assert.AreEqual(3, num);
         }
 
@@ -38,74 +49,112 @@ namespace TEngine.Tests.RedDot
         {
             _visitor.RegExternalLogic(200, (uint id, out RedDotStatus s, out int n) =>
             {
-                s = RedDotStatus.Number;
-                n = (int)id * 2;
+                s = id == 7 ? RedDotStatus.RedDotStatusRedDot : RedDotStatus.RedDotStatusNull;
+                n = 0;
             });
 
-            _visitor.Visit(200, 5, out var status, out var num);
-
-            Assert.AreEqual(RedDotStatus.Number, status);
-            Assert.AreEqual(10, num);
+            _visitor.Visit(200, 7, out var status, out _);
+            Assert.AreEqual(RedDotStatus.RedDotStatusRedDot, status);
+            _visitor.Visit(200, 8, out status, out _);
+            Assert.AreEqual(RedDotStatus.RedDotStatusNull, status);
         }
 
         [Test]
-        public void CheckHasExternalId_WithIdOnly_ReturnsTrue_AfterFix()
+        public void Visit_Id0_FallsBackToWithIdTable()
         {
-            // 修复前：只查无 id 字典，带 id 注册会返回 false（缺陷）
+            // 无 id 表未注册时,id=0 回退查带 id 表(P3-4 口径)
             _visitor.RegExternalLogic(300, (uint id, out RedDotStatus s, out int n) =>
             {
-                s = 0; n = 0;
+                s = RedDotStatus.RedDotStatusBlueDot;
+                n = 0;
             });
 
-            Assert.IsTrue(_visitor.CheckHasExternalId(300), "修复后应同时检查带 id 字典");
+            _visitor.Visit(300, 0, out var status, out _);
+            Assert.AreEqual(RedDotStatus.RedDotStatusBlueDot, status);
         }
 
         [Test]
-        public void CheckHasExternalId_NoIdOnly_ReturnsTrue()
+        public void Visit_MissingRegistration_ReturnsNull()
         {
-            _visitor.RegExternalLogic(400, (out RedDotStatus s, out int n) =>
-            {
-                s = 0; n = 0;
-            });
-
-            Assert.IsTrue(_visitor.CheckHasExternalId(400));
-        }
-
-        [Test]
-        public void CheckHasExternalId_NotRegistered_ReturnsFalse()
-        {
-            Assert.IsFalse(_visitor.CheckHasExternalId(999));
-        }
-
-        [Test]
-        public void UnRegExternalLogic_RemovesBothDictionaries()
-        {
-            _visitor.RegExternalLogic(500, (out RedDotStatus s, out int n) => { s = 0; n = 0; });
-            _visitor.RegExternalLogic(500, (uint id, out RedDotStatus s, out int n) => { s = 0; n = 0; });
-
-            _visitor.UnRegExternalLogic(500);
-
-            Assert.IsFalse(_visitor.CheckHasExternalId(500));
-        }
-
-        [Test]
-        public void Visit_Unregistered_ReturnsNullState()
-        {
-            _visitor.Visit(888, 0, out var status, out var num);
-
-            Assert.AreEqual(RedDotStatus.Null, status);
+            // 未注册:status/num 记 0(Null),走 Warning 域
+            _visitor.Visit(999, 0, out var status, out var num);
+            Assert.AreEqual(RedDotStatus.RedDotStatusNull, status);
             Assert.AreEqual(0, num);
         }
 
         [Test]
-        public void Visit_IdZero_PrefersNoIdLogic()
+        public void RegExternalLogic_DuplicateRegistration_LastWins()
         {
-            _visitor.RegExternalLogic(600, (out RedDotStatus s, out int n) => { s = RedDotStatus.New; n = 1; });
-            _visitor.RegExternalLogic(600, (uint id, out RedDotStatus s, out int n) => { s = RedDotStatus.Full; n = 2; });
+            _visitor.RegExternalLogic(400, (out RedDotStatus s, out int n) =>
+            {
+                s = RedDotStatus.RedDotStatusRedDot;
+                n = 0;
+            });
+            _visitor.RegExternalLogic(400, (out RedDotStatus s, out int n) =>
+            {
+                s = RedDotStatus.RedDotStatusFull;
+                n = 0;
+            });
 
-            _visitor.Visit(600, 0, out var status, out var num);
+            _visitor.Visit(400, 0, out var status, out _);
+            Assert.AreEqual(RedDotStatus.RedDotStatusFull, status);
+        }
 
-            Assert.AreEqual(RedDotStatus.New, status, "id==0 时应优先用无 id 版本");
+        [Test]
+        public void CheckHasExternalId_ChecksBothTables()
+        {
+            Assert.IsFalse(_visitor.CheckHasExternalId(500));
+            _visitor.RegExternalLogic(500, (out RedDotStatus s, out int n) =>
+            {
+                s = RedDotStatus.RedDotStatusNull;
+                n = 0;
+            });
+            Assert.IsTrue(_visitor.CheckHasExternalId(500));
+
+            _visitor.RegExternalLogic(501, (uint id, out RedDotStatus s, out int n) =>
+            {
+                s = RedDotStatus.RedDotStatusNull;
+                n = 0;
+            });
+            Assert.IsTrue(_visitor.CheckHasExternalId(501));
+        }
+
+        [Test]
+        public void UnregisterExternalLogic_RemovesBothTables()
+        {
+            _visitor.RegExternalLogic(600, (out RedDotStatus s, out int n) =>
+            {
+                s = RedDotStatus.RedDotStatusRedDot;
+                n = 0;
+            });
+            _visitor.RegExternalLogic(600, (uint id, out RedDotStatus s, out int n) =>
+            {
+                s = RedDotStatus.RedDotStatusRedDot;
+                n = 0;
+            });
+            Assert.IsTrue(_visitor.CheckHasExternalId(600));
+
+            _visitor.UnregisterExternalLogic(600);
+            Assert.IsFalse(_visitor.CheckHasExternalId(600));
+        }
+
+        [Test]
+        public void Clear_RemovesAll()
+        {
+            _visitor.RegExternalLogic(700, (out RedDotStatus s, out int n) =>
+            {
+                s = RedDotStatus.RedDotStatusNull;
+                n = 0;
+            });
+            _visitor.RegExternalLogic(701, (out RedDotStatus s, out int n) =>
+            {
+                s = RedDotStatus.RedDotStatusNull;
+                n = 0;
+            });
+
+            _visitor.Clear();
+            Assert.IsFalse(_visitor.CheckHasExternalId(700));
+            Assert.IsFalse(_visitor.CheckHasExternalId(701));
         }
     }
 }

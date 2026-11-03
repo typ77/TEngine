@@ -1,0 +1,8 @@
+.the-uxml-listview {
+    /* Provide the list view with an explict height for every row
+    so it can calculate how many items to actually display */
+    --unity-item-height: 20;
+    /* 高度弹性填满窗口剩余空间(原固定500px,窗口高时下方留大片死空白);
+    外层 TemplateContainer 需在 InitListView 里同步 flexGrow=1 */
+    flex-grow: 1;
+}
