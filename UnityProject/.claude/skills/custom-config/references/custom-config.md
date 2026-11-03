@@ -67,7 +67,7 @@ F:/code/TEngine/
 
 #### 标签说明（A 列标签行驱动）
 - **##lb-row##**：此行数据忽略处理，可在任意行填写
-- **##lb-labels##**：描述行。中文描述此列作用；首字母 `#` 表示此列为索引列（仅支持 int/string，单主键，建议放第一个数据列）
+- **##lb-labels##**：描述行。中文描述此列作用；首字母 `#` 表示此列为索引列（类型校验允许 int/uint/long/ulong/short/ushort/str/string，惯例用 int/string，单主键，建议放第一个数据列）
 - **##lb-target##**：输出平台。`c` 仅客户端 / `s` 仅服务端（客户端忽略）/ `cs` 双端 / `l` 多语言 / 不填默认双端
 - **##lb-keys##**：数据类型（见下文类型系统）
 - **##lb-names##**：字段名（代码访问用）
@@ -102,19 +102,24 @@ F:/code/TEngine/
 **通用类型**
 
 - int：默认值 0
-- long：超长数值用 long。同时支持 byte/short/uint/ulong 等
+- long：超长数值用 long。同时支持 byte/short/uint/ulong（完整链路可用：解析+写入+代码生成）
 - string/str：默认 ""；作为多语言文案时在 ##lb-target## 填 `l`
 - bool：1,0,TRUE,FALSE。默认 false
-- double/float/decimal：支持但**不建议**（精度问题，建议整型万进制：1 = 10000）
+- double/float：支持但**不建议**（精度问题，建议整型万进制：1 = 10000）
 
-**特殊类型**
+**特殊类型（完整链路可用）**
 
-- vec2/vector2、vec3/vector3、vec4/vector4、vec2int、vec3int：`x,y`（,z,w）格式
+- vec2/vector2、vec3/vector3、vec4/vector4：`x,y`（,z,w）格式
 - quat/quaternion：x,y,z,w 浮点
+
+**解析可用但暂不可导出**（二进制写入端/生成端未实现，导表报 `TypeNotSupportedException`）
+
+- vec2int、vec3int：`x,y`（,z）整型格式
 - color：r,g,b,a 浮点（0~1）
 - datetime：时间戳或可被 DateTime.TryParse 解析的格式
-- obj/object：可自动解析类型填啥解析啥（不建议滥用）
-- Enum：理论上支持（不建议）
+- decimal、sbyte：数值类型
+- obj/object：可自动解析类型填啥解析啥
+- Enum：解析端类型名残留源项目命名空间（`TypeRegistry.CodeNamespace`），暂不可用
 
 ### 自定义对象格式
 

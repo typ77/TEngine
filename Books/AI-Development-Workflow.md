@@ -700,7 +700,7 @@ sequenceDiagram
 - **事件系统**: GameEvent, EventInterface, AddUIEvent
 - **资源管理**: YooAsset, LoadAssetAsync, UnloadAsset
 - **热更代码**: HybridCLR, GameApp, HotFix
-- **配置表**: Luban, ConfigSystem
+- **配置表**: Custom Config, ConfigSystem
 
 ### 核心原则
 
@@ -717,25 +717,25 @@ tengine-dev 技能遵循以下核心原则：
 ```
 GameScripts/Main/       → 主包（不热更）
 GameScripts/HotFix/
-  ├── GameProto/        → Luban 配置代码
+  ├── GameProto/        → 自研 Excel 配置生成代码（GameConfig/）
   └── GameLogic/        → 业务逻辑（GameApp.cs 入口）
 ```
 
 ### 其他 Skills
 
-#### luban-dev
+#### custom-config
 
-Luban 游戏配置全栈工具，支持枚举/Bean/数据表的增删改查、代码生成、TEngine 集成。
+TEngine 自研 Excel 配置表系统（Custom Config）使用规范：表定义规范、导表流程、ConfigSystem 访问治理、多语言闭环。
 
 **触发场景**：
 - 编辑游戏配置数据（配置表/数据表/道具表/技能表/奖励表/活动表）
-- 新增/修改/删除配置表结构
-- 定义枚举/Bean/字段
-- 导表/生成配置代码
-- 编写 luban.conf 或 Schema 定义
-- Luban 类型系统/校验器问题
+- 新增/修改/删除配置表结构（字段/类型）
+- 导表生成配置代码（`Tools/配置表工具` 菜单）
+- 使用 ConfigSystem/GetConfig 访问配置
+- 配置多语言文案（`##lb-target##=l`）
+- 排查配置加载/懒加载/共享缓存问题
 
-> 即使用户未明确说"Luban"，只要是编辑游戏配置数据，也应使用此技能。
+> 即使用户未明确说"配置表"，只要是编辑游戏数值/文案数据（Excel），也应使用此技能。
 
 #### html-to-ugui
 
@@ -1379,7 +1379,7 @@ graph TB
         hybrid[HybridCLR<br/>热更新]
         yoo[YooAsset<br/>资源管理]
         uni[UniTask<br/>异步编程]
-        luban[Luban<br/>配置表]
+        luban[自研 Excel<br/>配置表]
     end
 
     subgraph "Unity 引擎"

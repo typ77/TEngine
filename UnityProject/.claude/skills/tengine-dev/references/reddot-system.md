@@ -25,17 +25,17 @@ UI 绑定 ◄──AddUI(key, cb, id) 注册即回放──┘   RedDotWidget（
 
 ## 六态位掩码（`RedDotStatus`，`RedDotConst.cs`）
 
-| 状态 | 位值 | 优先级 |
+| 状态 | 位值 | 优先级秩（大者胜） |
 |---|---|---|
 | `RedDotStatusNull` | 0（熄灭） | — |
-| `RedDotStatusFull` | 1<<5 满 | **1（最高）** |
-| `RedDotStatusRedDot` | 1<<0 红点 | 2 |
-| `RedDotStatusBlueDot` | 1<<1 蓝点 | 3 |
-| `RedDotStatusRedNumber` | 1<<2 红数字 | 4 |
-| `RedDotStatusBlueNumber` | 1<<3 蓝数字 | 5 |
-| `RedDotStatusTips` | 1<<4 "新"标签 | 6（最低） |
+| `RedDotStatusFull` | 1<<5 满 | **6（最高）** |
+| `RedDotStatusRedDot` | 1<<0 红点 | 5 |
+| `RedDotStatusBlueDot` | 1<<1 蓝点 | 4 |
+| `RedDotStatusRedNumber` | 1<<2 红数字 | 3 |
+| `RedDotStatusBlueNumber` | 1<<3 蓝数字 | 2 |
+| `RedDotStatusTips` | 1<<4 "新"标签 | 1（最低） |
 
-聚合结果恒为单态（`RedDotStatusRules.HighestPriorityBit` 归一）；节点掩码（编辑器勾选）可为组合。
+优先级唯一权威 `RedDotStatusRules.PriorityOf`（`PriorityByBit={5,4,3,2,1,6}`，下标=枚举位序）。**秩 ≠ 位值**（满位值 32 < 新位值 16 但满优先级更高），禁止直接比较位值；聚合结果恒为单态（归一取秩最高位）；节点掩码（编辑器勾选）可为组合。
 
 ## 业务接入三步
 
@@ -80,6 +80,9 @@ RedDotGraphModule.Instance.AddUI(key, OnRedDotChanged);        // 注册即回�
 RedDotGraphModule.Instance.GetRedDotStatus(key, 0, out var status, out var num);  // 读时刷新
 RedDotGraphModule.Instance.RemoveUI(key, OnRedDotChanged);     // 与 AddUI 配对
 RedDotGraphModule.Instance.SetNodeEnabled(key, false);         // 门控:吞报脏/不中继/读回 Null
+RedDotGraphModule.Instance.FlushNow();                         // 显式即时冲刷(开窗/切帧等零延迟节点)
+RedDotGraphModule.Instance.SummarizeCells(key, idsProvider, mask);   // cell 汇总(列表 per-id 聚合一行接入)
+RedDotGraphModule.Instance.ReleaseCellIds(key, keepIds);       // 列表刷新后收敛 per-id 槽位(id=0 强制保留)
 ```
 
 ## 编辑器（Assets/Editor/RedDotGraph）
@@ -88,12 +91,12 @@ RedDotGraphModule.Instance.SetNodeEnabled(key, false);         // 门控:吞报�
 - **分组子图**：组内独立树，组根（橙框）+ 引用节点（占位连接面）；左栏组树面板导航；导出自动展平
 - **导出**：窗口导出按钮 → 写 `Assets/AssetRaw/Configs/Other/RedDotGraphConfig.json`（运行时 YooAsset 按文件名寻址）+ 同步再生成 `RedDotKeys.cs`
 - **双轴校验**：K1-K6（key/逻辑ID）+ V1-V9（组结构）在导出门禁强制
-- 菜单：`Tools/红点系统/使用说明`、`Tools/红点系统/生成Key常量表(选导出JSON)`
+- 菜单：`Tools/红点系统/生成Key常量表(选导出JSON)`（CI 复跑）；"使用说明"帮助窗由编辑器工具栏按钮打开（无菜单项）。实际菜单仅三个：`Assets/Create/红点图`、生成Key常量表、`TEngine/RedDot/Build Demo Scene`
 - Demo 图：`Assets/Editor/RedDotGraph/RedDotDemo.reddotgraph`；Demo 构建：菜单 `TEngine/RedDot/Build Demo Scene`
 
 ## 生命周期与陷阱
 
-- **重登/切号**：启动链调 `RedDotGraphModule.Instance.EnsureStarted()`——第二次调用即 `Reinitialize()` 全量重建（清图/订阅/队列）。**必须在 UI 重建之后调用**，否则存量 widget 订阅丢失红点失联
+- **重登/切号**：`GameApp.StartGameLogic` 已接线 `EnsureStarted()`——首启激活，再次调用即 `Reinitialize()` 全量重建（清图/订阅/队列）。重登若不重走 StartGameLogic，业务在 UI 重建后自行再调，否则存量 widget 订阅丢失红点失联
 - **帧驱动**：模块实现 `ILateUpdate`（SingletonSystem 自动注册/注销），Batched 模式每帧冲刷一次；不要给它再挂定时器
 - **TMP**：数字态需 TMP Essentials（`Assets/TextMesh Pro/` 已导入）；缺失时 `TMP_Settings` getter 会 NRE
 - **配置缺失**：`RedDotGraphConfig` 加载失败时图保持为空 + Warning，业务操作照常重放（未知 key 运行期告警大声暴露）

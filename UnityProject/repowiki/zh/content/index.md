@@ -46,6 +46,11 @@
 
 **红点系统**：
 - [红点系统/红点系统.md](repowiki/zh/content/红点系统/红点系统.md) - RedDotGraph 红点系统（六态/帧绑定/分组子图/动态节点）🆕
+- [红点系统/红点架构原理与图模型.md](repowiki/zh/content/红点系统/红点架构原理与图模型.md) - DAG 图模型/边方向/BFS+DFS 算法/六态优先级
+- [红点系统/红点使用指南.md](repowiki/zh/content/红点系统/红点使用指南.md) - 业务接入四步/Widget/cell 汇总/API 速查
+- [红点系统/红点动态节点.md](repowiki/zh/content/红点系统/红点动态节点.md) - 运行时动态节点生命周期/挂父重放
+- [红点系统/红点编辑器工具.md](repowiki/zh/content/红点系统/红点编辑器工具.md) - GraphView 编辑器/分组子图/双轴校验/导出
+- [红点系统/红点常见问题与排查.md](repowiki/zh/content/红点系统/红点常见问题与排查.md) - 故障排查/GM 诊断工具
 
 **音频系统**：
 - [音频系统/](repowiki/zh/content/音频系统/) - 音频系统

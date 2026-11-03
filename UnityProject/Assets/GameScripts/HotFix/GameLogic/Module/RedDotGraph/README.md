@@ -82,12 +82,14 @@ m_widget.SetKey(RedDotKeys.Mail_Unread, cellId);
 - **节点门控**：`SetNodeEnabled(key, false)` 禁用吞 DataChange、不作 BFS 中继、聚合跳过、读回 Null
 - **动态节点**：`RegisterDynamicNode(ownerKey, out dynKey)`（幂等，`dyn:` 前缀）→ `SetDynamicParent`（未就绪自动登记重放）→ `BindDynamicChecker` → `RemoveDynamicNode/RemoveDynamicParent`（父链逐 id 补发重算）
 - **cell 汇总**：`SummarizeCells(key, idsProvider, mask)` 一行接入列表 per-id 聚合；列表刷新后 `ReleaseCellIds(key, keep)` 收敛槽位
+- **即时冲刷**：`FlushNow()` 显式冲刷待派发变更（开窗/切帧等零延迟场景）
+- **诊断 API（`RedDotManager.Ins()`，业务禁直连、诊断可用）**：`RefreshRedDot()` 全量巡检；`DumpRedDotStatus(key)` 单节点快照；`DumpChangeRecords(key)` 最近 8 次 DataChange 来源追踪
 
 ## 集成约定
 
 - 命名空间：运行时 `RedDot.Runtime.RedDot`，编辑器 `RedDot.Editor.*`，集成层 `GameLogic.RedDotGraphModule`
 - 业务只认 `RedDotKeys.XXX` 常量与 `RedDotGraphModule` 收口，禁止直连 `RedDotManager`（绕过缓冲/自检）
-- 启动链调用 `RedDotGraphModule.Instance.EnsureStarted()`：重登/切号走 `Reinitialize()` 全量重建
+- 启动链接线：`GameApp.StartGameLogic` 调用 `RedDotGraphModule.Instance.EnsureStarted()`（首启激活；重登/切号再调即 `Reinitialize()` 全量重建）
 - JSON（热更）与 RedDotKeys（热更 dll）版本错配在加载期对账即报（`ValidateKeysConsistency`）
 
 ## Demo 与测试

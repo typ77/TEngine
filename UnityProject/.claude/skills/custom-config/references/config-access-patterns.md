@@ -150,8 +150,9 @@ GroupItem GetEarliestGroup() => _groupsSortedByStart[0];
 强 Init 模式的前提：`XxxCfgLoader.Init()` 必须早于任何运行时 getter 调用。
 
 **机制保障**：`SystemMgr.OnInit()` 反射注册所有 `SystemBase` 子类并逐一调用各自 `Init()`。模块 Mgr 的 `Init()` 在此阶段调用对应 `CfgLoader.Init()`，早于一切运行时业务。
+（注：`SystemMgr`/`SystemBase` 反射注册机制为**源项目 Ljdmw 的基础设施**，本仓库暂无此类——本仓库请以 `GameApp.StartGameLogic` 完成后的时机为界，或自建模块级 Init 链；下述硬约束的语义不变。）
 
-**硬约束**：`CfgLoader` 的 getter **不得在任何 `SystemBase.Init()` 内调用**——反射注册顺序不确定，Init 阶段调用 getter 可能读到尚未初始化的空索引（返回 null/默认值）。
+**硬约束**：`CfgLoader` 的 getter **不得在任何初始化阶段回调内调用**——初始化顺序不确定，Init 阶段调用 getter 可能读到尚未初始化的空索引（返回 null/默认值）。
 
 > 实证：Synthesis 的 6 处 `get_synthesis_by_material` 调用经逐一核实全部在运行时方法（`IsEggChipCanUse` / `ReqChipProgress` / UI Widget 等），无一在 `System.Init()` 内。
 

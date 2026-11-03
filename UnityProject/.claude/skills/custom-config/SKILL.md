@@ -40,7 +40,7 @@ description: TEngine 自研 Excel 配置表系统（Custom Config）使用规范
 2. **业务经 ConfigMgr 访问**，不散落 `ConfigSystem.Instance.GetConfig<>()`（只读一次的简单场景除外）
 3. **字段前向兼容**：新增字段安全，删除/改名不兼容（热更包）；字段名含空格工具会报 Error
 4. **运行时禁止热点全量遍历**：`foreach GetAllKeys { GetItem }` 会击穿懒加载，见 references/config-access-patterns.md
-5. 主键仅支持 int/string 单列，第一个数据列，`##lb-labels##` 中 `#` 开头标识
+5. 主键单列（int/uint/long/ulong/short/ushort/str/string 均过校验，惯例 int/string），第一个数据列，`##lb-labels##` 中 `#` 开头标识
 
 ## 常用命令
 
